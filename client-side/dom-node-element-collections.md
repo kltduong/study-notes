@@ -174,4 +174,4 @@ Lowercase = pre-created singleton on the global. Capital = the type.
 
 ## Related
 
-- [JS prototype vs own properties](./prototype-vs-own-properties.md) — why `document.createElement` lives on `Document.prototype`, not on `document` itself.
+- [JS class semantics](./js-class-semantics.md) — why `document.createElement` lives on `Document.prototype`, not on `document` itself.

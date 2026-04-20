@@ -1,4 +1,4 @@
-# JS: Own Properties vs Prototype (and how Python compares)
+# JS Class Semantics (and how Python compares)
 
 **TL;DR**
 - Methods declared in a `class` body live on `Class.prototype` — one shared copy for all instances.
