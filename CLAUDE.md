@@ -11,7 +11,20 @@ A personal study-notes repository. The workflow is: **discuss a topic with Claud
 - Organize notes by topic, one folder per topic (e.g. `git/`, `linux/`, `networking/`).
 - One markdown file per focused subtopic. Prefer several small files over one sprawling file.
 - Use kebab-case filenames (e.g. `rebase-vs-merge.md`).
-- A topic folder may have an `index.md` linking to its notes once it grows.
+
+### Topic index file (`index.md`)
+
+Every topic folder with **two or more notes** must have an `index.md`. It is the entry point for the topic and the glue that makes the separate notes feel like one body of knowledge. A good `index.md` is itself a useful read, not just a list of links.
+
+It should contain:
+
+- **A short intro** (2–4 sentences) framing the topic: what it is, why it matters, the mental model that ties the subtopics together.
+- **A reading order** — which note to start with and how the subtopics build on each other. If order doesn't matter, say so.
+- **A map of the subtopics**: for each note, a relative link plus a one-line description of what's in it and when you'd reach for it.
+- **Cross-cutting concepts** that span multiple notes (shared vocabulary, recurring gotchas, a diagram of how the pieces relate) — the kind of thing that has no natural home in any single note.
+- **Links to related topics** (other folders) when relevant.
+
+**Keep `index.md` in sync — always.** Whenever a note is added, removed, renamed, or significantly reshaped inside a topic folder, update `index.md` in the **same change**. Adding a new file without updating the index is incomplete work. If the folder didn't previously have an `index.md` and this addition brings it to 2+ notes, create the index as part of the same change. The index must never drift out of sync with the folder contents.
 
 ## Workflow
 
