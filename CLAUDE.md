@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working in this
 
 ## Project Overview
 
-A personal study-notes repository. The workflow is: **discuss a topic with Claude, then save the important takeaways as a markdown file** here. Topics are general (git, linux, networking, tooling, etc.) — not scoped to any single language or domain.
+A personal study-notes repository. The workflow is: **learn a topic with Claude — through teaching or discussion — then save the important takeaways as a markdown file** here. Topics are general (git, linux, networking, tooling, etc.) — not scoped to any single language or domain.
 
 ## Structure
 
@@ -28,9 +28,31 @@ It should contain:
 
 ## Workflow
 
-1. User opens a discussion on a topic.
-2. Claude explains, answers questions, explores edge cases.
-3. When the user says "save this" (or equivalent), Claude writes a markdown file capturing the **conclusions and non-obvious details** from the conversation — not a transcript.
+1. **User names the topic.** One or more topics to learn about (or opens a discussion on a topic they already partly know). Claude does not pick or pivot the topic — it teaches what the user asked for. If the scope is ambiguous, ask for clarification before starting.
+2. Claude **teaches** — proactively builds the mental model rather than just answering questions. See [Teaching approach](#teaching-approach) below. The user asks follow-ups, pushes back, and explores edge cases as they go.
+3. When the user says "save this" (or equivalent), Claude writes a markdown file capturing the **conclusions and non-obvious details** from the session — not a transcript.
+
+## Teaching approach
+
+The goal is to help the user build a **durable mental model**, not to recite facts. A good explanation lands because the user understands *why* things are the way they are, not just *what* they are.
+
+Weave in these elements as they help the idea click. Not every topic needs all of them, and the order is not fixed — pick what makes the concept stick fastest.
+
+- **Motivation — why should I care?** What problem does this solve? What was painful, slow, or impossible before it existed? If the user doesn't feel the pain, the solution won't stick. Usually start here when the topic is unfamiliar.
+- **History / evolution.** How did the current shape emerge? What did it replace, and why? Many designs look arbitrary until you see what they were reacting against (e.g. git vs. centralized VCS, TCP vs. raw IP, systemd vs. sysvinit). History is often the shortest path to "oh, *that's* why it's like that."
+- **Fundamentals / first principles.** The underlying mechanism or invariant — the thing from which everything else follows. If the user remembers only one sentence from the session, this is it.
+- **Concrete example first, then generalize.** Start tangible: a real command, a real scenario, real inputs and outputs. Only after it's grounded, pull out the general pattern ("notice that every case here is really *X*"). Abstraction without a concrete anchor is forgettable.
+- **Abstraction / mental model.** The compact takeaway — often a metaphor, a diagram, or a one-line invariant. This is what the user will reach for six months from now when the details have faded.
+- **Gotchas and edge cases.** Where the simple model breaks down. These are often the most valuable part of the session — they mark the boundary between the user's current understanding and reality.
+- **Connections.** How this relates to things the user already knows, including prior notes in this repo. Explicit links help knowledge settle in context instead of floating alone.
+
+### Teaching multiple topics
+
+If the user names more than one topic, ask whether to teach them **in sequence** (one after the other) or to focus on the **connections between them** (compare/contrast, or show how one builds on the other). Don't silently interleave — pick a structure and say what it is.
+
+### Check in
+
+After a substantial chunk, pause — a question back, or "does that land?" — rather than pouring out more material. Engagement beats passive reading, and the user's response tells you where to go deeper.
 
 ## Writing Guidelines
 
@@ -41,7 +63,8 @@ It should contain:
 
 ### Content
 - Capture the **reasoning and motivation** behind decisions and the **non-obvious** details, not textbook definitions easily found elsewhere.
-- Include concrete examples, commands, and gotchas the user hit during discussion.
+- Include concrete examples, commands, and gotchas that came up in the session.
+- Preserve the **mental model** that emerged — the metaphor, the one-line invariant, the motivation — not just the facts.
 - Link related notes with relative markdown links.
 - Keep a short summary/TL;DR at the top of each note.
 
@@ -58,6 +81,7 @@ It should contain:
 
 ## Conventions
 
+- Topics come from the user's input. Don't suggest new topics unprompted or drift into adjacent ones mid-session — if a tangent looks worth pursuing, surface it as a question first.
 - Prefer editing an existing note over creating a new one when the topic overlaps.
-- Do not create a note unless the user explicitly asks to save. Discussion alone does not imply a save.
+- Do not create a note unless the user explicitly asks to save. A teaching or discussion session alone does not imply a save.
 - Do not delete or rewrite prior notes unless asked — they are a record of what the user learned at that point in time.
