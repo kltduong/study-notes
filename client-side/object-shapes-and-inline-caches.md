@@ -49,6 +49,8 @@ flowchart LR
     Y -->|add x| YX["{y, x}"]
 ```
 
+**Shapes are append-only tree nodes.** Adding a property doesn't mutate the current shape — it transitions the object to a different one. The engine first checks whether the current shape already has a child for "add this key": if so, the object jumps to that existing node, shared with every earlier object that walked the same path; if not, a new child is minted. Either way, the old shape is untouched — any other object still on it keeps its exact key set, and any IC specialized on it stays valid.
+
 **`{x,y}` and `{y,x}` are different shapes.** Identity is defined by the insertion sequence, not the key set. Two objects with the same keys in different orders cannot share an IC.
 
 Object literals walk the transitions in source order: `{a:1, b:2}` ≡ `o={}; o.a=1; o.b=2`.

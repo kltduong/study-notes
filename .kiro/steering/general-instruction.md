@@ -78,6 +78,7 @@ After a substantial chunk, pause — a question back, or "does that land?" — r
 - **Do not use ASCII or Unicode box-drawing art** (`┌─┐│└┘`, `+--+|+-+`, arrows like `──►`, etc.) for diagrams. It may look aligned in your editor, but renders inconsistently in markdown viewers — box-drawing glyphs have variable width, lines don't connect, and the result looks broken. Use mermaid instead; it's portable across renderers. Plain text inside code blocks (numbered steps, pseudo-code, asm) is fine — the rule only targets box/line/arrow *drawings*.
 - Be concise. A study note is for the user's future self — not a tutorial for strangers.
 - No filler ("In this document, we will discuss..."). Start with the substance.
+- **Define jargon on first use.** Notes are read top-down — if a technical term first appears in the TL;DR or intro, it needs a brief gloss *there*, not three sections later. Example: "structurally-identical objects (same keys, same insertion order)". After the first use, the shorthand is safe. This matters most in the TL;DR, which the reader hits with zero prior context.
 - Match existing note style once a pattern is established.
 
 ### Surgical edits
