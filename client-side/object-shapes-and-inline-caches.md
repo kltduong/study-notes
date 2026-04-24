@@ -37,6 +37,15 @@ const b = { x: 3, y: 4 };   // same shape as a — same keys, same order
 
 Without the split, each object would carry its own schema. The split is what makes the schema cheap enough to share *and* stable enough to cache against.
 
+### "But the shape is also a map — where's the win?"
+
+Fair question. Looking up `x` in the shape's `key → offset` table is still a map lookup. **On its own, the split doesn't make access faster.** It does two things:
+
+1. **Share the schema** across all structurally-identical objects (memory win — real, but not the point).
+2. **Give every call site a stable identity** — the shape pointer — that it can remember across accesses.
+
+The speed comes from (2). Once a site has seen an object's shape, it caches `shape → offset` and skips the map lookup on every subsequent hit ([Inline caches](#inline-caches)). The split is the *enabler*; the inline cache is where the actual speedup lives. Shapes without ICs would just be a memory optimization.
+
 ## Shape transitions
 
 Adding a property moves an object to a new shape. Transitions form a tree rooted at the empty shape:
@@ -54,6 +63,65 @@ flowchart LR
 **`{x,y}` and `{y,x}` are different shapes.** Identity is defined by the insertion sequence, not the key set. Two objects with the same keys in different orders cannot share an IC.
 
 Object literals walk the transitions in source order: `{a:1, b:2}` ≡ `o={}; o.a=1; o.b=2`.
+
+### Same shape or different? — worked examples
+
+Same shape (values differ, key sequence matches):
+
+```js
+const a = { x: 1, y: 2 };
+const b = { x: 7, y: 9 };           // ✓ same shape as a
+```
+
+Different — same keys, different order:
+
+```js
+const a = { x: 1, y: 2 };
+const b = { y: 2, x: 1 };           // ✗ reversed insertion order
+```
+
+Different — superset / subset:
+
+```js
+const a = { x: 1, y: 2 };
+const b = { x: 1, y: 2, z: 3 };     // ✗ extra key → different shape
+const c = { x: 1 };                 // ✗ also different (subset)
+```
+
+Different — same final key set, different transition paths:
+
+```js
+const p = {};  p.x = 1;  p.y = 2;   // path: {} → {x} → {x, y}
+const q = {};  q.y = 2;  q.x = 1;   // path: {} → {y} → {y, x}
+// Iterating keys would show [x, y] vs [y, x] — distinct shapes, can't share an IC.
+```
+
+Different — one branch conditionally adds a property:
+
+```js
+function make(flag) {
+  const o = { x: 1 };
+  if (flag) o.y = 2;
+  return o;
+}
+make(true);   // shape {x, y}
+make(false);  // shape {x}          // ✗ two shapes flowing out of one factory
+```
+
+Different — different prototypes, even with identical own keys:
+
+```js
+class A { constructor() { this.x = 1; } }
+class B { constructor() { this.x = 1; } }
+new A();  new B();                  // ✗ prototype is part of shape identity
+```
+
+Same — factory produces a single shape no matter how many instances:
+
+```js
+const point = (x, y) => ({ x, y });
+point(1, 2); point(3, 4); point(5, 6);   // ✓ all share one shape
+```
 
 ## Per-object benefit is separate from sharing
 
