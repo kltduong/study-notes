@@ -70,6 +70,7 @@ After a substantial chunk, pause — a question back, or "does that land?" — r
 
 - Markdown only. Use headings, fenced code blocks with language tags, and tables where they help.
 - Use mermaid fenced blocks for diagrams/charts (flowcharts, sequence, state, etc.) when a visual clarifies the idea.
+- **Do not use ASCII or Unicode box-drawing art** (`┌─┐│└┘`, `+--+|+-+`, arrows like `──►`, etc.) for diagrams. It may look aligned in your editor, but renders inconsistently in markdown viewers — box-drawing glyphs have variable width, lines don't connect, and the result looks broken. Use mermaid instead; it's portable across renderers. Plain text inside code blocks (numbered steps, pseudo-code, asm) is fine — the rule only targets box/line/arrow *drawings*.
 - Be concise. A study note is for the user's future self — not a tutorial for strangers.
 - No filler ("In this document, we will discuss..."). Start with the substance.
 - Match existing note style once a pattern is established.
