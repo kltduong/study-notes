@@ -14,7 +14,7 @@
 
 ## Why shapes exist
 
-A naive JS object: one hash map per object. Every `obj.x` hashes the key, walks buckets, compares strings, returns the value. Every access, every time.
+A naive JS object: one hash map per object. Every `obj.x` goes through the full hash-table sequence: hash the key string to a number, mod into a slot index, then compare keys at that slot (and handle collisions if multiple keys landed there). Every access, every time.
 
 But hot `obj.x` in real JS costs a few cycles — comparable to a C struct field access. Shapes + inline caches are how that happens.
 
@@ -51,10 +51,10 @@ The speed comes from (2). To see why, compare the data structures involved at ea
 ```
 obj:  HashMap { "x" → 10, "y" → 20 }
 
-obj.x  →  hash("x") → probe buckets → strcmp key → return value
+obj.x  →  hash("x") → find slot → compare key → return value
 ```
 
-Hash the string, index into the bucket array, walk the chain comparing keys. That's pointer-chasing through heap-allocated nodes, with a string comparison at each step.
+Hash the string to a number, mod into a table index, compare the key stored there (and follow collision chains if multiple keys hashed to the same index). That involves pointer-chasing through heap-allocated entries, with a string comparison at each step.
 
 **With shapes, before any IC** — the map moved out of the object, but the work is the same:
 
@@ -80,10 +80,10 @@ obj.x  →  obj.shape == S1?  →  yes  →  obj.slots[0]
 
 The hash-map lookup is gone entirely. What remains is:
 
-- **One pointer comparison** (`obj.shape == S1`) — a single `cmp` instruction on two integers. No hashing, no string comparison, no bucket walking.
+- **One pointer comparison** (`obj.shape == S1`) — a single `cmp` instruction on two integers. No hashing, no string comparison, no collision resolution.
 - **One array index** (`slots[0]`) — a base-pointer + fixed-offset load. The `0` is baked into the machine code as a literal.
 
-That's the structural difference: a hash map is an indirection-heavy structure (hash → bucket array → chain → key comparison → value). An IC reduces it to a guard (pointer `==`) plus a direct memory load (array base + constant offset). Both are O(1), but the constant factors are different by an order of magnitude — roughly ~30–100 cycles vs ~2–5 cycles.
+That's the structural difference: a hash map requires multiple indirections (hash → table index → collision chain → key comparison → value). An IC reduces it to a guard (pointer `==`) plus a direct memory load (array base + constant offset). Both are O(1), but the constant factors are different by an order of magnitude — roughly ~30–100 cycles vs ~2–5 cycles.
 
 The split is the _enabler_; the inline cache is where the actual speedup lives. Shapes without ICs would just be a memory optimization — the shape pointer would exist but nobody would be caching against it.
 
@@ -280,7 +280,7 @@ function getC(o) {
 4. Install IC: "shape S2 → offset 1"
 ```
 
-Step 2 means: hash the string `"c"`, index into the shape's table, walk the bucket, compare names — all in a C++ runtime helper. Roughly 30–100 cycles.
+Step 2 means: hash the string `"c"` to a number, mod into the shape's table, compare keys at that slot (following collision chains if needed) — all in a C++ runtime helper. Roughly 30–100 cycles.
 
 **Every subsequent call — warm path** (object is still shape S2):
 
@@ -295,16 +295,16 @@ Stays in JIT machine code. Roughly 2–5 cycles. The `1` is literally baked into
 
 ## Three implementations compared
 
-| Aspect             | Naive hashmap-per-object   | Shape + IC — cold                               | Shape + IC — warm         |
-| ------------------ | -------------------------- | ----------------------------------------------- | ------------------------- |
-| Per-object data    | Own hashmap                | Shape pointer + slots                           | Shape pointer + slots     |
-| Steps for `o.c`    | hash → bucket walk → value | shape → hash → bucket walk → offset → slot load | shape compare → slot load |
-| Hash the key `"c"` | Every access               | Once per (site, shape)                          | Skipped                   |
-| Table walk         | Every access               | Once                                            | Skipped                   |
-| Where code runs    | C++ runtime helper         | C++ runtime helper                              | Pure JIT machine code     |
-| Rough cost         | ~30–100 cycles             | ~30–100 cycles                                  | ~2–5 cycles               |
-| 1000th access      | Full cost                  | —                                               | ~2–5 cycles               |
-| JS engine analog   | Dictionary mode            | First-time IC miss                              | Monomorphic hot IC        |
+| Aspect             | Naive hashmap-per-object | Shape + IC — cold                             | Shape + IC — warm         |
+| ------------------ | ------------------------ | --------------------------------------------- | ------------------------- |
+| Per-object data    | Own hashmap              | Shape pointer + slots                         | Shape pointer + slots     |
+| Steps for `o.c`    | hash → find slot → value | shape → hash → find slot → offset → slot load | shape compare → slot load |
+| Hash the key `"c"` | Every access             | Once per (site, shape)                        | Skipped                   |
+| Table walk         | Every access             | Once                                          | Skipped                   |
+| Where code runs    | C++ runtime helper       | C++ runtime helper                            | Pure JIT machine code     |
+| Rough cost         | ~30–100 cycles           | ~30–100 cycles                                | ~2–5 cycles               |
+| 1000th access      | Full cost                | —                                             | ~2–5 cycles               |
+| JS engine analog   | Dictionary mode          | First-time IC miss                            | Monomorphic hot IC        |
 
 One-line per case:
 
@@ -342,17 +342,17 @@ That single question resolves most real cases.
 
 ```
 map.get(k):
-  1. hash(k)              → bucket index
-  2. walk bucket chain    → find entry where key === k
+  1. hash(k)              → table index
+  2. find matching entry   → compare keys at that slot (follow collision chain if needed)
   3. return entry.value
 ```
 
 Why no IC? Two structural reasons:
 
 - The "key" in `map.get(userId)` is typically **runtime data** — the JIT has no constant to bake into the machine code, so there's nothing to cache.
-- Even if the key were a constant, the value doesn't live at a stable offset — it's wherever the hash function + bucket allocator put it, and that can move when the table resizes.
+- Even if the key were a constant, the value doesn't live at a stable offset — it's wherever the hash function placed it, and that can move when the table resizes.
 
-So `Map` access cost is roughly **the same as dictionary-mode Object access** (or the cold path of shape + IC): every time, you pay hashing + bucket walk. There's no warm-path speedup — by design.
+So `Map` access cost is roughly **the same as dictionary-mode Object access** (or the cold path of shape + IC): every time, you pay the full hash-and-compare sequence. There's no warm-path speedup — by design.
 
 That's what makes the tradeoff so clean:
 
