@@ -11,15 +11,27 @@
 
 ## `:has()` — parent selector
 
-`A:has(B)` matches `A` when `B` matches something *inside* it, or — with combinators — relative to it.
+`A:has(B)` matches `A` when `B` matches something _inside_ it, or — with combinators — relative to it.
 
 ```css
-figure:has(figcaption)          { margin-bottom: 2rem; }
-label:has(input:invalid)        { color: red; }
-.card:not(:has(img))            { padding: 2rem; }
-h2:has(+ p)                     { margin-bottom: 0; }
-form:has(:checked)              { border-color: green; }
-body:has(.modal[open])          { overflow: hidden; }
+figure:has(figcaption) {
+  margin-bottom: 2rem;
+}
+label:has(input:invalid) {
+  color: red;
+}
+.card:not(:has(img)) {
+  padding: 2rem;
+}
+h2:has(+ p) {
+  margin-bottom: 0;
+}
+form:has(:checked) {
+  border-color: green;
+}
+body:has(.modal[open]) {
+  overflow: hidden;
+}
 ```
 
 The last one is the game-changer: disabling page scroll when a modal is open used to require JS toggling a class on `<body>`. Now it's one CSS rule.
@@ -45,7 +57,9 @@ Specificity = the highest specificity among its arguments. The `:is()` itself co
 Same matching behavior as `:is()`, but its specificity contribution is always **0**. This makes it perfect for styles you want to be easily overridable:
 
 ```css
-:where(ul, ol) { padding-inline-start: 1rem; }  /* consumers can override with any selector */
+:where(ul, ol) {
+  padding-inline-start: 1rem;
+} /* consumers can override with any selector */
 ```
 
 Common pattern in reset stylesheets and design systems: wrap everything in `:where(...)` so consumers never fight the cascade.
@@ -55,20 +69,24 @@ Common pattern in reset stylesheets and design systems: wrap everything in `:whe
 Takes a selector list. Matches elements **not** matching any of them.
 
 ```css
-button:not(.primary, .danger) { /* neutral buttons */ }
-li:not(:last-child)           { border-bottom: 1px solid; }
+button:not(.primary, .danger) {
+  /* neutral buttons */
+}
+li:not(:last-child) {
+  border-bottom: 1px solid;
+}
 ```
 
 Specificity = the highest specificity among its arguments (same rule as `:is()`/`:has()`).
 
 ## Specificity at a glance
 
-| Function | Contributes |
-|---|---|
-| `:is(X)` | max(specificity of X) |
-| `:not(X)` | max(specificity of X) |
-| `:has(X)` | max(specificity of X) |
-| `:where(X)` | **0** |
+| Function    | Contributes           |
+| ----------- | --------------------- |
+| `:is(X)`    | max(specificity of X) |
+| `:not(X)`   | max(specificity of X) |
+| `:has(X)`   | max(specificity of X) |
+| `:where(X)` | **0**                 |
 
 ```css
 :is(#sidebar, .menu) a     /* (1,0,1) */
@@ -85,5 +103,5 @@ Specificity = the highest specificity among its arguments (same rule as `:is()`/
 
 ## See also
 
-- [specificity-and-cascade.md](./specificity-and-cascade.md) — how the specificity numbers combine into the `(a,b,c)` tuple.
+- [specificity-cascade.md](./specificity-cascade.md) — how the specificity numbers combine into the `(a,b,c)` tuple.
 - [selectors-basics.md](./selectors-basics.md) — combinators, which also appear inside `:has()`.

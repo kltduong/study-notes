@@ -6,11 +6,11 @@ A personal study-notes repository. The workflow is: **learn a topic through teac
 
 - Organize notes by topic, one folder per topic (e.g. `git/`, `linux/`, `networking/`).
 - One markdown file per focused subtopic. Prefer several small files over one sprawling file.
-- Use kebab-case filenames (e.g. `rebase-vs-merge.md`).
+- Use kebab-case filenames (e.g. `rebase-vs-merge.md`). Keep filenames short — aim for **≤ 25 characters** (including `.md`) so they display fully in the IDE sidebar without truncation. Prefer abbreviating or dropping filler words (`and`, `the`, `of`) over long descriptive names.
 - **Each note must stand on its own.** A reader landing on one file via search should be able to understand its subtopic fully without opening sibling notes. That means:
   - The note covers its declared scope completely — no "see the other note for the actual explanation."
-  - Concepts from *other topics* stay linked, not re-explained (a link to `git/refs.md` is fine; re-teaching refs is not).
-  - Shared context from *within the same topic* goes in `index.md` or is briefly recapped in the note — never "read X first or this won't make sense."
+  - Concepts from _other topics_ stay linked, not re-explained (a link to `git/refs.md` is fine; re-teaching refs is not).
+  - Shared context from _within the same topic_ goes in `index.md` or is briefly recapped in the note — never "read X first or this won't make sense."
   - If a note can't stand alone, its scope is wrong: either narrow it, or absorb the missing piece.
 
 ### Topic index file (`index.md`)
@@ -75,10 +75,10 @@ After a substantial chunk, pause — a question back, or "does that land?" — r
 
 - Markdown only. Use headings, fenced code blocks with language tags, and tables where they help.
 - Use mermaid fenced blocks for diagrams/charts (flowcharts, sequence, state, etc.) when a visual clarifies the idea.
-- **Do not use ASCII or Unicode box-drawing art** (`┌─┐│└┘`, `+--+|+-+`, arrows like `──►`, etc.) for diagrams. It may look aligned in your editor, but renders inconsistently in markdown viewers — box-drawing glyphs have variable width, lines don't connect, and the result looks broken. Use mermaid instead; it's portable across renderers. Plain text inside code blocks (numbered steps, pseudo-code, asm) is fine — the rule only targets box/line/arrow *drawings*.
+- **Do not use ASCII or Unicode box-drawing art** (`┌─┐│└┘`, `+--+|+-+`, arrows like `──►`, etc.) for diagrams. It may look aligned in your editor, but renders inconsistently in markdown viewers — box-drawing glyphs have variable width, lines don't connect, and the result looks broken. Use mermaid instead; it's portable across renderers. Plain text inside code blocks (numbered steps, pseudo-code, asm) is fine — the rule only targets box/line/arrow _drawings_.
 - Be concise. A study note is for the user's future self — not a tutorial for strangers.
 - No filler ("In this document, we will discuss..."). Start with the substance.
-- **Define jargon on first use.** Notes are read top-down — if a technical term first appears in the TL;DR or intro, it needs a brief gloss *there*, not three sections later. Example: "structurally-identical objects (same keys, same insertion order)". After the first use, the shorthand is safe. This matters most in the TL;DR, which the reader hits with zero prior context.
+- **Define jargon on first use.** Notes are read top-down — if a technical term first appears in the TL;DR or intro, it needs a brief gloss _there_, not three sections later. Example: "structurally-identical objects (same keys, same insertion order)". After the first use, the shorthand is safe. This matters most in the TL;DR, which the reader hits with zero prior context.
 - Match existing note style once a pattern is established.
 
 ### Surgical edits

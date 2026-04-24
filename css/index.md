@@ -16,9 +16,9 @@ Keep these separate. "Why isn't my style applying?" is almost always question 2,
 Start with basics; cascade is the load-bearing concept. The other two files are reference-flavored — read when you hit the relevant problem.
 
 1. **[selectors-basics.md](./selectors-basics.md)** — building blocks (type, class, id, attribute, pseudo), combinators (`>`, `+`, `~`, space), and the difference between compound selectors, complex selectors, and selector lists.
-2. **[specificity-and-cascade.md](./specificity-and-cascade.md)** — the full resolution order: origin & importance, cascade layers (`@layer`), the `(a,b,c)` specificity tuple, source order. This is the file to reach for when a style isn't applying.
+2. **[specificity-cascade.md](./specificity-cascade.md)** — the full resolution order: origin & importance, cascade layers (`@layer`), the `(a,b,c)` specificity tuple, source order. This is the file to reach for when a style isn't applying.
 3. **[modern-selectors.md](./modern-selectors.md)** — `:has()` (the parent selector), `:is()`, `:where()`, `:not()`, and how each affects specificity.
-4. **[attribute-and-structural.md](./attribute-and-structural.md)** — attribute operators (`^=`, `$=`, `*=`, `~=`, `|=`), the `nth-child` vs `nth-of-type` trap, `:empty` and friends.
+4. **[attr-structural.md](./attr-structural.md)** — attribute operators (`^=`, `$=`, `*=`, `~=`, `|=`), the `nth-child` vs `nth-of-type` trap, `:empty` and friends.
 
 ## Cross-cutting ideas
 
@@ -26,21 +26,21 @@ Start with basics; cascade is the load-bearing concept. The other two files are 
 
 Every pseudo-class, attribute selector, and logical function contributes to the `(a,b,c)` tuple in a specific way. A quick reference:
 
-| Thing | Slot | Notes |
-|---|---|---|
-| `#id` | a | |
-| `.class`, `[attr]`, `:hover`, `:nth-child()` | b | pseudo-**classes** |
-| `tag`, `::before` | c | pseudo-**elements** |
-| `*`, combinators (`>`, `+`, `~`, space) | — | nothing |
-| `:is(X)`, `:not(X)`, `:has(X)` | highest of `X` | the wrapper adds nothing |
-| `:where(X)` | **0** | always — escape hatch for low-specificity defaults |
+| Thing                                        | Slot           | Notes                                              |
+| -------------------------------------------- | -------------- | -------------------------------------------------- |
+| `#id`                                        | a              |                                                    |
+| `.class`, `[attr]`, `:hover`, `:nth-child()` | b              | pseudo-**classes**                                 |
+| `tag`, `::before`                            | c              | pseudo-**elements**                                |
+| `*`, combinators (`>`, `+`, `~`, space)      | —              | nothing                                            |
+| `:is(X)`, `:not(X)`, `:has(X)`               | highest of `X` | the wrapper adds nothing                           |
+| `:where(X)`                                  | **0**          | always — escape hatch for low-specificity defaults |
 
 ### Read selectors structurally, not word-by-word
 
 Given `nav ul > li.active a[href^="/"]`:
 
 - Whitespace between simple selectors is the **descendant** combinator.
-- Combinators (`>`, `+`, `~`) describe DOM *relationships*.
+- Combinators (`>`, `+`, `~`) describe DOM _relationships_.
 - No space (`li.active`, `a[href^="/"]`) means **same element, multiple conditions** (AND).
 - A comma would mean **OR**.
 

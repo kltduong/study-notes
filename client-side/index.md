@@ -8,7 +8,7 @@ Client-side JS sits on top of several layers that are easy to conflate:
 
 - **The language** (ECMAScript) — just syntax, types, and pure built-ins like `Array` and `Promise`. No `document`, no `fetch`.
 - **The host** (the browser) — adds the DOM, network, storage, timers, and the event loop. This is what makes JS useful for web pages.
-- **The engine's object representation** — the *how* behind the object model. Objects behave like hash maps but are implemented as shared schemas (shapes) + value slots, with inline caches on hot property-access sites. The spec doesn't mandate this, but every major engine does it.
+- **The engine's object representation** — the _how_ behind the object model. Objects behave like hash maps but are implemented as shared schemas (shapes) + value slots, with inline caches on hot property-access sites. The spec doesn't mandate this, but every major engine does it.
 - **The object model** — everything the host exposes is wired into JS via prototype chains. `document.createElement` isn't a property of `document`; it lives on `Document.prototype`. DOM APIs feel like language features because prototypes blur the line.
 - **Events** — the web's pub/sub glue. `EventTarget` is a separate interface specifically because many event-emitting things (`Window`, `XHR`, `WebSocket`, `AbortSignal`) are not DOM nodes.
 
@@ -18,11 +18,11 @@ A lot of "why does this API look weird?" moments resolve once you know which lay
 
 Start with the platform layers, then the object model (semantics + implementation), then the DOM, then events. Each note stands alone, but they reinforce each other in this order.
 
-1. **[ecmascript-engine-runtime.md](./ecmascript-engine-runtime.md)** — ECMAScript vs JavaScript vs engine vs runtime. What's in the engine (pure language) vs what the host adds (`fetch`, `window`, `fs`, …), and how the runtime registers native functions into the engine's global. The layer map for everything below.
+1. **[js-engine-runtime.md](./js-engine-runtime.md)** — ECMAScript vs JavaScript vs engine vs runtime. What's in the engine (pure language) vs what the host adds (`fetch`, `window`, `fs`, …), and how the runtime registers native functions into the engine's global. The layer map for everything below.
 2. **[js-class-semantics.md](./js-class-semantics.md)** — own properties vs prototype properties, how `this` is resolved at the call site, and how this differs from Python's bound methods. The object-model primer.
-3. **[object-shapes-and-inline-caches.md](./object-shapes-and-inline-caches.md)** — how engines actually store objects. Shape = shared schema; inline cache = remembered offset at a call site. Explains why JS is fast despite semantically being hash maps, and why property order / `delete` / optional fields matter for performance.
-4. **[dom-node-element-collections.md](./dom-node-element-collections.md)** — the `Node`/`Element` class hierarchy, `childNodes` vs `children`, and `HTMLCollection` (live) vs `NodeList` (usually static). What the browser runtime actually puts in front of you as "the DOM."
-5. **[event-target-and-events.md](./event-target-and-events.md)** — why `EventTarget` is its own interface above `Node`, and all the non-Node things that also fire events.
+3. **[shapes-inline-caches.md](./shapes-inline-caches.md)** — how engines actually store objects. Shape = shared schema; inline cache = remembered offset at a call site. Explains why JS is fast despite semantically being hash maps, and why property order / `delete` / optional fields matter for performance.
+4. **[dom-collections.md](./dom-collections.md)** — the `Node`/`Element` class hierarchy, `childNodes` vs `children`, and `HTMLCollection` (live) vs `NodeList` (usually static). What the browser runtime actually puts in front of you as "the DOM."
+5. **[events-targets.md](./events-targets.md)** — why `EventTarget` is its own interface above `Node`, and all the non-Node things that also fire events.
 
 ## Cross-cutting ideas
 
@@ -30,10 +30,10 @@ Start with the platform layers, then the object model (semantics + implementatio
 
 A useful first question whenever something behaves surprisingly across environments:
 
-| Layer | Owns | Examples |
-|---|---|---|
-| ECMAScript (engine) | The language | `Array`, `Promise`, `JSON`, `Map`, syntax |
-| Browser runtime | Host APIs | `document`, `fetch`, `setTimeout`, `localStorage` |
+| Layer                 | Owns         | Examples                                           |
+| --------------------- | ------------ | -------------------------------------------------- |
+| ECMAScript (engine)   | The language | `Array`, `Promise`, `JSON`, `Map`, syntax          |
+| Browser runtime       | Host APIs    | `document`, `fetch`, `setTimeout`, `localStorage`  |
 | `Node.prototype` etc. | DOM behavior | `appendChild`, `addEventListener`, `querySelector` |
 
 If an API only works in one runtime, it's almost always the runtime row. If a method is missing on an object you expected it on, it's almost always the prototype row (walk the chain).
@@ -44,7 +44,7 @@ If an API only works in one runtime, it's almost always the runtime row. If a me
 
 ### Semantics vs representation
 
-`js-class-semantics.md` and `object-shapes-and-inline-caches.md` are two views of the same objects. The first is what the language *promises* (own vs prototype, dynamic property addition, `this` at the call site). The second is how the engine *delivers* on those promises quickly (shared shapes, inline caches, dictionary-mode fallback). The semantics note tells you what you can do; the shapes note tells you which of those things are cheap.
+`js-class-semantics.md` and `shapes-inline-caches.md` are two views of the same objects. The first is what the language _promises_ (own vs prototype, dynamic property addition, `this` at the call site). The second is how the engine _delivers_ on those promises quickly (shared shapes, inline caches, dictionary-mode fallback). The semantics note tells you what you can do; the shapes note tells you which of those things are cheap.
 
 ### `EventTarget` vs `Node`
 

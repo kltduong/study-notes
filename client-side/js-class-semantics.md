@@ -1,6 +1,7 @@
 # JS Class Semantics (and how Python compares)
 
 **TL;DR**
+
 - Methods declared in a `class` body live on `Class.prototype` — one shared copy for all instances.
 - Properties declared in a `class` body (fields like `x = 1`) — and anything assigned via `this.x = ...` — become **own properties** of the instance.
 - Method lookup walks the prototype chain: `obj → obj.__proto__ → ... → null`.
@@ -15,28 +16,30 @@
 ```js
 class Foo {
   constructor() {
-    this.x = 1;             // own property
-    this.greet = () => {};  // own property
+    this.x = 1; // own property
+    this.greet = () => {}; // own property
   }
 
-  bar() {}                  // Foo.prototype.bar
-  get y() { return 2; }     // getter on Foo.prototype
-  static baz() {}           // Foo.baz (on the class itself)
+  bar() {} // Foo.prototype.bar
+  get y() {
+    return 2;
+  } // getter on Foo.prototype
+  static baz() {} // Foo.baz (on the class itself)
 }
 
 const f = new Foo();
-f.hasOwnProperty('x')       // true
-f.hasOwnProperty('bar')     // false → on Foo.prototype
+f.hasOwnProperty("x"); // true
+f.hasOwnProperty("bar"); // false → on Foo.prototype
 ```
 
-| Lives as **own property** | Lives on **prototype** |
-|---|---|
-| `this.x = ...` in constructor | Methods declared in class body |
-| Class fields: `class Foo { x = 1 }` | Getters/setters declared in class body |
-| Properties added later: `obj.foo = 1` | `constructor` itself |
-| Array elements, Map/Set entries | Inherited methods from parent classes |
+| Lives as **own property**             | Lives on **prototype**                 |
+| ------------------------------------- | -------------------------------------- |
+| `this.x = ...` in constructor         | Methods declared in class body         |
+| Class fields: `class Foo { x = 1 }`   | Getters/setters declared in class body |
+| Properties added later: `obj.foo = 1` | `constructor` itself                   |
+| Array elements, Map/Set entries       | Inherited methods from parent classes  |
 
-> **Class fields are sugar for `this.x = ...` in the constructor** — so they're own properties, *not* on the prototype. Easy to misread.
+> **Class fields are sugar for `this.x = ...` in the constructor** — so they're own properties, _not_ on the prototype. Easy to misread.
 
 ## Why this split
 
@@ -48,9 +51,9 @@ f.hasOwnProperty('bar')     // false → on Foo.prototype
 ## DOM example
 
 ```js
-const div = document.createElement('div');
+const div = document.createElement("div");
 
-Object.keys(div)   // []  ← no own enumerable properties
+Object.keys(div); // []  ← no own enumerable properties
 ```
 
 `div.id` looks like a normal property, but it's actually a **getter/setter on `Element.prototype`** that proxies the underlying attribute. Almost everything on DOM objects lives on prototypes:
@@ -68,9 +71,9 @@ That's why `document.createElement` isn't an own property of `document` — it l
 ## Inspecting any object
 
 ```js
-Object.getOwnPropertyNames(obj)        // own (incl. non-enumerable)
-Object.keys(obj)                       // own enumerable only
-Object.getPrototypeOf(obj)             // → the prototype
+Object.getOwnPropertyNames(obj); // own (incl. non-enumerable)
+Object.keys(obj); // own enumerable only
+Object.getPrototypeOf(obj); // → the prototype
 
 // Walk the whole chain:
 let p = obj;
@@ -88,12 +91,12 @@ while (p) {
 
 Same conceptual split, different mechanism.
 
-| JavaScript | Python |
-|---|---|
-| Own property | Instance attribute (`self.__dict__`) |
-| Prototype property | Class attribute (`Cls.__dict__`) |
-| `Object.getPrototypeOf(obj)` | `type(obj)` then walks `Cls.__mro__` |
-| Prototype chain (objects) | MRO (classes, with C3 linearization for multiple inheritance) |
+| JavaScript                   | Python                                                        |
+| ---------------------------- | ------------------------------------------------------------- |
+| Own property                 | Instance attribute (`self.__dict__`)                          |
+| Prototype property           | Class attribute (`Cls.__dict__`)                              |
+| `Object.getPrototypeOf(obj)` | `type(obj)` then walks `Cls.__mro__`                          |
+| Prototype chain (objects)    | MRO (classes, with C3 linearization for multiple inheritance) |
 
 ### The big trap: class-body field declarations
 
@@ -108,11 +111,12 @@ b.x   # [1]  ← surprise
 
 ```js
 class Foo {
-  x = [];   // INSTANCE field — fresh array per instance
+  x = []; // INSTANCE field — fresh array per instance
 }
-const a = new Foo(), b = new Foo();
+const a = new Foo(),
+  b = new Foo();
 a.x.push(1);
-b.x;   // []
+b.x; // []
 ```
 
 In Python you must do `self.x = []` in `__init__` for per-instance state. The mutable-default-on-the-class footgun bites Python beginners constantly.
@@ -133,21 +137,22 @@ del f.x; f.x       # 1 (back to class attribute)
 class Foo {}
 Foo.prototype.x = 1;
 const f = new Foo();
-f.x = 99;          // own property, shadows prototype
-Foo.prototype.x;   // still 1
-delete f.x; f.x;   // 1
+f.x = 99; // own property, shadows prototype
+Foo.prototype.x; // still 1
+delete f.x;
+f.x; // 1
 ```
 
 ### Lookup chain shape
 
-- **JS:** chain of *objects* (`obj → __proto__ → ... → null`). Single inheritance at the prototype level.
-- **Python:** chain of *classes* via MRO. Genuine multiple inheritance, linearized by C3.
+- **JS:** chain of _objects_ (`obj → __proto__ → ... → null`). Single inheritance at the prototype level.
+- **Python:** chain of _classes_ via MRO. Genuine multiple inheritance, linearized by C3.
 
 ### Method binding
 
 Core difference: **Python binds `self` at attribute access; JS resolves `this` at call site.**
 
-- **Python:** `obj.method` returns a *bound method* object — `self` is pre-packaged via the descriptor protocol. Storing and calling later just works.
+- **Python:** `obj.method` returns a _bound method_ object — `self` is pre-packaged via the descriptor protocol. Storing and calling later just works.
 - **JS:** `obj.method` returns the raw function. `this` is decided by **how** you call it.
 
 ```python
@@ -159,21 +164,21 @@ counter.increment.__func__    # → the underlying function
 
 ```js
 const m = counter.increment;
-m();                              // TypeError or wrong `this`
-counter.increment.call(counter);  // works
-setTimeout(counter.increment.bind(counter), 0);  // classic fix
+m(); // TypeError or wrong `this`
+counter.increment.call(counter); // works
+setTimeout(counter.increment.bind(counter), 0); // classic fix
 ```
 
 #### How `this` is decided in JS
 
-| Call form | `this` is |
-|---|---|
-| `obj.m()` | `obj` |
-| `const f = obj.m; f()` | `undefined` (strict) / global (sloppy) |
-| `f.call(x)` / `f.apply(x)` | `x` |
-| `f.bind(x)()` | `x` (permanently) |
-| `new F()` | the new instance |
-| arrow function | lexical `this` from enclosing scope (ignores all the above) |
+| Call form                  | `this` is                                                   |
+| -------------------------- | ----------------------------------------------------------- |
+| `obj.m()`                  | `obj`                                                       |
+| `const f = obj.m; f()`     | `undefined` (strict) / global (sloppy)                      |
+| `f.call(x)` / `f.apply(x)` | `x`                                                         |
+| `f.bind(x)()`              | `x` (permanently)                                           |
+| `new F()`                  | the new instance                                            |
+| arrow function             | lexical `this` from enclosing scope (ignores all the above) |
 
 #### Three common fixes
 
@@ -186,29 +191,41 @@ setTimeout(counter.increment.bind(counter), 0);  // classic fix
 Not a mistake — a deliberate tradeoff that enables patterns Python can't express cleanly:
 
 - **Function borrowing.** Any function can be called against any receiver, so methods from one type can operate on another:
+
   ```js
   Array.prototype.slice.call(arguments);               // turn arguments into a real array
   [].forEach.call(document.querySelectorAll('p'), …);  // iterate NodeList pre-ES6
   Object.prototype.toString.call(x);                   // reliable type tag: "[object Array]"
   ```
+
   Python would require `ClassName.method(obj, …)` and only works when `obj` is actually an instance of that class.
 
-- **Callbacks and event handlers control `this` for you.** jQuery, DOM handlers, and `Array.prototype.forEach`'s `thisArg` all *set* `this` at call time — `this` inside a click handler is the element that fired the event:
+- **Callbacks and event handlers control `this` for you.** jQuery, DOM handlers, and `Array.prototype.forEach`'s `thisArg` all _set_ `this` at call time — `this` inside a click handler is the element that fired the event:
+
   ```js
-  $('button').on('click', function () { this.disabled = true; });
+  $("button").on("click", function () {
+    this.disabled = true;
+  });
   ```
+
   Python callbacks can't receive an implicit receiver; you'd need a closure or explicit arg.
 
 - **Mixins and composition without inheritance.** Copy a method onto any object and it just works — the object doesn't need to be an instance of a particular class:
+
   ```js
-  Object.assign(target, { greet() { return `hi ${this.name}`; } });
+  Object.assign(target, {
+    greet() {
+      return `hi ${this.name}`;
+    },
+  });
   ```
 
 - **`new` reuses the same function as a constructor.** Because `this` is decided at call site, `F()` and `new F()` can mean different things with the same function body.
 
-- **Arrow functions opted *out* later.** ES6 added lexical `this` precisely for the callback case where you *don't* want dynamic binding. So JS now has both tools: dynamic `this` for flexibility, arrows for Python-like auto-binding.
+- **Arrow functions opted _out_ later.** ES6 added lexical `this` precisely for the callback case where you _don't_ want dynamic binding. So JS now has both tools: dynamic `this` for flexibility, arrows for Python-like auto-binding.
 
 **Mental model:**
+
 - **Python:** `obj.method` = "give me a thing I can call later, `self` included."
 - **JS:** `obj.method` = "give me the function; `this` is whatever the call site says."
 
@@ -216,18 +233,18 @@ The footgun (losing `this` in a callback) is the same property that enables borr
 
 ### Static / class-level
 
-| Goal | JS | Python |
-|---|---|---|
-| Per-class shared method | `static foo()` | `@staticmethod` / `@classmethod` |
-| Per-class shared data | `Foo.x = 1` or `static x = 1` | `class Foo: x = 1` (the natural default!) |
+| Goal                    | JS                            | Python                                    |
+| ----------------------- | ----------------------------- | ----------------------------------------- |
+| Per-class shared method | `static foo()`                | `@staticmethod` / `@classmethod`          |
+| Per-class shared data   | `Foo.x = 1` or `static x = 1` | `class Foo: x = 1` (the natural default!) |
 
 ### Inspection cheatsheet
 
-| Goal | JS | Python |
-|---|---|---|
-| Own/instance attrs | `Object.getOwnPropertyNames(obj)` | `obj.__dict__` |
-| Class/proto attrs | `Object.getOwnPropertyNames(Cls.prototype)` | `Cls.__dict__` |
-| Walk the chain | `Object.getPrototypeOf` repeatedly | `type(obj).__mro__` |
+| Goal               | JS                                          | Python              |
+| ------------------ | ------------------------------------------- | ------------------- |
+| Own/instance attrs | `Object.getOwnPropertyNames(obj)`           | `obj.__dict__`      |
+| Class/proto attrs  | `Object.getOwnPropertyNames(Cls.prototype)` | `Cls.__dict__`      |
+| Walk the chain     | `Object.getPrototypeOf` repeatedly          | `type(obj).__mro__` |
 
 ---
 
@@ -235,16 +252,16 @@ The footgun (losing `this` in a callback) is the same property that enables borr
 
 Rule of thumb: **pick the narrowest scope that fits the data's lifetime.**
 
-| Data is... | Put it on... | How |
-|---|---|---|
-| Different per instance | Instance (own) | `x = 1` field or `this.x = 1` |
-| Same for every instance, read-only behavior | Prototype | method in class body, or `static get` |
-| Config/counter/registry for the class itself | Class (static) | `static x = 1` |
-| Truly global | Module scope | `const X = 1` outside the class |
+| Data is...                                   | Put it on...   | How                                   |
+| -------------------------------------------- | -------------- | ------------------------------------- |
+| Different per instance                       | Instance (own) | `x = 1` field or `this.x = 1`         |
+| Same for every instance, read-only behavior  | Prototype      | method in class body, or `static get` |
+| Config/counter/registry for the class itself | Class (static) | `static x = 1`                        |
+| Truly global                                 | Module scope   | `const X = 1` outside the class       |
 
 Guidelines:
 
-- **Default to instance fields for state.** Reach for `static` only when the value is genuinely about the *class*, not any instance (e.g. `User.tableName`, `HttpClient.defaultTimeout`, an id counter).
+- **Default to instance fields for state.** Reach for `static` only when the value is genuinely about the _class_, not any instance (e.g. `User.tableName`, `HttpClient.defaultTimeout`, an id counter).
 - **Never put mutable objects on the prototype or as a `static` default that instances will mutate.** `Foo.prototype.items = []` or exposing `static items = []` and having instances push into it creates shared-state bugs. If it's mutable per-instance, make it an instance field.
 - **Read statics via the class name, not `this`.** `User.tableName` is clearer than `this.constructor.tableName` and avoids surprises from subclass shadowing — unless subclass override is exactly what you want, in which case `this.constructor.x` is the right tool.
 - **Don't reassign `static` fields to simulate globals.** If multiple unrelated callers mutate `Foo.count`, that's a module-level variable wearing a class costume. Move it out.
@@ -254,4 +271,4 @@ Guidelines:
 
 ## Related
 
-- [DOM: Node, Element, and Collections](./dom-node-element-collections.md) — concrete example of how DOM relies entirely on prototype methods.
+- [DOM: Node, Element, and Collections](./dom-collections.md) — concrete example of how DOM relies entirely on prototype methods.

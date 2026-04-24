@@ -42,7 +42,7 @@ EventTarget
 
 If `addEventListener` lived on `Node` instead, every one of these would have to reinvent its own event API.
 
-This is **interface segregation**: "can receive events" (`EventTarget`) is separated from "is in the DOM tree" (`Node`). A `Window` *is* an event target but *isn't* a tree node — and the type system reflects that honestly.
+This is **interface segregation**: "can receive events" (`EventTarget`) is separated from "is in the DOM tree" (`Node`). A `Window` _is_ an event target but _isn't_ a tree node — and the type system reflects that honestly.
 
 ## Examples — non-Node event targets
 
@@ -88,4 +88,4 @@ That's it. Everything else (capture/bubble phases, `event.target` vs `event.curr
 
 ## Related
 
-- [DOM: Node, Element, and Collections](./dom-node-element-collections.md) — the DOM-tree side of the hierarchy.
+- [DOM: Node, Element, and Collections](./dom-collections.md) — the DOM-tree side of the hierarchy.

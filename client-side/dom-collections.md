@@ -27,7 +27,7 @@ EventTarget
 └── (also: Window, XMLHttpRequest, WebSocket, AbortSignal, Worker, ...)
 ```
 
-> `EventTarget` is **not DOM-specific** — many non-Node things (`Window`, `XHR`, `WebSocket`, etc.) extend it directly. See [EventTarget and the Web's Event System](./event-target-and-events.md) for the full picture. The rest of this note focuses on the `Node` subtree.
+> `EventTarget` is **not DOM-specific** — many non-Node things (`Window`, `XHR`, `WebSocket`, etc.) extend it directly. See [EventTarget and the Web's Event System](./events-targets.md) for the full picture. The rest of this note focuses on the `Node` subtree.
 
 Every `Element` is a `Node`, but a `Text` node (the actual characters inside `<p>hello</p>`) is a `Node` and **not** an `Element`.
 
@@ -68,7 +68,7 @@ The `*Element*` variants skip text and comment nodes. Forgetting this is a class
 
 A **live** collection re-queries the DOM on every read. **Static** is a snapshot.
 
-**Why would you ever want live?** Because sometimes a view *should* track reality — a sidebar counter showing `.unread-message` count should update automatically as new messages arrive, without you re-querying. Live collections were the original design: the DOM is mutable, so collections reflecting it felt natural. The hidden cost is the footgun below (mutation-during-iteration) and a potential perf cliff on large documents. `querySelectorAll` was added later precisely because most modern code wants the predictable snapshot semantics.
+**Why would you ever want live?** Because sometimes a view _should_ track reality — a sidebar counter showing `.unread-message` count should update automatically as new messages arrive, without you re-querying. Live collections were the original design: the DOM is mutable, so collections reflecting it felt natural. The hidden cost is the footgun below (mutation-during-iteration) and a potential perf cliff on large documents. `querySelectorAll` was added later precisely because most modern code wants the predictable snapshot semantics.
 
 ```js
 const live = document.getElementsByTagName("div"); // HTMLCollection — live
@@ -123,7 +123,7 @@ Default to `querySelectorAll`: static + has `forEach` + flexible selectors. Reac
 - **`Document`** (capital) — the **class/interface**. Used in `instanceof` checks and TypeScript types.
 - **`document`** (lowercase) — the **singleton instance** for the current page, hanging off the global.
 
-**Why both?** The class has to exist (the DOM is object-oriented, and documents have behavior — `createElement`, `querySelector`, etc. — that belongs on a type). A *convenience global* has to exist too, because 99% of code is talking about *this* page's document and nobody wants to type `window.currentDocument()` every time. So the platform exposes a pre-created singleton pointing at the current page. Any time you see a `foo` / `Foo` pair on `window`, this is the pattern.
+**Why both?** The class has to exist (the DOM is object-oriented, and documents have behavior — `createElement`, `querySelector`, etc. — that belongs on a type). A _convenience global_ has to exist too, because 99% of code is talking about _this_ page's document and nobody wants to type `window.currentDocument()` every time. So the platform exposes a pre-created singleton pointing at the current page. Any time you see a `foo` / `Foo` pair on `window`, this is the pattern.
 
 ```js
 document instanceof Document; // true
