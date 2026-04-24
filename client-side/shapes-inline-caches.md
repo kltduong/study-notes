@@ -5,7 +5,7 @@
 - Semantically, JS objects are hash maps. In practice, engines run them near C-struct speed by separating **shape** (the schema) from the object's **slot array** (the values).
 - A shape maps `key → offset`. Many structurally-identical objects share one shape; each object still gets offset-based access _individually_ from its shape, even when nothing is shared.
 - Adding a property creates a **shape transition**. `{x,y}` and `{y,x}` are different shapes — the insertion order defines identity, not the key set.
-- Property-access sites install an **inline cache (IC)** that remembers the shape they saw. **Monomorphic** (1 shape): fastest. **Polymorphic** (2–4): still fast. **Megamorphic** (many): slow, falls back to runtime lookup.
+- Property-access sites (each spot in your source code where you read or write a property, like `obj.x` or `obj.name`) install an **inline cache (IC)** that remembers the shape they saw. **Monomorphic** (1 shape): fastest. **Polymorphic** (2–4): still fast. **Megamorphic** (many): slow, falls back to runtime lookup.
 - The IC doesn't _speed up_ lookup — it _eliminates_ it. What's left is a shape-pointer check plus a fixed-offset load.
 - Nothing in the ECMAScript spec mandates any of this. Every major engine (V8, SpiderMonkey, JavaScriptCore, Hermes) implements it independently.
 - Practical upshot for `Object` vs `Map`: use `{}` for **records** (schema keys — known at write time), use `Map` for **dictionaries** (data keys — runtime-generated, unbounded, or non-string). Using `{}` as a dictionary pushes it into dictionary mode anyway.
@@ -14,16 +14,18 @@
 
 ## Why shapes exist
 
-A naive JS object: one hash map per object. Every `obj.x` goes through the full hash-table sequence: hash the key string to a number, mod into a slot index, then compare keys at that slot (and handle collisions if multiple keys landed there). Every access, every time.
+A naive JS object: one hash map per object. Every `obj.x` goes through the full hash-table sequence: hash the key string to a number, mod into a slot index, then walk the chain of entries at that slot (multiple keys can hash to the same index), comparing each stored key against `"x"` until you find a match. Every access, every time.
 
 But hot `obj.x` in real JS costs a few cycles — comparable to a C struct field access. Shapes + inline caches are how that happens.
 
 ## The core idea: split schema from values
 
+Given `const a = { x: 1, y: 2 }`, the engine stores it as:
+
 ```mermaid
 flowchart LR
-    O["<b>Object</b> (per-obj)<br/>shape: ●<br/>slots: [1, 2]"]
-    S["<b>Shape</b> (shared)<br/>a → offset 0<br/>b → offset 1"]
+    O["<b>Object</b> (per-obj)<br/>shape: ●<br/>values: [1, 2]"]
+    S["<b>Shape</b> (shared)<br/>x → offset 0<br/>y → offset 1"]
     O -->|shape pointer| S
 ```
 
@@ -42,50 +44,9 @@ Without the split, each object would carry its own schema. The split is what mak
 Fair question. Looking up `x` in the shape's `key → offset` table is still a map lookup. **On its own, the split doesn't make access faster.** It does two things:
 
 1. **Share the schema** across all structurally-identical objects (memory win — real, but not the point).
-2. **Give every call site a stable identity** — the shape pointer — that it can remember across accesses.
+2. **Make the layout cacheable.** Because every object with the same structure points to the same shape, the engine can do the expensive lookup once, save the answer keyed by shape, and skip the lookup on every subsequent access. Without the split, every object is a standalone hash map — there's nothing shared to cache against.
 
-The speed comes from (2). To see why, compare the data structures involved at each stage:
-
-**Without shapes** — every `obj.x` does a hash-map lookup:
-
-```
-obj:  HashMap { "x" → 10, "y" → 20 }
-
-obj.x  →  hash("x") → find slot → compare key → return value
-```
-
-Hash the string to a number, mod into a table index, compare the key stored there (and follow collision chains if multiple keys hashed to the same index). That involves pointer-chasing through heap-allocated entries, with a string comparison at each step.
-
-**With shapes, before any IC** — the map moved out of the object, but the work is the same:
-
-```
-Shape S1:                     obj:
-  HashMap {                     shape: → S1
-    "x" → offset 0,            slots: [ 10, 20 ]
-    "y" → offset 1
-  }
-
-obj.x  →  follow obj.shape → hash("x") in S1's table → offset 0 → obj.slots[0]
-```
-
-Still a hash lookup — just in the shape's table instead of the object's. No faster yet.
-
-**With shapes + IC** — the call site remembers the answer:
-
-```
-IC at this code site:  { shape: S1, offset: 0 }
-
-obj.x  →  obj.shape == S1?  →  yes  →  obj.slots[0]
-```
-
-The hash-map lookup is gone entirely. What remains is:
-
-- **One pointer comparison** (`obj.shape == S1`) — a single `cmp` instruction on two integers. No hashing, no string comparison, no collision resolution.
-- **One array index** (`slots[0]`) — a base-pointer + fixed-offset load. The `0` is baked into the machine code as a literal.
-
-That's the structural difference: a hash map requires multiple indirections (hash → table index → collision chain → key comparison → value). An IC reduces it to a guard (pointer `==`) plus a direct memory load (array base + constant offset). Both are O(1), but the constant factors are different by an order of magnitude — roughly ~30–100 cycles vs ~2–5 cycles.
-
-The split is the _enabler_; the inline cache is where the actual speedup lives. Shapes without ICs would just be a memory optimization — the shape pointer would exist but nobody would be caching against it.
+The speed comes from (2). How exactly this caching works is the subject of [Inline caches](#inline-caches) — the next few sections cover shapes themselves first.
 
 ## Shape transitions
 
@@ -99,9 +60,9 @@ flowchart LR
     Y -->|add x| YX["{y, x}"]
 ```
 
-**Shapes are append-only tree nodes.** Adding a property doesn't mutate the current shape — it transitions the object to a different one. The engine first checks whether the current shape already has a child for "add this key": if so, the object jumps to that existing node, shared with every earlier object that walked the same path; if not, a new child is minted. Either way, the old shape is untouched — any other object still on it keeps its exact key set, and any IC specialized on it stays valid.
+**Shapes are append-only tree nodes.** Adding a property doesn't mutate the current shape — it transitions the object to a different one. The engine first checks whether the current shape already has a child for "add this key": if so, the object jumps to that existing node, shared with every earlier object that walked the same path; if not, a new child is minted. Either way, the old shape is untouched — any other object still on it keeps its exact key set, and any cached lookup result based on it stays valid.
 
-**`{x,y}` and `{y,x}` are different shapes.** Identity is defined by the insertion sequence, not the key set. Two objects with the same keys in different orders cannot share an IC.
+**`{x,y}` and `{y,x}` are different shapes.** Identity is defined by the insertion sequence, not the key set. Two objects with the same keys in different orders have different shapes, so the engine can't reuse a cached lookup from one for the other.
 
 Object literals walk the transitions in source order: `{a:1, b:2}` ≡ `o={}; o.a=1; o.b=2`.
 
@@ -118,7 +79,7 @@ Shape names below are labels for reading convenience (`S_xy` = the shape reached
 
 **Start.** The root empty shape `S∅` always exists.
 
-```
+```txt
 shape pool:  { S∅ }
 objects:     (none)
 ```
@@ -127,7 +88,7 @@ objects:     (none)
 
 Walks two brand-new transitions from the root: `S∅ → S_x → S_xy`. Both are minted.
 
-```
+```txt
 shape pool:  { S∅, S_x, S_xy }
 objects:     a → S_xy
 ```
@@ -136,19 +97,19 @@ objects:     a → S_xy
 
 Same key sequence → engine re-walks the existing path. **No new shapes.** `b` reuses `S_xy`.
 
-```
+```txt
 shape pool:  { S∅, S_x, S_xy }          ← unchanged
 objects:     a → S_xy
              b → S_xy                    ← same pointer as a
 ```
 
-This is the sharing payoff: a hot `o.x` site seeing both `a` and `b` stays monomorphic.
+This is the sharing payoff: a hot `o.x` site seeing both `a` and `b` stays monomorphic (only one shape seen — the fastest IC state, explained in [Inline caches](#inline-caches)).
 
 **③ `const c = { x: 1, y: 2, z: 3 };`**
 
 Walks through `S_x`, `S_xy` (reused), then mints `S_xyz` as a new child of `S_xy`.
 
-```
+```txt
 shape pool:  { S∅, S_x, S_xy, S_xyz }
 objects:     a → S_xy
              b → S_xy
@@ -159,7 +120,7 @@ objects:     a → S_xy
 
 Starts with a different first key → forks a new branch from the root. Mints `S_y` and `S_yx`.
 
-```
+```txt
 shape pool:  { S∅, S_x, S_xy, S_xyz, S_y, S_yx }
 objects:     a → S_xy
              b → S_xy
@@ -173,33 +134,33 @@ objects:     a → S_xy
 
 Shapes belong to the engine's transition tree — they are **not owned by individual objects**. Other objects (and future ones) may still walk the same path, so the pool doesn't shrink just because one object died.
 
-```
+```txt
 shape pool:  { S∅, S_x, S_xy, S_xyz, S_y, S_yx }   ← unchanged
 objects:     b → S_xy
              c → S_xyz
              d → S_yx
 ```
 
-(Engines may eventually collect shapes with zero live references and no active ICs, but treat the tree as append-only for the mental model.)
+(Engines may eventually collect shapes with zero live references and no active cached lookups, but treat the tree as append-only for the mental model.)
 
 **⑥ `b.z = 100;` — add a field to an existing object.**
 
 `b` was at `S_xy`. The engine checks: does `S_xy` already have an "add z" child? Yes — `S_xyz` exists (c created it in step ③). **No new shape is minted;** `b` just swaps its pointer. Now `b` and `c` share `S_xyz`.
 
-```
+```txt
 shape pool:  { S∅, S_x, S_xy, S_xyz, S_y, S_yx }   ← unchanged
 objects:     b → S_xyz                              ← moved
              c → S_xyz                              ← shared with b now
              d → S_yx
 ```
 
-This is why shape transitions are interned: the second object to walk a path costs zero new shapes, and ICs specialized on `S_xyz` stay hot across both `b` and `c`.
+This is why shape transitions are interned: the second object to walk a path costs zero new shapes, and any inline cache that was already specialized on `S_xyz` (see [Inline caches](#inline-caches)) stays valid for both `b` and `c`.
 
 **⑦ `delete c.z;` — remove a field.**
 
 Here's the trap: `delete` does **not** walk back to `S_xy`. The object gets **ejected from the shape system** into dictionary mode (a per-object hash table):
 
-```
+```txt
 shape pool:  { S∅, S_x, S_xy, S_xyz, S_y, S_yx }   ← unchanged
 objects:     b → S_xyz
              c → [dict mode — no shape]
@@ -214,7 +175,7 @@ Every future property access on `c` pays hash-lookup cost — see [Dictionary mo
 
 - Shapes are **minted lazily** on first encounter and **interned** on reuse — two objects that walk the same path from the same root share a shape pointer.
 - The shape pool is an **append-only tree**, keyed by the (prototype + insertion sequence) path from the root. It grows; it doesn't shrink when objects die.
-- **Adding** a property tries to reuse an existing transition first (cheap, IC-friendly). **Deleting** a property ejects the object to dictionary mode (expensive, breaks ICs).
+- **Adding** a property tries to reuse an existing transition first (cheap, cache-friendly). **Deleting** a property ejects the object to dictionary mode (expensive, invalidates cached lookups).
 - "Same shape" means "same pointer" — which means "same path walked from the same root." Same own keys is neither necessary nor sufficient.
 
 ## Per-object benefit is separate from sharing
@@ -240,11 +201,47 @@ point(3, 4);
 point(5, 6); // all share one shape
 ```
 
-Note: `a` is at offset 0 in both `o1`'s shape and `o2`'s shape, but they're still distinct shapes. A shape is defined by the whole key sequence, so `o1.a` and `o2.a` cannot share an IC entry.
+Note: `a` is at offset 0 in both `o1`'s shape and `o2`'s shape, but they're still distinct shapes. A shape is defined by the whole key sequence, so `o1.a` and `o2.a` cannot share an inline cache entry (each property-access site caches against a specific shape — see [Inline caches](#inline-caches)).
 
 ## Inline caches
 
-When the JIT compiles `obj.x`, it emits code that remembers the shape it saw at that site:
+To see why shapes enable speed (not just memory savings), compare what happens at each stage when the engine executes `obj.x`:
+
+**Without shapes** — every `obj.x` does a hash-map lookup:
+
+```txt
+obj:  HashMap { "x" → 10, "y" → 20 }
+
+obj.x  →  hash("x") → find slot → compare key → return value
+```
+
+Hash the string to a number, mod into a table index, compare the key stored there (and follow collision chains if multiple keys hashed to the same index). That involves pointer-chasing through heap-allocated entries, with a string comparison at each step. Every access, every time.
+
+**With shapes, before any IC** — the hash map moved out of the object into the shape, but the lookup work is the same:
+
+```txt
+Shape S1:                     obj:
+  HashMap {                     shape: → S1
+    "x" → offset 0,             slots: [ 10, 20 ]
+    "y" → offset 1
+  }
+
+obj.x  →  follow obj.shape → hash("x") in S1's table → offset 0 → obj.slots[0]
+```
+
+Still a hash lookup — just in the shape's table instead of the object's. No faster yet.
+
+**With shapes + IC** — the engine remembers the answer from last time:
+
+```txt
+IC at this property-access site:  { shape: S1, offset: 0 }
+
+obj.x  →  obj.shape == S1?  →  yes  →  obj.slots[0]
+```
+
+The first time this line runs, the engine does the full hash lookup in the shape's table — same cost as before. But it saves the result: "for shape S1, `x` is at slot 0." Every subsequent time, it just checks whether the object has the same shape. If yes, it grabs slot 0 directly — no hashing, no string comparison, no searching. The expensive lookup happened once and was replaced by a cheap check.
+
+This is what the JIT actually emits for a property access:
 
 ```asm
 cmp  [o + shape_offset], S1   ; is this the shape I saw before?
@@ -273,7 +270,7 @@ function getC(o) {
 
 **First call — cold path** (no IC yet):
 
-```
+```txt
 1. Follow o2.shape                 → S2
 2. Lookup "c" in S2's property table → offset 1     ← the slow step
 3. Load o2.slots[1]                → "string1"
@@ -284,7 +281,7 @@ Step 2 means: hash the string `"c"` to a number, mod into the shape's table, com
 
 **Every subsequent call — warm path** (object is still shape S2):
 
-```
+```txt
 1. Compare o.shape vs cached S2    → match
 2. Load o.slots[1]                 → "string1"
 ```
@@ -340,7 +337,7 @@ That single question resolves most real cases.
 
 `Map` is a real **hash table**. It doesn't use shapes, and there's no inline-cache equivalent for its operations. Every access follows the classic dictionary recipe:
 
-```
+```txt
 map.get(k):
   1. hash(k)              → table index
   2. find matching entry   → compare keys at that slot (follow collision chain if needed)
@@ -390,7 +387,7 @@ Internally, engines often use different hash-table implementations for each — 
 
 ### Representation summary
 
-```
+```txt
 shape-mode Object       = shared schema + slot array + prototype + descriptors
 dictionary-mode Object  = hash table + prototype + descriptors + accessors
 Map                     = hash table (and that's it)
@@ -588,7 +585,7 @@ Two of those (consistent init, `Map` for dictionaries) are things you'd probably
 
 ## Mental model
 
-> **Shape** — the schema lives _outside_ the object, so many objects can share it, and so a call site can remember it and skip the lookup next time.
+> **Shape** — the schema lives _outside_ the object, so many objects can share it, and so a property-access site can remember it and skip the lookup next time.
 
 > **Inline cache** — replace a variable-cost lookup with a fixed-cost guard plus a direct access.
 

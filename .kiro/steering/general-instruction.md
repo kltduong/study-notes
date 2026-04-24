@@ -79,6 +79,8 @@ After a substantial chunk, pause — a question back, or "does that land?" — r
 - Be concise. A study note is for the user's future self — not a tutorial for strangers.
 - No filler ("In this document, we will discuss..."). Start with the substance.
 - **Define jargon on first use.** Notes are read top-down — if a technical term first appears in the TL;DR or intro, it needs a brief gloss _there_, not three sections later. Example: "structurally-identical objects (same keys, same insertion order)". After the first use, the shorthand is safe. This matters most in the TL;DR, which the reader hits with zero prior context.
+- **No unexplained forward references.** If a concept is introduced early but explained in detail later, give the reader enough plain-language context to follow _right now_, plus a hint that the full explanation is coming (e.g. "how this works is covered in [Section name](#section-name) below"). Never drop jargon or a dense summary that only makes sense after reading a later section — the reader shouldn't need to jump ahead to understand the current paragraph. Conversely, don't duplicate the full explanation in both places; a one-sentence plain-language framing + a forward link is enough.
+- **No duplicate explanations.** Each idea should be explained in full exactly once. If the same concept is relevant in multiple places, pick the section where it fits best for the detailed treatment, and use brief references or links elsewhere. Two sections teaching the same mechanism (even with different wording) creates confusion about which is the "real" explanation and makes the note harder to maintain.
 - Match existing note style once a pattern is established.
 
 ### Surgical edits
