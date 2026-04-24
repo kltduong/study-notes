@@ -7,6 +7,11 @@ A personal study-notes repository. The workflow is: **learn a topic through teac
 - Organize notes by topic, one folder per topic (e.g. `git/`, `linux/`, `networking/`).
 - One markdown file per focused subtopic. Prefer several small files over one sprawling file.
 - Use kebab-case filenames (e.g. `rebase-vs-merge.md`).
+- **Each note must stand on its own.** A reader landing on one file via search should be able to understand its subtopic fully without opening sibling notes. That means:
+  - The note covers its declared scope completely — no "see the other note for the actual explanation."
+  - Concepts from *other topics* stay linked, not re-explained (a link to `git/refs.md` is fine; re-teaching refs is not).
+  - Shared context from *within the same topic* goes in `index.md` or is briefly recapped in the note — never "read X first or this won't make sense."
+  - If a note can't stand alone, its scope is wrong: either narrow it, or absorb the missing piece.
 
 ### Topic index file (`index.md`)
 
