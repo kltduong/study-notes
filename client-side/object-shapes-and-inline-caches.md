@@ -3,10 +3,10 @@
 **TL;DR**
 
 - Semantically, JS objects are hash maps. In practice, engines run them near C-struct speed by separating **shape** (the schema) from the object's **slot array** (the values).
-- A shape maps `key → offset`. Many structurally-identical objects share one shape; each object still gets offset-based access *individually* from its shape, even when nothing is shared.
+- A shape maps `key → offset`. Many structurally-identical objects share one shape; each object still gets offset-based access _individually_ from its shape, even when nothing is shared.
 - Adding a property creates a **shape transition**. `{x,y}` and `{y,x}` are different shapes — the insertion order defines identity, not the key set.
 - Property-access sites install an **inline cache (IC)** that remembers the shape they saw. **Monomorphic** (1 shape): fastest. **Polymorphic** (2–4): still fast. **Megamorphic** (many): slow, falls back to runtime lookup.
-- The IC doesn't *speed up* lookup — it *eliminates* it. What's left is a shape-pointer check plus a fixed-offset load.
+- The IC doesn't _speed up_ lookup — it _eliminates_ it. What's left is a shape-pointer check plus a fixed-offset load.
 - Nothing in the ECMAScript spec mandates any of this. Every major engine (V8, SpiderMonkey, JavaScriptCore, Hermes) implements it independently.
 - Practical upshot for `Object` vs `Map`: use `{}` for **records** (schema keys — known at write time), use `Map` for **dictionaries** (data keys — runtime-generated, unbounded, or non-string). Using `{}` as a dictionary pushes it into dictionary mode anyway.
 
@@ -32,10 +32,10 @@ flowchart LR
 
 ```js
 const a = { x: 1, y: 2 };
-const b = { x: 3, y: 4 };   // same shape as a — same keys, same order
+const b = { x: 3, y: 4 }; // same shape as a — same keys, same order
 ```
 
-Without the split, each object would carry its own schema. The split is what makes the schema cheap enough to share *and* stable enough to cache against.
+Without the split, each object would carry its own schema. The split is what makes the schema cheap enough to share _and_ stable enough to cache against.
 
 ### "But the shape is also a map — where's the win?"
 
@@ -44,7 +44,48 @@ Fair question. Looking up `x` in the shape's `key → offset` table is still a m
 1. **Share the schema** across all structurally-identical objects (memory win — real, but not the point).
 2. **Give every call site a stable identity** — the shape pointer — that it can remember across accesses.
 
-The speed comes from (2). Once a site has seen an object's shape, it caches `shape → offset` and skips the map lookup on every subsequent hit ([Inline caches](#inline-caches)). The split is the *enabler*; the inline cache is where the actual speedup lives. Shapes without ICs would just be a memory optimization.
+The speed comes from (2). To see why, compare the data structures involved at each stage:
+
+**Without shapes** — every `obj.x` does a hash-map lookup:
+
+```
+obj:  HashMap { "x" → 10, "y" → 20 }
+
+obj.x  →  hash("x") → probe buckets → strcmp key → return value
+```
+
+Hash the string, index into the bucket array, walk the chain comparing keys. That's pointer-chasing through heap-allocated nodes, with a string comparison at each step.
+
+**With shapes, before any IC** — the map moved out of the object, but the work is the same:
+
+```
+Shape S1:                     obj:
+  HashMap {                     shape: → S1
+    "x" → offset 0,            slots: [ 10, 20 ]
+    "y" → offset 1
+  }
+
+obj.x  →  follow obj.shape → hash("x") in S1's table → offset 0 → obj.slots[0]
+```
+
+Still a hash lookup — just in the shape's table instead of the object's. No faster yet.
+
+**With shapes + IC** — the call site remembers the answer:
+
+```
+IC at this code site:  { shape: S1, offset: 0 }
+
+obj.x  →  obj.shape == S1?  →  yes  →  obj.slots[0]
+```
+
+The hash-map lookup is gone entirely. What remains is:
+
+- **One pointer comparison** (`obj.shape == S1`) — a single `cmp` instruction on two integers. No hashing, no string comparison, no bucket walking.
+- **One array index** (`slots[0]`) — a base-pointer + fixed-offset load. The `0` is baked into the machine code as a literal.
+
+That's the structural difference: a hash map is an indirection-heavy structure (hash → bucket array → chain → key comparison → value). An IC reduces it to a guard (pointer `==`) plus a direct memory load (array base + constant offset). Both are O(1), but the constant factors are different by an order of magnitude — roughly ~30–100 cycles vs ~2–5 cycles.
+
+The split is the _enabler_; the inline cache is where the actual speedup lives. Shapes without ICs would just be a memory optimization — the shape pointer would exist but nobody would be caching against it.
 
 ## Shape transitions
 
@@ -64,68 +105,121 @@ flowchart LR
 
 Object literals walk the transitions in source order: `{a:1, b:2}` ≡ `o={}; o.a=1; o.b=2`.
 
-### Same shape or different? — worked examples
+### Walkthrough: shape pool over time
 
-Same shape (values differ, key sequence matches):
+Run through a sequence of operations and watch two things at each step:
 
-```js
-const a = { x: 1, y: 2 };
-const b = { x: 7, y: 9 };           // ✓ same shape as a
+1. **The shape pool** — the set of shapes the engine has minted so far (append-only).
+2. **Each live object's shape pointer** — which shape in the pool it currently points at.
+
+Shape names below are labels for reading convenience (`S_xy` = the shape reached by adding `x` then `y` from the root). The engine identifies them by pointer, not name.
+
+---
+
+**Start.** The root empty shape `S∅` always exists.
+
+```
+shape pool:  { S∅ }
+objects:     (none)
 ```
 
-Different — same keys, different order:
+**① `const a = { x: 1, y: 2 };`**
 
-```js
-const a = { x: 1, y: 2 };
-const b = { y: 2, x: 1 };           // ✗ reversed insertion order
+Walks two brand-new transitions from the root: `S∅ → S_x → S_xy`. Both are minted.
+
+```
+shape pool:  { S∅, S_x, S_xy }
+objects:     a → S_xy
 ```
 
-Different — superset / subset:
+**② `const b = { x: 10, y: 20 };`**
 
-```js
-const a = { x: 1, y: 2 };
-const b = { x: 1, y: 2, z: 3 };     // ✗ extra key → different shape
-const c = { x: 1 };                 // ✗ also different (subset)
+Same key sequence → engine re-walks the existing path. **No new shapes.** `b` reuses `S_xy`.
+
+```
+shape pool:  { S∅, S_x, S_xy }          ← unchanged
+objects:     a → S_xy
+             b → S_xy                    ← same pointer as a
 ```
 
-Different — same final key set, different transition paths:
+This is the sharing payoff: a hot `o.x` site seeing both `a` and `b` stays monomorphic.
 
-```js
-const p = {};  p.x = 1;  p.y = 2;   // path: {} → {x} → {x, y}
-const q = {};  q.y = 2;  q.x = 1;   // path: {} → {y} → {y, x}
-// Iterating keys would show [x, y] vs [y, x] — distinct shapes, can't share an IC.
+**③ `const c = { x: 1, y: 2, z: 3 };`**
+
+Walks through `S_x`, `S_xy` (reused), then mints `S_xyz` as a new child of `S_xy`.
+
+```
+shape pool:  { S∅, S_x, S_xy, S_xyz }
+objects:     a → S_xy
+             b → S_xy
+             c → S_xyz
 ```
 
-Different — one branch conditionally adds a property:
+**④ `const d = { y: 5, x: 6 };`**
 
-```js
-function make(flag) {
-  const o = { x: 1 };
-  if (flag) o.y = 2;
-  return o;
-}
-make(true);   // shape {x, y}
-make(false);  // shape {x}          // ✗ two shapes flowing out of one factory
+Starts with a different first key → forks a new branch from the root. Mints `S_y` and `S_yx`.
+
+```
+shape pool:  { S∅, S_x, S_xy, S_xyz, S_y, S_yx }
+objects:     a → S_xy
+             b → S_xy
+             c → S_xyz
+             d → S_yx
 ```
 
-Different — different prototypes, even with identical own keys:
+`d` has the same _own keys_ as `a`/`b`, but a different shape. Identity is the insertion path, not the final key set.
 
-```js
-class A { constructor() { this.x = 1; } }
-class B { constructor() { this.x = 1; } }
-new A();  new B();                  // ✗ prototype is part of shape identity
+**⑤ `a` goes out of scope and is GC'd.**
+
+Shapes belong to the engine's transition tree — they are **not owned by individual objects**. Other objects (and future ones) may still walk the same path, so the pool doesn't shrink just because one object died.
+
+```
+shape pool:  { S∅, S_x, S_xy, S_xyz, S_y, S_yx }   ← unchanged
+objects:     b → S_xy
+             c → S_xyz
+             d → S_yx
 ```
 
-Same — factory produces a single shape no matter how many instances:
+(Engines may eventually collect shapes with zero live references and no active ICs, but treat the tree as append-only for the mental model.)
 
-```js
-const point = (x, y) => ({ x, y });
-point(1, 2); point(3, 4); point(5, 6);   // ✓ all share one shape
+**⑥ `b.z = 100;` — add a field to an existing object.**
+
+`b` was at `S_xy`. The engine checks: does `S_xy` already have an "add z" child? Yes — `S_xyz` exists (c created it in step ③). **No new shape is minted;** `b` just swaps its pointer. Now `b` and `c` share `S_xyz`.
+
 ```
+shape pool:  { S∅, S_x, S_xy, S_xyz, S_y, S_yx }   ← unchanged
+objects:     b → S_xyz                              ← moved
+             c → S_xyz                              ← shared with b now
+             d → S_yx
+```
+
+This is why shape transitions are interned: the second object to walk a path costs zero new shapes, and ICs specialized on `S_xyz` stay hot across both `b` and `c`.
+
+**⑦ `delete c.z;` — remove a field.**
+
+Here's the trap: `delete` does **not** walk back to `S_xy`. The object gets **ejected from the shape system** into dictionary mode (a per-object hash table):
+
+```
+shape pool:  { S∅, S_x, S_xy, S_xyz, S_y, S_yx }   ← unchanged
+objects:     b → S_xyz
+             c → [dict mode — no shape]
+             d → S_yx
+```
+
+Every future property access on `c` pays hash-lookup cost — see [Dictionary mode](#dictionary-mode-the-fallback). This is exactly why [rule #3](#3-replace-delete-with-assignment) recommends `c.z = null` over `delete c.z` on hot objects.
+
+---
+
+**What to take away from the walkthrough:**
+
+- Shapes are **minted lazily** on first encounter and **interned** on reuse — two objects that walk the same path from the same root share a shape pointer.
+- The shape pool is an **append-only tree**, keyed by the (prototype + insertion sequence) path from the root. It grows; it doesn't shrink when objects die.
+- **Adding** a property tries to reuse an existing transition first (cheap, IC-friendly). **Deleting** a property ejects the object to dictionary mode (expensive, breaks ICs).
+- "Same shape" means "same pointer" — which means "same path walked from the same root." Same own keys is neither necessary nor sufficient.
 
 ## Per-object benefit is separate from sharing
 
-With three objects that have *nothing* in common:
+With three objects that have _nothing_ in common:
 
 ```js
 const o1 = { a: 1, b: 2 };
@@ -133,13 +227,17 @@ const o2 = { a: 10, c: "string1" };
 const o3 = { d: "string2", e: true };
 ```
 
-each gets its own shape — and that shape is still doing useful work *for that object*. It's what enables offset-based access instead of a hash lookup. Shapes aren't only a sharing mechanism; they're also what gives any single object its struct-like layout.
+each gets its own shape — and that shape is still doing useful work _for that object_. It's what enables offset-based access instead of a hash lookup. Shapes aren't only a sharing mechanism; they're also what gives any single object its struct-like layout.
 
 Sharing still happens constantly in real code — just usually via factories/constructors, not identical literals:
 
 ```js
-function point(x, y) { return { x, y }; }
-point(1,2); point(3,4); point(5,6);   // all share one shape
+function point(x, y) {
+  return { x, y };
+}
+point(1, 2);
+point(3, 4);
+point(5, 6); // all share one shape
 ```
 
 Note: `a` is at offset 0 in both `o1`'s shape and `o2`'s shape, but they're still distinct shapes. A shape is defined by the whole key sequence, so `o1.a` and `o2.a` cannot share an IC entry.
@@ -167,8 +265,10 @@ The performance question is never "how many distinct objects?" — it's **"how m
 Setup:
 
 ```js
-const o2 = { a: 10, c: "string1" };   // shape S2:  a → 0,  c → 1
-function getC(o) { return o.c; }
+const o2 = { a: 10, c: "string1" }; // shape S2:  a → 0,  c → 1
+function getC(o) {
+  return o.c;
+}
 ```
 
 **First call — cold path** (no IC yet):
@@ -195,16 +295,16 @@ Stays in JIT machine code. Roughly 2–5 cycles. The `1` is literally baked into
 
 ## Three implementations compared
 
-| Aspect | Naive hashmap-per-object | Shape + IC — cold | Shape + IC — warm |
-|---|---|---|---|
-| Per-object data | Own hashmap | Shape pointer + slots | Shape pointer + slots |
-| Steps for `o.c` | hash → bucket walk → value | shape → hash → bucket walk → offset → slot load | shape compare → slot load |
-| Hash the key `"c"` | Every access | Once per (site, shape) | Skipped |
-| Table walk | Every access | Once | Skipped |
-| Where code runs | C++ runtime helper | C++ runtime helper | Pure JIT machine code |
-| Rough cost | ~30–100 cycles | ~30–100 cycles | ~2–5 cycles |
-| 1000th access | Full cost | — | ~2–5 cycles |
-| JS engine analog | Dictionary mode | First-time IC miss | Monomorphic hot IC |
+| Aspect             | Naive hashmap-per-object   | Shape + IC — cold                               | Shape + IC — warm         |
+| ------------------ | -------------------------- | ----------------------------------------------- | ------------------------- |
+| Per-object data    | Own hashmap                | Shape pointer + slots                           | Shape pointer + slots     |
+| Steps for `o.c`    | hash → bucket walk → value | shape → hash → bucket walk → offset → slot load | shape compare → slot load |
+| Hash the key `"c"` | Every access               | Once per (site, shape)                          | Skipped                   |
+| Table walk         | Every access               | Once                                            | Skipped                   |
+| Where code runs    | C++ runtime helper         | C++ runtime helper                              | Pure JIT machine code     |
+| Rough cost         | ~30–100 cycles             | ~30–100 cycles                                  | ~2–5 cycles               |
+| 1000th access      | Full cost                  | —                                               | ~2–5 cycles               |
+| JS engine analog   | Dictionary mode            | First-time IC miss                              | Monomorphic hot IC        |
 
 One-line per case:
 
@@ -263,17 +363,17 @@ That's what makes the tradeoff so clean:
 
 ### Dictionary-mode Object vs `Map` — what actually differs
 
-Once an Object flips to dictionary mode, the hash-table core is *very similar* to what `Map` uses. The difference is the ECMAScript object machinery that Object carries on top — things `Map` simply doesn't have.
+Once an Object flips to dictionary mode, the hash-table core is _very similar_ to what `Map` uses. The difference is the ECMAScript object machinery that Object carries on top — things `Map` simply doesn't have.
 
-| Feature | Dictionary-mode Object | Map |
-|---|---|---|
-| Hash table keyed by identity/string hash | ✓ | ✓ |
-| **Prototype chain lookup** — miss in own table falls through to `__proto__` | ✓ | ✗ |
-| **Property descriptors** (`writable`, `enumerable`, `configurable`) per entry | ✓ | ✗ |
-| **Accessor properties** — `get`/`set` functions that run on access | ✓ | ✗ |
-| **Allowed key types** | strings + symbols only (everything else coerced) | any value |
-| **Integer-like keys sort first** in iteration | ✓ (the weird rule) | ✗ (pure insertion order) |
-| **`Proxy` traps** intercept access | ✓ | ✗ (traps fire on the Map object, not its entries) |
+| Feature                                                                       | Dictionary-mode Object                           | Map                                               |
+| ----------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------- |
+| Hash table keyed by identity/string hash                                      | ✓                                                | ✓                                                 |
+| **Prototype chain lookup** — miss in own table falls through to `__proto__`   | ✓                                                | ✗                                                 |
+| **Property descriptors** (`writable`, `enumerable`, `configurable`) per entry | ✓                                                | ✗                                                 |
+| **Accessor properties** — `get`/`set` functions that run on access            | ✓                                                | ✗                                                 |
+| **Allowed key types**                                                         | strings + symbols only (everything else coerced) | any value                                         |
+| **Integer-like keys sort first** in iteration                                 | ✓ (the weird rule)                               | ✗ (pure insertion order)                          |
+| **`Proxy` traps** intercept access                                            | ✓                                                | ✗ (traps fire on the Map object, not its entries) |
 
 One-line framing:
 
@@ -283,8 +383,8 @@ Strip those away from a dict-mode object and you're essentially left with a `Map
 
 This reframes two things that otherwise look like separate facts:
 
-1. **Why `{}` as a dictionary has so many footguns** (prototype pollution, `"[object Object]"` key collisions, `hasOwnProperty` traps). They aren't bugs in the hash-table part — they're Object's extra machinery *leaking through* when you try to use it as a pure dictionary.
-2. **Why engines can still optimize dict-mode Object reasonably well** — the hash-table core is shared with Map. What makes dict-mode slow compared to *shape-mode* Object isn't the hash table itself; it's that shape-mode skips the hash table entirely via ICs.
+1. **Why `{}` as a dictionary has so many footguns** (prototype pollution, `"[object Object]"` key collisions, `hasOwnProperty` traps). They aren't bugs in the hash-table part — they're Object's extra machinery _leaking through_ when you try to use it as a pure dictionary.
+2. **Why engines can still optimize dict-mode Object reasonably well** — the hash-table core is shared with Map. What makes dict-mode slow compared to _shape-mode_ Object isn't the hash table itself; it's that shape-mode skips the hash table entirely via ICs.
 
 Internally, engines often use different hash-table implementations for each — V8 for instance has `OrderedHashMap` for `Map` and `NameDictionary` for dict-mode objects — tuned differently but conceptually the same data structure.
 
@@ -296,16 +396,16 @@ dictionary-mode Object  = hash table + prototype + descriptors + accessors
 Map                     = hash table (and that's it)
 ```
 
-`Map` is the minimalist version. Object is "hash table, plus all the ECMAScript object-ness built on top." Shape-mode is Object's *fast* representation; dictionary-mode is its *flexible* representation. `Map` has only one representation — the flexible one — and isn't trying to be anything else.
+`Map` is the minimalist version. Object is "hash table, plus all the ECMAScript object-ness built on top." Shape-mode is Object's _fast_ representation; dictionary-mode is its _flexible_ representation. `Map` has only one representation — the flexible one — and isn't trying to be anything else.
 
 ### Performance intuition
 
-| Situation | Pick |
-|---|---|
-| Fixed set of known string keys, hot access | **Object** — IC-backed `.x` beats `.get('x')` method dispatch |
-| Dynamic / runtime-generated keys | **Map** — neither side gets ICs; Map is the structure designed for this |
-| Heavy insertion / deletion over lifetime | **Map** — objects suffer shape churn + the `delete` penalty |
-| Non-string keys (objects, numbers kept as numbers) | **Map** — `{}` only takes string/symbol keys |
+| Situation                                          | Pick                                                                    |
+| -------------------------------------------------- | ----------------------------------------------------------------------- |
+| Fixed set of known string keys, hot access         | **Object** — IC-backed `.x` beats `.get('x')` method dispatch           |
+| Dynamic / runtime-generated keys                   | **Map** — neither side gets ICs; Map is the structure designed for this |
+| Heavy insertion / deletion over lifetime           | **Map** — objects suffer shape churn + the `delete` penalty             |
+| Non-string keys (objects, numbers kept as numbers) | **Map** — `{}` only takes string/symbol keys                            |
 
 Common mistake: reaching for `Map` to "optimize" a fixed-schema record. You lose IC-backed access and the `.x` syntax. `{ x: 1, y: 2 }` is the right tool for a point; `new Map([['x',1],['y',2]])` is not.
 
@@ -321,8 +421,8 @@ Even when perf is a wash, `Map` avoids long-standing object-as-dictionary footgu
 ### Gotcha: JSON serialization
 
 ```js
-JSON.stringify({ a: 1 });              // '{"a":1}'
-JSON.stringify(new Map([['a', 1]]));   // '{}'  — Map has no own enumerable props
+JSON.stringify({ a: 1 }); // '{"a":1}'
+JSON.stringify(new Map([["a", 1]])); // '{}'  — Map has no own enumerable props
 ```
 
 To serialize a Map: `JSON.stringify([...map])` gives `[["a",1]]`. Often the decisive factor for storage / API code: **Object for the wire format, Map for in-memory lookup.**
@@ -332,16 +432,16 @@ To serialize a Map: `JSON.stringify([...map])` gives `[["a",1]]`. Often the deci
 - **ECMAScript** says nothing about shapes, hidden classes, or ICs. The spec defines observable behavior; the mechanism is an implementation detail.
 - **Every major engine implements it**, under different names:
 
-| Engine | Name | Used by |
-|---|---|---|
-| V8 | hidden class / map | Chrome, Node, Deno, Edge, Electron, Cloudflare Workers |
-| SpiderMonkey | shape | Firefox |
-| JavaScriptCore | structure | Safari, Bun |
-| Hermes | hidden class | React Native |
+| Engine         | Name               | Used by                                                |
+| -------------- | ------------------ | ------------------------------------------------------ |
+| V8             | hidden class / map | Chrome, Node, Deno, Edge, Electron, Cloudflare Workers |
+| SpiderMonkey   | shape              | Firefox                                                |
+| JavaScriptCore | structure          | Safari, Bun                                            |
+| Hermes         | hidden class       | React Native                                           |
 
 You can assume it's there. Few engine details are universal enough to reason about portably; this is one of them.
 
-> **Scope note.** This note is about the representation of Object *properties*. Arrays have their own parallel optimization system (**element kinds** — packed vs holey, SMI vs double vs tagged) that behaves differently and deserves a separate note. If you see advice like "don't mix numbers and strings in the same array" or "avoid creating holes with `arr[100] = x`," that's the array system, not this one.
+> **Scope note.** This note is about the representation of Object _properties_. Arrays have their own parallel optimization system (**element kinds** — packed vs holey, SMI vs double vs tagged) that behaves differently and deserves a separate note. If you see advice like "don't mix numbers and strings in the same array" or "avoid creating holes with `arr[100] = x`," that's the array system, not this one.
 
 ## Practical takeaways — writing shape-friendly code
 
@@ -353,17 +453,17 @@ Knowing the mechanics mostly cashes out as a handful of concrete habits, plus a 
 // ❌ two shapes: admins have `role`, others don't
 function makeUser(data) {
   const u = { name: data.name };
-  if (data.email)   u.email = data.email;
-  if (data.isAdmin) u.role  = 'admin';
+  if (data.email) u.email = data.email;
+  if (data.isAdmin) u.role = "admin";
   return u;
 }
 
 // ✅ one shape, always
 function makeUser(data) {
   return {
-    name:  data.name,
+    name: data.name,
     email: data.email ?? null,
-    role:  data.isAdmin ? 'admin' : null,
+    role: data.isAdmin ? "admin" : null,
   };
 }
 ```
@@ -395,12 +495,10 @@ user.session = null;
 result.value = err ? err.message : data;
 
 // ✅ two stable shapes, each property with one type
-result = err
-  ? { ok: false, error: err.message, data: null }
-  : { ok: true,  error: null,        data };
+result = err ? { ok: false, error: err.message, data: null } : { ok: true, error: null, data };
 ```
 
-**Why:** ICs often specialize not just on shape but on the *type* stored at each offset (small integer vs heap object vs string). Writing a different type to the same property invalidates that specialization and can trigger a deoptimization on the JIT-compiled code around it.
+**Why:** ICs often specialize not just on shape but on the _type_ stored at each offset (small integer vs heap object vs string). Writing a different type to the same property invalidates that specialization and can trigger a deoptimization on the JIT-compiled code around it.
 
 ### 5. Avoid conditional spreads that fork shapes
 
@@ -421,7 +519,12 @@ const config = { host, port, ssl: enableSSL };
 ### 6. Prefer constructors / factories over ad-hoc literals in hot code
 
 ```js
-class Point { constructor(x, y) { this.x = x; this.y = y; } }
+class Point {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+}
 // or
 const makePoint = (x, y) => ({ x, y });
 ```
@@ -435,9 +538,9 @@ const makePoint = (x, y) => ({ x, y });
 const users = await res.json();
 
 // ✅ one normalized shape across your entire pipeline
-const users = (await res.json()).map(u => ({
-  id:    u.id,
-  name:  u.name  ?? null,
+const users = (await res.json()).map((u) => ({
+  id: u.id,
+  name: u.name ?? null,
   email: u.email ?? null,
 }));
 ```
@@ -457,12 +560,12 @@ Object.setPrototypeOf(obj, NewProto);
 
 When Chrome DevTools shows a **deopt** marker, or `node --trace-deopt` / `--trace-ic` prints messages like these, you now know what they name:
 
-| Message | Means |
-|---|---|
-| "wrong map" / "wrong hidden class" | IC's shape guard failed — site was specialized for one shape, got another |
-| "polymorphic" | Site has started seeing multiple shapes; still fast, but flag it if on a hot path |
-| "megamorphic" | Too many shapes; engine gave up on inlining → generic runtime lookup |
-| "convert to dictionary" | Object flipped into dictionary mode — usually triggered by rules #1, #3, or #8 |
+| Message                            | Means                                                                             |
+| ---------------------------------- | --------------------------------------------------------------------------------- |
+| "wrong map" / "wrong hidden class" | IC's shape guard failed — site was specialized for one shape, got another         |
+| "polymorphic"                      | Site has started seeing multiple shapes; still fast, but flag it if on a hot path |
+| "megamorphic"                      | Too many shapes; engine gave up on inlining → generic runtime lookup              |
+| "convert to dictionary"            | Object flipped into dictionary mode — usually triggered by rules #1, #3, or #8    |
 
 Each one points back at a concrete rule above. Without the mental model these messages are noise; with it, they're a punch list.
 
@@ -485,7 +588,7 @@ Two of those (consistent init, `Map` for dictionaries) are things you'd probably
 
 ## Mental model
 
-> **Shape** — the schema lives *outside* the object, so many objects can share it, and so a call site can remember it and skip the lookup next time.
+> **Shape** — the schema lives _outside_ the object, so many objects can share it, and so a call site can remember it and skip the lookup next time.
 
 > **Inline cache** — replace a variable-cost lookup with a fixed-cost guard plus a direct access.
 
@@ -493,5 +596,5 @@ The two together are why JS is fast. Neither works alone: shapes without ICs are
 
 ## Related
 
-- [ECMAScript, JavaScript, Engine, Runtime](./ecmascript-engine-runtime.md) — the layer where shapes live. They're an engine concern, *below* the language.
+- [ECMAScript, JavaScript, Engine, Runtime](./ecmascript-engine-runtime.md) — the layer where shapes live. They're an engine concern, _below_ the language.
 - [JS class semantics](./js-class-semantics.md) — classes and factory functions naturally produce shared shapes; ad-hoc property assignment fights that.
