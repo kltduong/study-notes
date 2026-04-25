@@ -288,7 +288,7 @@ Step 2 means: hash the string `"c"` to a number, mod into the shape's table, com
 
 Stays in JIT machine code. Roughly 2–5 cycles. The `1` is literally baked into the instruction stream.
 
-**Key insight:** the IC doesn't make the lookup faster — it **replaces** the lookup with a guard. The expensive "where does `c` live?" question was answered once and written into the machine code.
+**Key insight:** the IC doesn't make the lookup faster — it **replaces** the lookup with a guard. The expensive "where does `c` live?" question was answered once, and the answer (offset `1`) was written into the machine code as a literal number inside the `mov` instruction. At runtime the JIT code never reads from the shape's property table — the offset is part of the instruction bytes themselves, decoded by the CPU alongside the opcode. The string `"c"` is gone; all that remains is a shape-pointer comparison and a direct memory load at a baked-in offset.
 
 ## Three implementations compared
 
