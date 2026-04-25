@@ -1,21 +1,21 @@
 ## Project Overview
 
-A personal study-notes repository. The workflow is: **learn a topic through teaching or discussion — then save the important takeaways as a markdown file** here. Topics are general (git, linux, networking, tooling, etc.) — not scoped to any single language or domain.
+A personal study-notes repository — **learn a topic through teaching or discussion, then save the takeaways as a markdown file**. Topics are general (git, linux, networking, tooling, etc.) — not scoped to any single language or domain.
 
 ## Structure
 
 - Organize notes by topic, one folder per topic (e.g. `git/`, `linux/`, `networking/`).
 - One markdown file per focused subtopic. Prefer several small files over one sprawling file.
 - Use kebab-case filenames (e.g. `rebase-vs-merge.md`). Keep filenames short — aim for **≤ 25 characters** (including `.md`) so they display fully in the IDE sidebar without truncation. Prefer abbreviating or dropping filler words (`and`, `the`, `of`) over long descriptive names.
-- **Each note must stand on its own.** A reader landing on one file via search should be able to understand its subtopic fully without opening sibling notes. That means:
-  - The note covers its declared scope completely — no "see the other note for the actual explanation."
-  - Concepts from _other topics_ stay linked, not re-explained (a link to `git/refs.md` is fine; re-teaching refs is not).
-  - Shared context from _within the same topic_ goes in `index.md` or is briefly recapped in the note — never "read X first or this won't make sense."
-  - If a note can't stand alone, its scope is wrong: either narrow it, or absorb the missing piece.
+- **Each note must stand on its own.** A reader landing via search should understand the subtopic without opening siblings. That means:
+  - Cover the declared scope fully — no "see the other note for the actual explanation."
+  - Concepts from _other topics_: link, don't re-explain (a link to `git/refs.md` is fine; re-teaching refs is not).
+  - Shared context from _within the same topic_: put in `index.md` or briefly recap — never "read X first or this won't make sense."
+  - If a note can't stand alone, its scope is wrong: narrow it, or absorb the missing piece.
 
 ### Topic index file (`index.md`)
 
-Every topic folder with **two or more notes** must have an `index.md`. It is the entry point for the topic and the glue that makes the separate notes feel like one body of knowledge. A good `index.md` is itself a useful read, not just a list of links.
+Every topic folder with **two or more notes** must have an `index.md` — the entry point and the glue that makes separate notes feel like one body of knowledge. A good `index.md` is itself a useful read, not just a list of links.
 
 It should contain:
 
@@ -25,13 +25,13 @@ It should contain:
 - **Cross-cutting concepts** that span multiple notes (shared vocabulary, recurring gotchas, a diagram of how the pieces relate) — the kind of thing that has no natural home in any single note.
 - **Links to related topics** (other folders) when relevant.
 
-**Keep `index.md` in sync — always.** Whenever a note is added, removed, renamed, or significantly reshaped inside a topic folder, update `index.md` in the **same change**. Adding a new file without updating the index is incomplete work. If the folder didn't previously have an `index.md` and this addition brings it to 2+ notes, create the index as part of the same change. The index must never drift out of sync with the folder contents.
+**Keep `index.md` in sync — always.** Whenever a note is added, removed, renamed, or significantly reshaped, update `index.md` in the **same change** — a new file without an index update is incomplete work. If the addition brings the folder to 2+ notes for the first time, create `index.md` in the same change.
 
 ## Workflow
 
-1. **User names the topic.** One or more topics to learn about (or opens a discussion on a topic they already partly know). Do not pick or pivot the topic — teach what the user asked for. If the scope is ambiguous, ask for clarification before starting.
+1. **User names the topic.** One or more topics to learn, or to discuss when partly known. If the scope is ambiguous, ask for clarification before starting.
 2. **Teach** — proactively build the mental model rather than just answering questions. See [Teaching approach](#teaching-approach) below. The user asks follow-ups, pushes back, and explores edge cases as they go.
-3. When the user says "save this" (or equivalent), write a markdown file capturing the **conclusions and non-obvious details** from the session — not a transcript.
+3. **Save only on explicit ask.** When the user says "save this" (or equivalent), write a markdown file capturing the **conclusions and non-obvious details** from the session — not a transcript. A teaching or discussion session alone does not imply a save.
 
 ## Teaching approach
 
@@ -49,11 +49,11 @@ Weave in these elements as they help the idea click. Not every topic needs all o
 
 ### Teaching multiple topics
 
-If the user names more than one topic, ask whether to teach them **in sequence** (one after the other) or to focus on the **connections between them** (compare/contrast, or show how one builds on the other). Don't silently interleave — pick a structure and say what it is.
+If the user names more than one topic, ask whether to teach them **in sequence** or focus on the **connections** (compare/contrast, or show how one builds on the other). Don't silently interleave — pick a structure and say what it is.
 
 ### Check in
 
-After a substantial chunk, pause — a question back, or "does that land?" — rather than pouring out more material. Engagement beats passive reading, and the user's response tells you where to go deeper.
+After a substantial chunk, pause — ask a question back, or "does that land?" — rather than pouring out more. The user's response tells you where to go deeper.
 
 ## Writing Guidelines
 
@@ -67,20 +67,29 @@ After a substantial chunk, pause — a question back, or "does that land?" — r
 
 - Capture the **reasoning and motivation** behind decisions and the **non-obvious** details, not textbook definitions easily found elsewhere.
 - Include concrete examples, commands, and gotchas that came up in the session.
-- Preserve the **mental model** that emerged — the metaphor, the one-line invariant, the motivation — not just the facts.
+- Preserve the **mental model** that emerged — the metaphor, the one-line invariant — not just the facts.
 - Link related notes with relative markdown links.
 - Keep a short summary/TL;DR at the top of each note.
 
 ### Style
 
+**Top-down clarity.** Notes are read top-to-bottom — at every point, the reader should understand what they're reading using only what came before. If a term, concept, or mechanism isn't introduced yet, give a brief plain-language gloss inline or signal that the full explanation is coming later — never assume they'll figure it out by reading ahead. The rules below are applications of this principle.
+
+- **Define jargon on first use.** If a technical term first appears in the TL;DR or intro, gloss it _there_, not three sections later — the reader hits the TL;DR with zero prior context. Example: "structurally-identical objects (same keys, same insertion order)". After first use, the shorthand is safe.
+- **No unexplained forward references.** If a concept is introduced early but detailed later, give the reader enough plain-language context to follow _right now_, plus a forward link (e.g. "covered in [Section name](#section-name) below"). Never drop jargon or a dense summary that only makes sense after reading ahead.
+- **No duplicate explanations.** Each idea is explained in full exactly once. If a concept is relevant in multiple places, pick the best section for the detailed treatment and link from elsewhere. Parallel explanations (even in different wording) confuse readers about which is canonical.
+- **Don't restate before forwarding.** When introducing an idea and deferring the detail to a later section, go straight to the forward link. Don't insert a paragraph that re-explains the same point in different words — that reads as stalling. One statement + forward link is enough.
+
+**Format.**
+
 - Markdown only. Use headings, fenced code blocks with language tags, and tables where they help.
 - Use mermaid fenced blocks for diagrams/charts (flowcharts, sequence, state, etc.) when a visual clarifies the idea.
-- **Do not use ASCII or Unicode box-drawing art** (`┌─┐│└┘`, `+--+|+-+`, arrows like `──►`, etc.) for diagrams. It may look aligned in your editor, but renders inconsistently in markdown viewers — box-drawing glyphs have variable width, lines don't connect, and the result looks broken. Use mermaid instead; it's portable across renderers. Plain text inside code blocks (numbered steps, pseudo-code, asm) is fine — the rule only targets box/line/arrow _drawings_.
+- **No ASCII or Unicode box-drawing art** (`┌─┐│└┘`, `+--+|+-+`, arrows like `──►`) for diagrams. Looks aligned in your editor but renders broken in markdown viewers — variable-width glyphs, lines don't connect. Use mermaid instead; it's portable across renderers. Plain text in code blocks (numbered steps, pseudo-code, asm) is fine — the rule only targets box/line/arrow _drawings_.
+
+**Tone.**
+
 - Be concise. A study note is for the user's future self — not a tutorial for strangers.
 - No filler ("In this document, we will discuss..."). Start with the substance.
-- **Define jargon on first use.** Notes are read top-down — if a technical term first appears in the TL;DR or intro, it needs a brief gloss _there_, not three sections later. Example: "structurally-identical objects (same keys, same insertion order)". After the first use, the shorthand is safe. This matters most in the TL;DR, which the reader hits with zero prior context.
-- **No unexplained forward references.** If a concept is introduced early but explained in detail later, give the reader enough plain-language context to follow _right now_, plus a hint that the full explanation is coming (e.g. "how this works is covered in [Section name](#section-name) below"). Never drop jargon or a dense summary that only makes sense after reading a later section — the reader shouldn't need to jump ahead to understand the current paragraph. Conversely, don't duplicate the full explanation in both places; a one-sentence plain-language framing + a forward link is enough.
-- **No duplicate explanations.** Each idea should be explained in full exactly once. If the same concept is relevant in multiple places, pick the section where it fits best for the detailed treatment, and use brief references or links elsewhere. Two sections teaching the same mechanism (even with different wording) creates confusion about which is the "real" explanation and makes the note harder to maintain.
 - Match existing note style once a pattern is established.
 
 ### Surgical edits
@@ -90,7 +99,6 @@ After a substantial chunk, pause — a question back, or "does that land?" — r
 
 ## Conventions
 
-- Topics come from the user's input. Don't suggest new topics unprompted or drift into adjacent ones mid-session — if a tangent looks worth pursuing, surface it as a question first.
+- Topics come from the user's input — don't pick, pivot, or suggest new topics unprompted, and don't drift into adjacent ones mid-session. If a tangent looks worth pursuing, surface it as a question first.
 - Prefer editing an existing note over creating a new one when the topic overlaps.
-- Do not create a note unless the user explicitly asks to save. A teaching or discussion session alone does not imply a save.
 - Do not delete or rewrite prior notes unless asked — they are a record of what the user learned at that point in time.
