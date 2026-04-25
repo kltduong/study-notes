@@ -594,4 +594,4 @@ The two together are why JS is fast. Neither works alone: shapes without ICs are
 ## Related
 
 - [ECMAScript, JavaScript, Engine, Runtime](./js-engine-runtime.md) — the layer where shapes live. They're an engine concern, _below_ the language.
-- [JS class semantics](./js-class-semantics.md) — classes and factory functions naturally produce shared shapes; ad-hoc property assignment fights that.
+- [JS inheritance](./js-inheritance.md) — classes and factory functions naturally produce shared shapes; ad-hoc property assignment fights that.

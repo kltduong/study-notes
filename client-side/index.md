@@ -19,7 +19,7 @@ A lot of "why does this API look weird?" moments resolve once you know which lay
 Start with the platform layers, then the object model (semantics + implementation), then the DOM, then events. Each note stands alone, but they reinforce each other in this order.
 
 1. **[js-engine-runtime.md](./js-engine-runtime.md)** — ECMAScript vs JavaScript vs engine vs runtime. What's in the engine (pure language) vs what the host adds (`fetch`, `window`, `fs`, …), and how the runtime registers native functions into the engine's global. The layer map for everything below.
-2. **[js-class-semantics.md](./js-class-semantics.md)** — own properties vs prototype properties, how `this` is resolved at the call site, and how this differs from Python's bound methods. The object-model primer.
+2. **[js-inheritance.md](./js-inheritance.md)** — the prototype chain mechanism, the four direct ways to set `[[Prototype]]`, how `class`/`new` build on it, own vs prototype properties, `this` resolved at the call site, statics, and a JS-vs-Python comparison. The object-model primer.
 3. **[shapes-inline-caches.md](./shapes-inline-caches.md)** — how engines actually store objects. Shape = shared schema; inline cache = remembered offset at a call site. Explains why JS is fast despite semantically being hash maps, and why property order / `delete` / optional fields matter for performance.
 4. **[dom-collections.md](./dom-collections.md)** — the `Node`/`Element` class hierarchy, `childNodes` vs `children`, and `HTMLCollection` (live) vs `NodeList` (usually static). What the browser runtime actually puts in front of you as "the DOM."
 5. **[events-targets.md](./events-targets.md)** — why `EventTarget` is its own interface above `Node`, and all the non-Node things that also fire events.
@@ -40,11 +40,11 @@ If an API only works in one runtime, it's almost always the runtime row. If a me
 
 ### Prototypes are the connective tissue
 
-`document.querySelector`, `element.addEventListener`, `node.appendChild` — none of these are own properties of the objects they appear on. They live on `Document.prototype`, `EventTarget.prototype`, `Node.prototype`. The class-semantics note and the DOM note reinforce each other: once you can walk a prototype chain, DOM APIs stop looking magical.
+`document.querySelector`, `element.addEventListener`, `node.appendChild` — none of these are own properties of the objects they appear on. They live on `Document.prototype`, `EventTarget.prototype`, `Node.prototype`. The inheritance note covers the chain mechanism and how classes build on it; the DOM note shows it in practice — once you can walk a prototype chain, DOM APIs stop looking magical.
 
 ### Semantics vs representation
 
-`js-class-semantics.md` and `shapes-inline-caches.md` are two views of the same objects. The first is what the language _promises_ (own vs prototype, dynamic property addition, `this` at the call site). The second is how the engine _delivers_ on those promises quickly (shared shapes, inline caches, dictionary-mode fallback). The semantics note tells you what you can do; the shapes note tells you which of those things are cheap.
+`js-inheritance.md` and `shapes-inline-caches.md` are two views of the same objects. The first is what the language _promises_ (own vs prototype, dynamic property addition, `this` at the call site). The second is how the engine _delivers_ on those promises quickly (shared shapes, inline caches, dictionary-mode fallback). The inheritance note tells you what you can do; the shapes note tells you which of those things are cheap.
 
 ### `EventTarget` vs `Node`
 

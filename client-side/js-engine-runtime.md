@@ -167,6 +167,6 @@ The event loop is _mostly_ a host concern (HTML spec for browsers, libuv for Nod
 
 ## Related
 
-- [JS class semantics](./js-class-semantics.md) — why DOM methods live on prototypes, not instances. Reinforces that "engine provides the language, host provides the types populated with methods."
+- [JS inheritance](./js-inheritance.md) — why DOM methods live on prototypes, not instances. Reinforces that "engine provides the language, host provides the types populated with methods."
 - [DOM: Node, Element, and Collections](./dom-collections.md) — concrete example of what the _browser_ runtime adds.
 - [EventTarget and the Web's Event System](./events-targets.md) — the browser-runtime event model.
