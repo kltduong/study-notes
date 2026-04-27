@@ -1,6 +1,6 @@
 # Client-Side JavaScript
 
-Notes on how JavaScript runs in the browser: the platform layers beneath the language, the object model the DOM is built on, and the event system the web is glued together with.
+Notes on how JavaScript runs in the browser: the platform layers beneath the language, the object model the DOM is built on, the event system the web is glued together with, and the rendering pipeline that JS executes inside.
 
 ## The mental model
 
@@ -23,6 +23,7 @@ Start with the platform layers, then the object model (semantics + implementatio
 3. **[shapes-inline-caches.md](./shapes-inline-caches.md)** — how engines actually store objects. Shape = shared schema; inline cache = remembered offset at a call site. Explains why JS is fast despite semantically being hash maps, and why property order / `delete` / optional fields matter for performance.
 4. **[dom-collections.md](./dom-collections.md)** — the `Node`/`Element` class hierarchy, `childNodes` vs `children`, and `HTMLCollection` (live) vs `NodeList` (usually static). What the browser runtime actually puts in front of you as "the DOM."
 5. **[events-targets.md](./events-targets.md)** — why `EventTarget` is its own interface above `Node`, and all the non-Node things that also fire events.
+6. **[rendering-path.md](./rendering-path.md)** — the Critical Rendering Path: how the browser turns HTML/CSS/JS into pixels (DOM → CSSOM → Render Tree → Layout → Paint → Composite), and what blocks what along the way. Where `async`, `defer`, `preload`, and critical CSS fit in.
 
 ## Cross-cutting ideas
 
