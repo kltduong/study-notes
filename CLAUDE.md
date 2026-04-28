@@ -1,3 +1,3 @@
 # CLAUDE.md
 
-@.kiro/steering/general-instruction.md
+@.kiro/steering/study-notes-guide.md

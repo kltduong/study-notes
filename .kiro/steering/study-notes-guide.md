@@ -29,9 +29,25 @@ It should contain:
 
 ## Workflow
 
+Two workflows depending on what the user provides. **Auto-detect:** if the input is a structured course outline (sections, chapters, numbered TOC, curriculum), use the course-guided workflow. If it's a topic name or question, use the default discussion workflow.
+
+### Default: discussion workflow
+
 1. **User names the topic.** One or more topics to learn, or to discuss when partly known. If the scope is ambiguous, ask for clarification before starting.
 2. **Teach** — proactively build the mental model rather than just answering questions. See [Teaching approach](#teaching-approach) below. The user asks follow-ups, pushes back, and explores edge cases as they go.
 3. **Save only on explicit ask.** When the user says "save this" (or equivalent), write a markdown file capturing the **conclusions and non-obvious details** from the session — not a transcript. A teaching or discussion session alone does not imply a save.
+
+### Course-guided workflow
+
+Activated automatically when the user provides a structured course outline or curriculum.
+
+1. **User provides a course outline.** Accept it as the session roadmap. Clarify scope or ambiguity before starting, just like the discussion workflow.
+2. **Teach chunk by chunk, following the course order.** The course structure is the backbone, but teach freely — restructure explanations, reorder within a chunk, add context the course misses. Don't narrate slides.
+3. **Check in and transition.** After each chunk, check understanding, then explicitly state what's coming next. The user can skip ahead, go deeper, or reorder.
+4. **Track progress.** Keep track of which sections are covered vs remaining. When the user asks "where are we?" or "what's next?", give a clear answer.
+5. **Cross-reference existing notes.** If the course covers something the user's repo already has notes on, point it out — skip, briefly recap, or highlight what's new rather than re-teaching from scratch.
+6. **Critical lens.** Flag when course content seems wrong, outdated, or oversimplified. Don't pass it through uncritically.
+7. **Save only on explicit ask.** Same rule as discussion workflow. When saving, organize notes by the mental model that emerged — not by the course's section layout. The course is the input; the understanding is the output.
 
 ## Teaching approach
 
