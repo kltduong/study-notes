@@ -4,15 +4,17 @@ JavaScript doesn't have classical inheritance — it has **prototype delegation*
 
 ## Reading order
 
-Start with **Foundations**, then **[[Prototype]] Deep Dive**. Foundations establishes the chain-walk mental model; the deep dive zooms in on the link itself and the edges (primitives, auto-boxing, `this` binding).
+Start with **Foundations**, then **[[Prototype]] Deep Dive**, then **Chain & Behavior**. Foundations establishes the chain-walk mental model; the deep dive zooms in on the link itself and the edges (primitives, auto-boxing, `this` binding); chain & behavior covers what happens during the walk — shadowing, enumeration, and mutation traps.
 
 ## Notes
 
 - [Foundations](foundations.md) — Why prototypes exist, delegation vs copying, the chain-walk invariant, `Object.prototype` as common ancestor.
 - [[[Prototype]] Deep Dive](prototype-deep-dive.md) — Internal slot vs property, `Object.keys`/`for...in` differences, primitive auto-boxing, built-in prototype fan, custom prototypes and `this` at the call site.
+- [Chain & Behavior](chain-behavior.md) — Shadowing (reads walk up, writes stay put), mutable reference trap, chain termination at `null`, enumerability and iteration tools, why runtime prototype mutation kills performance.
 
 ## Cross-cutting concepts
 
 - **Chain walk** — the core mechanic. Every note assumes it. Property lookup follows `[[Prototype]]` links until found or `null`.
+- **Reads walk up, writes stay put** — the two-rule model for property access vs assignment. Explains shadowing, per-instance state, and the mutable reference trap.
 - **Delegation, not copying** — methods aren't duplicated onto objects; they're found at lookup time via the chain.
 - **`this` is call-site-determined** — critical for shared methods on prototypes. What's left of the dot wins.
