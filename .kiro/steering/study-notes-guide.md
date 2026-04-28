@@ -8,6 +8,7 @@ A personal study-notes repository — **learn a topic through teaching or discus
 - Kebab-case filenames, **≤ 25 characters** including `.md`. Drop filler words (`and`, `the`, `of`) to stay short.
 - **Each folder is self-contained:**
   - **No cross-directory links.** If two folders need the same concept, each explains it independently. Duplication _across_ folders is fine.
+  - **No reading across directories.** When working in a folder, only read files inside that folder. Don't read notes from other topic folders for context, calibration, or background — treat each folder as if the others don't exist.
   - **No duplication _within_ a folder.** Each idea explained once; notes link to siblings; `index.md` is the glue.
   - **Each note stands on its own** within its folder. Cover the declared scope fully — no "see the other note for the actual explanation." If a note can't stand alone, its scope is wrong: narrow it, or absorb the missing piece.
 
@@ -48,8 +49,14 @@ These apply to both interactive workflows:
    - _What do you want to walk away with?_ (e.g. "clean mental model / implementation fluency / deep mastery / something else").
    - Use answers to skip what's solid, slow down where it's fuzzy, pitch examples at the right level. Advanced start → jump to edges. Implementation fluency → every concept includes a "now write it" moment.
    - After calibrating, state the planned arc so the user sees the map before entering the territory.
-2. **Teach** using the [teaching approach](#teaching-approach) below.
-3. **Save only on explicit ask.** "Save this" → write a markdown file capturing **conclusions and non-obvious details**, not a transcript. A session alone does not imply a save. When saving, organize by the mental model that emerged — not by session or course order.
+2. **Persist calibration and arc in `toc.md`.** This is a separate, mandatory step — do it immediately after calibrating, before teaching begins. Write a `## Calibration` section to `toc.md` recording:
+   - The user's starting point and goals (brief, their own words).
+   - The planned teaching arc (ordered list of chunks/themes and how depth/pacing is adapted to the calibration).
+
+   On a new session, read this section instead of re-asking. Only re-calibrate if the user says their level or goal has changed.
+
+3. **Teach** using the [teaching approach](#teaching-approach) below.
+4. **Save only on explicit ask.** "Save this" → write a markdown file capturing **conclusions and non-obvious details**, not a transcript. A session alone does not imply a save. When saving, organize by the mental model that emerged — not by session or course order.
 
 ### Discussion workflow
 
@@ -68,6 +75,7 @@ These apply to both interactive workflows:
 7. **Track progress.** Answer "where are we?" / "what's next?" clearly.
 8. **Cross-reference within the folder.** If the course covers something in a sibling note, point it out — skip, recap, or highlight what's new. No cross-folder references.
 9. **Critical lens.** Flag wrong, outdated, or oversimplified course content.
+10. **Session management.** Long sessions degrade context quality. Prefer short sessions — one chunk (or a few small related chunks) per session. After saving a chunk's note and updating `toc.md`, that's a natural stopping point. On a new session, read `toc.md` and existing notes in the folder to recover full state — no prior conversation needed. The user can start a new session anytime; `toc.md` + saved notes are the durable state.
 
 ### Content-to-note workflow
 
