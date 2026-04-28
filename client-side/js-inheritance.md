@@ -208,16 +208,96 @@ counter.increment.call(counter); // works
 setTimeout(counter.increment.bind(counter), 0); // classic fix
 ```
 
-### How `this` is decided
+### How `this` is decided — the four rules
 
-| Call form                  | `this` is                                                   |
-| -------------------------- | ----------------------------------------------------------- |
-| `obj.m()`                  | `obj`                                                       |
-| `const f = obj.m; f()`     | `undefined` (strict) / global (sloppy)                      |
-| `f.call(x)` / `f.apply(x)` | `x`                                                         |
-| `f.bind(x)()`              | `x` (permanently)                                           |
-| `new F()`                  | the new instance                                            |
-| arrow function             | lexical `this` from enclosing scope (ignores all the above) |
+For regular (non-arrow) functions, `this` is resolved by four rules. When multiple could apply, **higher priority wins**:
+
+| Priority | Rule                | Call form                                  | `this` is                                    |
+| -------- | ------------------- | ------------------------------------------ | -------------------------------------------- |
+| 1        | `new` binding       | `new F()`                                  | the fresh object being constructed           |
+| 2        | Explicit binding    | `f.call(x)` / `f.apply(x)` / `f.bind(x)()` | `x` (`.bind` is permanent)                   |
+| 3        | Implicit (dot rule) | `obj.m()`                                  | `obj` — whatever is left of the dot          |
+| 4        | Default (fallback)  | `f()` — bare call                          | `undefined` (strict) / `globalThis` (sloppy) |
+
+The algorithm: ask in order — is it `new`? explicit? dot? If none, it's the default. Stop at the first match.
+
+Rule 3 has a crucial corollary: **the binding is lost the moment the function is detached from its dot:**
+
+```js
+const fn = cat.meow;
+fn(); // Rule 3 doesn't apply → falls through to Rule 4
+// strict: undefined  |  sloppy: globalThis
+```
+
+Same function, different call site, completely different `this`. The function doesn't "remember" `cat`.
+
+#### Arrow functions: the exception to all four rules
+
+Arrow functions don't get their own `this`. They capture `this` **lexically** from the enclosing scope at definition time — all four rules above are ignored.
+
+```js
+const obj = {
+  name: "Duong",
+  regular() {
+    return this.name;
+  }, // Rule 3 → "Duong"
+  arrow: () => this.name, // lexical → this from enclosing scope (NOT obj)
+};
+obj.regular(); // "Duong"
+obj.arrow(); // undefined — arrow ignored the dot
+```
+
+Two hard constraints follow from this:
+
+- **No `[[Construct]]` slot, no `.prototype` property.** `new (() => {})` throws — arrows can't be constructors because there's no mechanism to bind `this` to a new object.
+- **Never use arrows as methods that need `this`.** They won't bind to the instance.
+
+The flip side: arrows are perfect for callbacks _inside_ methods, where you want to keep the outer `this`:
+
+```js
+function Dog(name) {
+  this.name = name;
+  setTimeout(() => console.log(this.name), 100); // arrow keeps Dog's `this`
+}
+new Dog("Rex"); // logs "Rex"
+```
+
+### Constructors without `new` — the chain collapses
+
+A constructor function is a regular function that uses `this` to mean "the new object." Without `new` triggering Rule 1, `this` falls back to Rule 4, and every line in the body either pollutes globals or crashes:
+
+```js
+function Dog(name) {
+  this.name = name;
+  this.bark = function () {
+    return `${this.name} says woof`;
+  };
+}
+
+// With new — Rule 1 wins ✓
+const rex = new Dog("Rex");
+rex.bark(); // "Rex says woof"
+
+// Without new — Rule 4 wins ✗
+const oops = Dog("Rex");
+oops; // undefined (no explicit return)
+globalThis.name; // "Rex" — polluted the global (sloppy mode)
+globalThis.bark(); // "Rex says woof" — method landed on global too
+```
+
+The dependency chain: `new` → fresh `this` → properties attach → return value is the instance → `instance.method()` works via Rule 3. Skip `new`, and it collapses at step 1.
+
+Some built-in constructors (`Array`, `Object`, `Number`) detect missing `new` internally and fix it up — `Array(3)` works the same as `new Array(3)`. Your own constructors don't do this by default. The old-school guard:
+
+```js
+function Dog(name) {
+  if (!(this instanceof Dog)) return new Dog(name); // re-call with new
+  this.name = name;
+}
+Dog("Rex").name; // "Rex" — works either way
+```
+
+ES6 `class` removed the need for this — calling a class without `new` throws immediately, no footgun.
 
 ### Three common fixes
 
