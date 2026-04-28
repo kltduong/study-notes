@@ -7,10 +7,12 @@ A personal study-notes repository — **learn a topic through teaching or discus
 - Organize notes by topic, one folder per topic (e.g. `git/`, `linux/`, `networking/`).
 - One markdown file per focused subtopic. Prefer several small files over one sprawling file.
 - Use kebab-case filenames (e.g. `rebase-vs-merge.md`). Keep filenames short — aim for **≤ 25 characters** (including `.md`) so they display fully in the IDE sidebar without truncation. Prefer abbreviating or dropping filler words (`and`, `the`, `of`) over long descriptive names.
-- **Each note must stand on its own.** A reader landing via search should understand the subtopic without opening siblings. That means:
+- **Each folder is self-contained.** A reader landing in any folder should be able to understand everything in it without opening files from other folders. That means:
+  - **No cross-directory links.** Never link to notes in other folders. If two folders need the same concept, each explains it in its own terms at the depth its topic requires. Duplication _across_ folders is expected and fine.
+  - **No duplication _within_ a folder.** Inside a folder, the normal rules apply: each idea is explained once, notes link to siblings, and `index.md` is the glue. No two notes in the same folder should cover the same ground.
+  - **Each note must stand on its own** within its folder's context. A reader should understand the subtopic using only the current note plus its siblings — never "read a note in another folder first."
   - Cover the declared scope fully — no "see the other note for the actual explanation."
-  - Concepts from _other topics_: link, don't re-explain (a link to `git/refs.md` is fine; re-teaching refs is not).
-  - Shared context from _within the same topic_: put in `index.md` or briefly recap — never "read X first or this won't make sense."
+  - Shared context within the folder: put in `index.md` or briefly recap — never "read X first or this won't make sense."
   - If a note can't stand alone, its scope is wrong: narrow it, or absorb the missing piece.
 
 ### Topic index file (`index.md`)
@@ -23,7 +25,6 @@ It should contain:
 - **A reading order** — which note to start with and how the subtopics build on each other. If order doesn't matter, say so.
 - **A map of the subtopics**: for each note, a relative link plus a one-line description of what's in it and when you'd reach for it.
 - **Cross-cutting concepts** that span multiple notes (shared vocabulary, recurring gotchas, a diagram of how the pieces relate) — the kind of thing that has no natural home in any single note.
-- **Links to related topics** (other folders) when relevant.
 
 **Keep `index.md` in sync — always.** Whenever a note is added, removed, renamed, or significantly reshaped, update `index.md` in the **same change** — a new file without an index update is incomplete work. If the addition brings the folder to 2+ notes for the first time, create `index.md` in the same change.
 
@@ -34,20 +35,22 @@ Two workflows depending on what the user provides. **Auto-detect:** if the input
 ### Default: discussion workflow
 
 1. **User names the topic.** One or more topics to learn, or to discuss when partly known. If the scope is ambiguous, ask for clarification before starting.
-2. **Teach** — proactively build the mental model rather than just answering questions. See [Teaching approach](#teaching-approach) below. The user asks follow-ups, pushes back, and explores edge cases as they go.
-3. **Save only on explicit ask.** When the user says "save this" (or equivalent), write a markdown file capturing the **conclusions and non-obvious details** from the session — not a transcript. A teaching or discussion session alone does not imply a save.
+2. **Calibrate first.** Before teaching anything, ask two quick questions: (a) where the user is starting from (offer concrete levels, e.g. "never touched it / used it but it's fuzzy / know the basics, want to sharpen edges"), and (b) what they want to walk away with (e.g. "clean mental model / implementation fluency / deep mastery / something else"). Adapt depth, pacing, and examples to the answers. See [Calibration](#calibration) below.
+3. **Teach** — proactively build the mental model rather than just answering questions. See [Teaching approach](#teaching-approach) below. The user asks follow-ups, pushes back, and explores edge cases as they go.
+4. **Save only on explicit ask.** When the user says "save this" (or equivalent), write a markdown file capturing the **conclusions and non-obvious details** from the session — not a transcript. A teaching or discussion session alone does not imply a save.
 
 ### Course-guided workflow
 
 Activated automatically when the user provides a structured course outline or curriculum.
 
 1. **User provides a course outline.** Accept it as the session roadmap. Clarify scope or ambiguity before starting, just like the discussion workflow.
-2. **Teach chunk by chunk, following the course order.** The course structure is the backbone, but teach freely — restructure explanations, reorder within a chunk, add context the course misses. Don't narrate slides.
-3. **Check in and transition.** After each chunk, check understanding, then explicitly state what's coming next. The user can skip ahead, go deeper, or reorder.
-4. **Track progress.** Keep track of which sections are covered vs remaining. When the user asks "where are we?" or "what's next?", give a clear answer.
-5. **Cross-reference existing notes.** If the course covers something the user's repo already has notes on, point it out — skip, briefly recap, or highlight what's new rather than re-teaching from scratch.
-6. **Critical lens.** Flag when course content seems wrong, outdated, or oversimplified. Don't pass it through uncritically.
-7. **Save only on explicit ask.** Same rule as discussion workflow. When saving, organize notes by the mental model that emerged — not by the course's section layout. The course is the input; the understanding is the output.
+2. **Calibrate first.** Same as the discussion workflow — ask about prior knowledge and goals before teaching the first chunk. See [Calibration](#calibration) below.
+3. **Teach chunk by chunk, following the course order.** The course structure is the backbone, but teach freely — restructure explanations, reorder within a chunk, add context the course misses. Don't narrate slides.
+4. **Check in and transition.** After each chunk, check understanding, then explicitly state what's coming next. The user can skip ahead, go deeper, or reorder.
+5. **Track progress.** Keep track of which sections are covered vs remaining. When the user asks "where are we?" or "what's next?", give a clear answer.
+6. **Cross-reference within the folder.** If the course covers something already captured in a sibling note within the same folder, point it out — skip, briefly recap, or highlight what's new rather than re-teaching from scratch. Don't reference notes in other folders.
+7. **Critical lens.** Flag when course content seems wrong, outdated, or oversimplified. Don't pass it through uncritically.
+8. **Save only on explicit ask.** Same rule as discussion workflow. When saving, organize notes by the mental model that emerged — not by the course's section layout. The course is the input; the understanding is the output.
 
 ## Teaching approach
 
@@ -61,15 +64,51 @@ Weave in these elements as they help the idea click. Not every topic needs all o
 - **Concrete example first, then generalize.** Start tangible: a real command, a real scenario, real inputs and outputs. Only after it's grounded, pull out the general pattern ("notice that every case here is really _X_"). Abstraction without a concrete anchor is forgettable.
 - **Abstraction / mental model.** The compact takeaway — often a metaphor, a diagram, or a one-line invariant. This is what the user will reach for six months from now when the details have faded.
 - **Gotchas and edge cases.** Where the simple model breaks down. These are often the most valuable part of the session — they mark the boundary between the user's current understanding and reality.
-- **Connections.** How this relates to things the user already knows, including prior notes in this repo. Explicit links help knowledge settle in context instead of floating alone.
+- **Connections.** How this relates to things the user already knows. Explicit connections help knowledge settle in context instead of floating alone.
 
 ### Teaching multiple topics
 
 If the user names more than one topic, ask whether to teach them **in sequence** or focus on the **connections** (compare/contrast, or show how one builds on the other). Don't silently interleave — pick a structure and say what it is.
 
-### Check in
+### Calibration
 
-After a substantial chunk, pause — ask a question back, or "does that land?" — rather than pouring out more. The user's response tells you where to go deeper.
+Before teaching begins (in either workflow), ask two quick questions to set depth and pacing:
+
+1. **Where are you starting from?** Offer concrete levels as options so the user can point rather than self-assess from scratch. Tailor the levels to the topic. Example for a technical topic:
+   - Never really thought about it
+   - I've used it but it feels like a black box
+   - I roughly get the basics but [specific confusing part] trips me up
+   - I know it well, want to sharpen the edges
+
+2. **What do you want to walk away with?** Again, offer options:
+   - A clean mental model (so it stops feeling like magic)
+   - Implementation fluency (build it from scratch)
+   - Deep mastery (could teach or write about it)
+   - Something else — tell me
+
+Use the answers to skip what's already solid, slow down where it's fuzzy, and pitch examples at the right level. If the user's starting point is advanced, don't re-teach foundations — jump to the edges. If they want implementation fluency, every concept must include a "now write it" moment.
+
+After calibrating, briefly state the arc you're planning (the sequence of chunks and how they build on each other) so the user can see the map before entering the territory.
+
+### Interactive rhythm
+
+Teaching is a conversation, not a lecture. The back-and-forth is what makes concepts stick.
+
+**After each chunk, stop and ask.** Don't pour out the next section — pose a question that tests whether the mental model actually landed. The user's answer tells you where to go deeper, what to skip, and whether to try a different angle.
+
+**Question types to rotate through** (pick what fits the concept):
+
+- **Predict the output.** Show a code snippet or scenario and ask "what happens here?" Forces the user to run the mental model, not just nod along.
+- **Walk me through it.** Ask the user to explain a mechanism in their own words, step by step. Reveals gaps that "I get it" hides.
+- **True or false.** A single statement that targets a common misconception. Quick, low-friction, high-signal.
+- **What would break?** Give a working setup and ask what change would break it, or why a specific variation doesn't work. Tests the boundaries of understanding.
+- **Draw the chain / diagram.** Ask the user to describe a structure (call stack, prototype chain, data flow) in words or steps. Externalizing structure exposes fuzzy spots.
+
+**Sharpen correct answers.** When the user gets it right but the wording is imprecise or the mental model is slightly off, don't just say "correct" — acknowledge the answer, then tighten it. Point out the precise nuance they glossed over, the edge case their phrasing doesn't cover, or the more accurate way to think about it. This is where real learning happens — the user was _almost_ right, and you close the last gap.
+
+**Handle wrong answers without deflating.** If the answer is wrong, don't say "wrong" and re-explain from scratch. Identify the specific point where the reasoning went off track, ask a narrower follow-up question that targets that point, and let the user self-correct. Only re-explain if the follow-up doesn't land.
+
+**Pace by signal, not by clock.** If the user nails the question instantly, move on — don't belabor it. If they struggle, slow down: try a different example, a different angle, or decompose the concept into smaller pieces. The user's answers are your pacing signal.
 
 ## Writing Guidelines
 
@@ -84,7 +123,7 @@ After a substantial chunk, pause — ask a question back, or "does that land?" �
 - Capture the **reasoning and motivation** behind decisions and the **non-obvious** details, not textbook definitions easily found elsewhere.
 - Include concrete examples, commands, and gotchas that came up in the session.
 - Preserve the **mental model** that emerged — the metaphor, the one-line invariant — not just the facts.
-- Link related notes with relative markdown links.
+- Link related notes with relative markdown links (within the same folder only — no cross-directory links).
 - Keep a short summary/TL;DR at the top of each note.
 
 ### Style

@@ -3,7 +3,7 @@
 **TL;DR**
 
 - Inheritance in JS is built on one mechanism: every object has a hidden internal slot `[[Prototype]]` — a link to another object or `null`. Property **reads** walk this chain until found; writes don't walk.
-- The chain is a singly-linked list of objects. Property lookup is a linear walk. `class`, `new`, and `extends` are sugar over this.
+- The chain is a singly-linked list of objects. Property lookup is a linear walk. `class`, `new`, and `extends` are sugar over this. The historical progression (Functional → Functional-shared → Prototypal → Pseudoclassical → Class) shows _why_ the chain exists: each pattern solves the previous one's pain point.
 - `class Foo { ... }` lays down two objects: `Foo` (the constructor function) and `Foo.prototype` (the object instances delegate to). Methods declared in the class body live on `Foo.prototype` — one shared copy. Class fields (`x = 1`) and `this.x = ...` become **own properties** on each instance.
 - `this` is resolved at the **call site**, not at attribute access — JS's biggest break from class-based languages like Python, where `obj.method` returns a pre-bound method object.
 
@@ -63,6 +63,118 @@ Writing creates a new own property that **shadows** the inherited one. This is w
 
 > Subtle exception: if the prototype defines a **setter** for that key, the write triggers the setter instead of creating an own property. Rare in hand-written code; common with DOM properties (e.g. `el.id = "x"` runs a setter on `Element.prototype`).
 
+## How we got here: instantiation patterns
+
+The prototype chain didn't arrive with a manual — JS developers discovered _why_ they needed it by hitting walls. Walking through the historical patterns makes the chain feel inevitable rather than arbitrary.
+
+### Functional
+
+The simplest possible approach: a plain function that creates an object, attaches properties and methods, and returns it.
+
+```js
+function makeCat(name) {
+  const cat = {};
+  cat.name = name;
+  cat.meow = function () {
+    return `${this.name} says meow`;
+  };
+  return cat;
+}
+const a = makeCat("Milo");
+const b = makeCat("Luna");
+```
+
+Works, but `a.meow` and `b.meow` are **separate function objects** doing the same thing. Make 10,000 cats and you get 10,000 copies of `meow` in memory. Methods don't change per instance — duplicating them is pure waste.
+
+### Functional-shared
+
+Extract the shared methods into a separate object and copy references onto each instance:
+
+```js
+const catMethods = {
+  meow() {
+    return `${this.name} says meow`;
+  },
+};
+
+function makeCat(name) {
+  const cat = {};
+  cat.name = name;
+  cat.meow = catMethods.meow; // reference, not copy
+  return cat;
+}
+```
+
+Now all cats share one `meow` function. But the wiring is manual — every new method means another `cat.x = catMethods.x` line. And if you add a method to `catMethods` _after_ creating an instance, existing instances don't see it. The link is a snapshot, not live.
+
+### Prototypal — the chain enters
+
+What if the object could just _ask another object_ at lookup time? That's exactly what `[[Prototype]]` does:
+
+```js
+const catMethods = {
+  meow() {
+    return `${this.name} says meow`;
+  },
+};
+
+function makeCat(name) {
+  const cat = Object.create(catMethods); // live delegation link
+  cat.name = name;
+  return cat;
+}
+```
+
+No manual copying. Methods added to `catMethods` later are visible to all existing cats instantly — the link is live. This is the pattern that made the prototype chain worth having.
+
+### Pseudoclassical — `new` automates the boilerplate
+
+The prototypal pattern still has ceremony: create via `Object.create`, assign properties, return. The `new` keyword automates all three steps:
+
+```js
+function Cat(name) {
+  this.name = name; // `new` already created the object and bound `this`
+}
+Cat.prototype.meow = function () {
+  return `${this.name} says meow`;
+};
+
+const c = new Cat("Milo"); // new: create obj → link to Cat.prototype → run body → return
+```
+
+`new` creates the empty object, sets its `[[Prototype]]` to `Cat.prototype`, runs the function body with `this` bound to the new object, and returns it. The developer only writes the interesting parts.
+
+The cost: `new` is invisible magic. Forget it and `this` points somewhere wrong (covered in the [`this` section](#this-is-resolved-at-the-call-site) below). The `Foo.prototype` naming collision with `[[Prototype]]` adds confusion.
+
+### Classes — sugar over pseudoclassical
+
+ES6 `class` is the same pseudoclassical pattern with cleaner syntax and guardrails:
+
+```js
+class Cat {
+  constructor(name) {
+    this.name = name;
+  }
+  meow() {
+    return `${this.name} says meow`;
+  }
+}
+```
+
+Under the hood, identical to the pseudoclassical version: `Cat.prototype.meow` exists, `new` does the same three steps. But calling without `new` throws instead of silently corrupting globals, and the syntax groups constructor + methods in one block.
+
+### The progression at a glance
+
+| Pattern           | Shared methods? | Live link? | Boilerplate |
+| ----------------- | --------------- | ---------- | ----------- |
+| Functional        | No — duplicated | —          | Low         |
+| Functional-shared | Yes — copied    | No         | Medium      |
+| Prototypal        | Yes — delegated | Yes        | Medium      |
+| Pseudoclassical   | Yes — delegated | Yes        | Low         |
+| Class             | Yes — delegated | Yes        | Lowest      |
+
+Each step solves the previous step's pain. The prototype chain is the mechanism that made the jump from "copied references" to "live delegation" — everything after that is ergonomic sugar on top.
+
 ## Setting up the chain directly
 
 Four ways to set `[[Prototype]]` without going through `class` or `new`:
@@ -110,7 +222,7 @@ Works, but engines optimize objects assuming a stable prototype; mutating it aft
 
 ## Classes and `new`
 
-`class` and `new` are the other route to set up `[[Prototype]]`. To untangle them you have to keep two named things separate:
+The [instantiation patterns](#how-we-got-here-instantiation-patterns) above showed what `class` and `new` _do_. This section unpacks the naming confusion underneath them. To untangle it you have to keep two named things separate:
 
 - `[[Prototype]]` — the **hidden internal slot** on every object (the chain link).
 - `Foo.prototype` — a **regular, visible property** that exists on functions. It's the object that future instances of that function will delegate to.
