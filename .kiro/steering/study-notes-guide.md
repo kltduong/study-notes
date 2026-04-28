@@ -63,10 +63,11 @@ These apply to both interactive workflows:
 2. **Create `toc.md`** in the topic folder. Parse the course outline into logical chunks (group related lessons), write one checkbox entry per chunk with a brief scope note. This is the progress tracker for the course.
 3. Apply [shared rules](#shared-rules-discussion--course-guided): calibrate → teach → save on ask.
 4. **Teach chunk by chunk following course order**, but teach freely — restructure, reorder within a chunk, add missing context. Don't narrate slides.
-5. **Check in and transition** after each chunk. State what's next. User can skip, go deeper, or reorder. **Update `toc.md`** — mark the completed chunk `[x]`.
-6. **Track progress.** Answer "where are we?" / "what's next?" clearly.
-7. **Cross-reference within the folder.** If the course covers something in a sibling note, point it out — skip, recap, or highlight what's new. No cross-folder references.
-8. **Critical lens.** Flag wrong, outdated, or oversimplified course content.
+5. **Prompt before moving on.** After finishing a chunk, explicitly tell the user the chunk is done and ask if they want to save it as a note before moving to the next chunk. State what the next chunk is. This prevents losing work in long sessions. User can skip saving, go deeper, or reorder.
+6. **One note per chunk.** Each completed chunk maps to one `.md` file (on explicit ask). The note captures the mental model from the discussion — not a transcript. Organize by understanding, not course order within the file. **Update `toc.md`** — mark the completed chunk `[x]`.
+7. **Track progress.** Answer "where are we?" / "what's next?" clearly.
+8. **Cross-reference within the folder.** If the course covers something in a sibling note, point it out — skip, recap, or highlight what's new. No cross-folder references.
+9. **Critical lens.** Flag wrong, outdated, or oversimplified course content.
 
 ### Content-to-note workflow
 
