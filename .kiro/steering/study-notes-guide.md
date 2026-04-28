@@ -30,7 +30,11 @@ It should contain:
 
 ## Workflow
 
-Two workflows depending on what the user provides. **Auto-detect:** if the input is a structured course outline (sections, chapters, numbered TOC, curriculum), use the course-guided workflow. If it's a topic name or question, use the default discussion workflow.
+Three workflows depending on what the user provides. **Auto-detect:**
+
+- **Content provided** — the user pastes or attaches raw content (article, transcript, notes dump, documentation excerpt, etc.) and asks to turn it into a note → use the [content-to-note workflow](#content-to-note-workflow).
+- **Course outline** — the input is a structured course outline (sections, chapters, numbered TOC, curriculum) → use the [course-guided workflow](#course-guided-workflow).
+- **Topic or question** — anything else (a topic name, a question, a "teach me X") → use the [default discussion workflow](#default-discussion-workflow).
 
 ### Default: discussion workflow
 
@@ -51,6 +55,23 @@ Activated automatically when the user provides a structured course outline or cu
 6. **Cross-reference within the folder.** If the course covers something already captured in a sibling note within the same folder, point it out — skip, briefly recap, or highlight what's new rather than re-teaching from scratch. Don't reference notes in other folders.
 7. **Critical lens.** Flag when course content seems wrong, outdated, or oversimplified. Don't pass it through uncritically.
 8. **Save only on explicit ask.** Same rule as discussion workflow. When saving, organize notes by the mental model that emerged — not by the course's section layout. The course is the input; the understanding is the output.
+
+### Content-to-note workflow
+
+Activated when the user provides raw content (pasted text, attached document, article, transcript, rough notes) and asks to turn it into a note — or when the intent is clearly "save this content as a note" rather than "teach me this."
+
+1. **Identify the topic folder.** Determine which existing folder the content belongs in, or create a new one if it's a new topic. Ask if ambiguous.
+2. **Assess scope.** Decide whether the content fits in a single note or should be split into multiple focused notes. Prefer several small files over one sprawling file — same as the structure rules. If splitting, tell the user the plan before writing.
+3. **Reorganize, don't transcribe.** The input is raw material, not the final structure. Reorganize it into a well-structured markdown note following all [Writing Guidelines](#writing-guidelines):
+   - Add a TL;DR at the top.
+   - Impose top-down reading order — define terms before using them, no unexplained forward references.
+   - Group related ideas under clear headings.
+   - Convert inline explanations to code blocks, tables, or mermaid diagrams where they'd be clearer.
+   - Cut filler and redundancy. Each idea explained once.
+   - Preserve the substance — don't drop non-obvious details, gotchas, or examples from the original content.
+4. **Apply a critical lens.** If something in the provided content seems wrong, outdated, or oversimplified, flag it with an inline note (e.g. "> ⚠️ The original source claims X, but...") rather than silently passing it through or silently dropping it.
+5. **Update `index.md`.** If the folder now has 2+ notes, create or update `index.md` in the same change.
+6. **No teaching, no calibration.** This workflow skips the interactive teaching loop — the user already has the content and wants it organized, not explained back to them. Just write the file(s).
 
 ## Teaching approach
 
