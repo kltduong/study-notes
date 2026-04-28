@@ -32,6 +32,51 @@ Created at the start of the [course-guided workflow](#course-guided-workflow). T
 - Mark chunks `[x]` as they are taught during the session.
 - `toc.md` is **not** linked from `index.md` — it's a progress artifact, not a study note.
 
+### Quizzes and tests
+
+Quizzes and tests are interactive checkpoints woven into the toc alongside teaching chunks. They are **not** saved as notes — they happen live in the session.
+
+- **Quiz** — covers the last 1–3 chunks. Quick (3–5 questions), focused on whether the immediate concepts landed. Checks recall and basic application.
+- **Test** — covers a major phase (multiple chunks). Broader, harder, pulls across chunks and tests how concepts connect. Forces synthesis, not just recall.
+
+**Placement rules:**
+
+- **Quizzes** — after every 2–3 thematically similar chunks. Quick checkpoint on whether the immediate concepts landed. Group by relatedness, not rigid count.
+- **Tests** — divide the course into roughly equal parts (by chunk count), place a test at each part boundary. Each test covers its entire part and tests how chunks within it connect.
+- **Final test** — always present, always last. Cumulative across the whole course. Forces synthesis across all parts.
+
+**Example** (10 chunks, adapt to actual count and natural boundaries):
+
+```
+chunk1
+chunk2
+chunk3
+  → quiz (covers chunks 2–3)
+chunk4
+chunk5
+  → test (covers chunks 1–5 — end of part 1)
+chunk6
+chunk7
+chunk8
+  → quiz (covers chunks 7–8)
+chunk9
+chunk10
+  → test (covers chunks 6–10 — end of part 2)
+  → final test (cumulative, full course)
+```
+
+Guidelines:
+
+- **Quiz after every 2–3 chunks** — frequent enough to catch gaps early, light enough to not slow momentum. Group by thematic similarity.
+- **Tests at part boundaries** — divide chunks into roughly equal parts, test at each boundary.
+- **Final test is mandatory** — cumulative, at the very end, distinct from part tests.
+- Not every chunk needs its own quiz — small or tightly coupled chunks share one.
+- Adjust to the actual course structure: if a natural boundary falls after 4 chunks instead of 5, put the test there.
+
+**In `toc.md`:** quiz/test entries use the same checkbox format as chunks. Mark `[x]` when completed.
+
+**Delivery:** Present quiz/test questions **one at a time**. Give the question, wait for the user's answer, provide feedback/explanation, then move to the next question. Don't batch all questions at once.
+
 ## Workflow
 
 Auto-detect which workflow to use based on user input:
@@ -67,7 +112,7 @@ These apply to both interactive workflows:
 ### Course-guided workflow
 
 1. User provides a course outline — accept it as the session roadmap. Clarify ambiguity before starting.
-2. **Create `toc.md`** in the topic folder. Parse the course outline into logical chunks (group related lessons), write one checkbox entry per chunk with a brief scope note. This is the progress tracker for the course.
+2. **Create `toc.md`** in the topic folder. Parse the course outline into logical chunks (group related lessons), write one checkbox entry per chunk with a brief scope note. **Add quiz and test entries** following the [placement pattern](#quizzes-and-tests) — interleave them among the chunks based on natural boundaries. This is the progress tracker for the course.
 3. Apply [shared rules](#shared-rules-discussion--course-guided): calibrate → teach → save on ask.
 4. **Teach chunk by chunk following course order**, but teach freely — restructure, reorder within a chunk, add missing context. Don't narrate slides.
 5. **Prompt before moving on.** After finishing a chunk, explicitly tell the user the chunk is done and ask if they want to save it as a note before moving to the next chunk. State what the next chunk is. This prevents losing work in long sessions. User can skip saving, go deeper, or reorder.
@@ -77,9 +122,7 @@ These apply to both interactive workflows:
 9. **Critical lens.** Flag wrong, outdated, or oversimplified course content.
 10. **Session management.** Long sessions degrade context quality. Prefer short sessions — one chunk (or a few small related chunks) per session. After saving a chunk's note and updating `toc.md`, that's a natural stopping point. On a new session, read `toc.md` and existing notes in the folder to recover full state — no prior conversation needed. The user can start a new session anytime; `toc.md` + saved notes are the durable state.
 
-### Content-to-note workflow
-
-No teaching, no calibration — the user has the content and wants it organized.
+### Content-to-note workflow — the user has the content and wants it organized.
 
 1. **Identify the topic folder.** Use existing or create new. Ask if ambiguous.
 2. **Assess scope.** Single note or split into multiple? If splitting, tell the user the plan first.
