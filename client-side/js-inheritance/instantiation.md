@@ -131,12 +131,16 @@ Under the hood: `User` is still a function, `greet` lives on `User.prototype`, `
 
 ## Class fields vs prototype methods
 
-The `=` sign in a class body is the tell. It determines where a property lands:
+The `=` sign in a class body is the tell. It determines where a property lands — this applies to values, regular functions, and arrow functions alike:
 
-| Syntax in class body | Where it lands                      | Shared?                        |
-| -------------------- | ----------------------------------- | ------------------------------ |
-| `method() {}`        | `Constructor.prototype`             | Yes — one copy, delegated      |
-| `prop = value`       | Each instance (`this.prop = value`) | No — own property per instance |
+| Syntax in class body | Where it lands              | Shared?                        |
+| -------------------- | --------------------------- | ------------------------------ |
+| `method() {}`        | `Constructor.prototype`     | Yes — one copy, delegated      |
+| `prop = value`       | Each instance (`this.prop`) | No — own property per instance |
+| `fn = function() {}` | Each instance (`this.fn`)   | No — own property per instance |
+| `fn = () => {}`      | Each instance (`this.fn`)   | No — own property per instance |
+
+The bottom three rows all use `=` — all own properties. Only the method shorthand (no `=`) goes on the prototype. `fn = function() {}` and `fn = () => {}` look like methods but are class fields — the `=` makes them per-instance, same as `count = 0`.
 
 ```js
 class User {
@@ -153,6 +157,27 @@ u.hasOwnProperty("fieldMethod"); // true — own property
 ```
 
 Class fields execute as if they were assignments inside the constructor (`this.fieldMethod = () => {}`). The **writes stay put** rule applies — assignment to `this` creates an own property.
+
+### Execution order: fields run before the constructor body
+
+Class fields are evaluated **right before** the constructor body runs. A class with both desugars roughly to:
+
+```js
+function User(name) {
+  // — class fields first —
+  this.age = 0;
+  this.fieldMethod = () => {};
+
+  // — then constructor body —
+  this.name = name;
+}
+```
+
+Both `age` and `name` end up as own properties on the instance. The difference: fields can't use constructor parameters (they run before the body), so they're suited for defaults and fixed values. Constructor assignments handle parameterized state.
+
+### Class fields are the functional pattern inside a class
+
+Mechanically, `age = 0` in a class body does the same thing as `user.age = 0` in the functional instantiation pattern — own property, per instance, no prototype involvement. The class just gives you both options side by side: `=` for own properties (functional-style), method syntax for prototype methods. The functional pattern only has own properties — there's no prototype wiring unless you set it up yourself.
 
 Arrow function fields capture `this` lexically, making them safe to detach (useful for callbacks/event handlers). The tradeoff: you lose shared-method memory efficiency — each instance gets its own function object.
 
