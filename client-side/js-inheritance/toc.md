@@ -26,7 +26,7 @@ Progress tracker for the course. Chunks grouped by theme.
 10. Quizzes/tests woven in at natural checkpoints, not as separate chunks.
 
 - [x] **Foundations** — What JS is, why objects and prototypes matter, everything inherits from Object (Section 1: intro through "Use prototypes when creating objects with a similar type")
-- [ ] **[[Prototype]] deep dive** — The hidden `[[Prototype]]` property, getting/setting prototypes, primitives vs objects, object wrappers, creating custom prototypes, prototype of object literals, inherited methods (Section 2: "Why understanding prototypes matter" through "Setting prototypes example")
+- [x] **[[Prototype]] deep dive** — The hidden `[[Prototype]]` property, getting/setting prototypes, primitives vs objects, object wrappers, creating custom prototypes, prototype of object literals, inherited methods (Section 2: "Why understanding prototypes matter" through "Setting prototypes example")
 - [ ] **Prototype chain & behavior** — Chain mechanics, null termination, shadowing, `this` binding, enumerable properties, iteration, warnings about mutating prototypes (Section 2 continued: "The prototype chain" through "Summary")
 - [ ] **[[Prototype]] quiz**
 - [ ] **Instantiation patterns** — Functional, Functional Shared, Prototypal (`Object.create`), Pseudoclassical (`new` + constructor), Class syntax, arrow function caveats (Section 3: "Object Literals" through "Instantiation Patterns Quiz")
