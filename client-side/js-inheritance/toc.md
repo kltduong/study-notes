@@ -36,7 +36,9 @@ Progress tracker for the course. Chunks grouped by theme.
       📊 shaky — solid on setPrototypeOf perf cost and Object.create distinction; fuzzy on the specific cases where **proto** breaks (shadowing, null-prototype unreachability vs getter returning undefined)
 - [x] **`.prototype` property** — Only functions have it, exceptions, `[[Call]]`/`[[Construct]]`, constructor property, overwriting `.prototype`, full chain revealed, `Object.prototype` at the top, `.prototype` vs `[[Prototype]]` (Section 6: "Only functions have a .prototype property" through "Function prototype quiz")
       📊 shaky — solid on .prototype vs [[Prototype]] distinction and [[Construct]]; missed that .constructor chain-walks to Object.prototype when overwritten
-- [ ] **Advanced prototypes quiz**
+- [x] **Advanced prototypes quiz**
+      📊 solid — core mechanics strong; chain walk, shadowing, class fields vs prototype methods all correct
+      🔧 Refinements: - Q1: Correct conclusion on `Object.create(null)` + `__proto__` but reasoning skipped _why_ the accessor wasn't found — key point is the accessor lives on `Object.prototype` and the chain doesn't reach it - Q3: Confused property descriptor `{ value: 42 }` with the value itself (`42`) when `defineProperty` shadows `__proto__` - Q4: Said `bark` lives in "engine's internal slot" — it lives on `Dog.prototype`, a regular JS object; the _link_ is engine-internal, the _target_ is not
 - [ ] **Building prototype chains** — `new` keyword approach (pre-2011), `Object.create` (ES5), `Object.setPrototypeOf` (ES6), classes + `extends`, 3-level chains with constructors and classes, `call()` for inheritance, duplication problems (Section 7: "Course project overview" through "You've beaten prototypes")
 - [ ] **OOP & class vs prototype** — What OOP means, class-based vs prototype-based inheritance, Java comparison, classes vs prototypes tradeoffs (Section 8)
 - [ ] **Composition** — Intro, converting prototypal model to composition, inheritance vs composition tradeoffs, when to use which (Section 9)
