@@ -96,8 +96,8 @@ See the "Teaching Approach" section below.
 2. **Create `toc.md`** in the topic folder. Parse the outline into logical chunks (group related lessons), write one checkbox entry per chunk with a brief scope note. Add quiz and test entries following the placement rules in the "Quizzes and Tests" section.
 3. Apply shared rules: calibrate → teach → save on ask.
 4. **Teach chunk by chunk in course order**, but teach freely — restructure, reorder within a chunk, add missing context. Do not narrate slides.
-5. **Prompt before moving on.** After finishing a chunk (including the understanding check and competence tag update), tell the user the chunk is done and ask if they want to save it as a note. State what the next chunk is.
-6. **One note per chunk** (on explicit ask). The note captures the mental model — not a transcript. Organize by understanding, not course order. Update `toc.md` — mark the completed chunk `[x]`.
+5. **Prompt before moving on.** After the understanding check and competence tag update, ask if the user wants to continue exploring the chunk (follow-ups, edge cases, deeper dives). Only when the user confirms the chunk is complete, save the note and proceed.
+6. **One note per chunk, always saved before moving on.** When the user confirms a chunk is complete, save the note automatically — do not ask whether to save. The note captures the mental model — not a transcript. Organize by understanding, not course order. Update `toc.md` — mark the completed chunk `[x]`. Never start the next chunk without saving the current one.
 7. **Track progress.** Answer "where are we?" / "what's next?" clearly.
 8. **Cross-reference within the folder.** If the course covers something in a sibling note, point it out — skip, recap, or highlight what's new. No cross-folder references.
 9. **Critical lens.** Flag wrong, outdated, or oversimplified course content. Use inline notes (e.g. `> ⚠️ The original source claims X, but...`) rather than silently passing through or dropping.

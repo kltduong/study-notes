@@ -2,14 +2,27 @@
 
 ## Calibration
 
-_Not yet calibrated — will be filled in before teaching begins._
+**Starting point:** Knows callbacks and promises exist, has used async/await. Fuzzy on how they actually work under the hood — event loop, microtasks, task queues, execution ordering.
+
+**Goal:** Clean mental model of how async JS actually works — event loop, task queues, why things run in the order they do.
+
+**Planned arc:**
+
+1. Foundations (chunks 1–2) — why async exists, event loop model (call stack + task queue). Moderate pace; this is where the fuzziness lives.
+2. Callbacks (chunks 3–5) — original async pattern, error handling, callback hell. Lighter pace; focus on _why_ and pain points.
+3. Promises (chunks 6–11) — states, chaining, combinators, testing. Moderate-to-slow; build the scheduling mental model.
+4. Async/Await & Advanced Event Loop (chunks 12–15) — syntax sugar, microtasks vs macrotasks, task priorities, rAF. Slower pace; final layer of the execution-order model.
+
+Throughout: emphasis on predicting execution order as the proof the mental model works.
 
 ## Course Progress
 
 ### Part 1 — Foundations & Callbacks
 
-- [ ] **Chunk 1: Intro & What Is Asynchronicity?**
+- [x] **Chunk 1: Intro & What Is Asynchronicity?**
       Introduction; Structure of This Course; What Is Asynchronicity?; Typical Example of an Asynchronous Action in JavaScript; Synchronous vs Asynchronous in JavaScript; Quick Note about Github Repository.
+      📊 solid
+      🔧 Refinements: - Said "the code is routed" when it's the _callback function_ that gets placed in the task queue, not the code inside it
 
 - [ ] **Chunk 2: Event Loop Basics**
       Event Loop in JavaScript — Call Stack and Task Queue; Let's Fix Our Example.
