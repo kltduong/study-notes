@@ -33,10 +33,12 @@ Throughout: emphasis on predicting execution order as the proof the mental model
       What Is a Callback In JavaScript?; Callbacks Are Not Always Asynchronous; How To Handle Errors In Asynchronous Code; Pros & Cons Of Callbacks; Callback Examples In JavaScript Libraries.
       📊 solid
 
-  → [ ] Quiz (chunks 2–3): event loop mechanics, callback fundamentals, error handling patterns.
+  → [x] Quiz (chunks 2–3): event loop mechanics, callback fundamentals, error handling patterns.
+  📊 solid
 
-- [ ] **Chunk 4: Callback Problems & HTTP**
+- [x] **Chunk 4: Callback Problems & HTTP**
       Callbacks Lack Readability; Making HTTP Requests From Your Browser; Callback Hell.
+      📊 solid
 
 - [ ] **Chunk 5: Testing Callbacks**
       Setting Up Testing Environment; Testing Callback Functions With Mocha And Chai.
