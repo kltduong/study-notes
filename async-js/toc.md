@@ -24,8 +24,10 @@ Throughout: emphasis on predicting execution order as the proof the mental model
       📊 solid
       🔧 Refinements: - Said "the code is routed" when it's the _callback function_ that gets placed in the task queue, not the code inside it
 
-- [ ] **Chunk 2: Event Loop Basics**
+- [x] **Chunk 2: Event Loop Basics**
       Event Loop in JavaScript — Call Stack and Task Queue; Let's Fix Our Example.
+      📊 solid
+      🔧 Refinements: - Said "engine places callback into the task queue" — it's the runtime that enqueues, not the engine - Said two same-delay setTimeout callbacks aren't guaranteed ordered — they are, because the task queue is FIFO and the runtime enqueues in registration order
 
 - [ ] **Chunk 3: Callbacks**
       What Is a Callback In JavaScript?; Callbacks Are Not Always Asynchronous; How To Handle Errors In Asynchronous Code; Pros & Cons Of Callbacks; Callback Examples In JavaScript Libraries.
