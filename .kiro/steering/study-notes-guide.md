@@ -4,7 +4,7 @@ inclusion: always
 
 ## Project Overview
 
-A personal study-notes repository. Learn a topic through teaching or discussion, then save takeaways as markdown. Topics are general (git, linux, networking, tooling, etc.) — not scoped to a single language or domain.
+Personal study-notes repository. Learn a topic through teaching or discussion, then save takeaways as markdown. Topics are general (git, linux, networking, tooling, etc.) — not scoped to a single language or domain.
 
 ## Repository Structure
 
@@ -40,89 +40,6 @@ Created at the start of the course-guided workflow. Tracks original course struc
 - Mark chunks `[x]` as they are taught.
 - `toc.md` is **not** linked from `index.md` — it's a progress artifact, not a study note.
 
-#### Competence tracking
-
-After completing a chunk's understanding check (or quiz/test), append a compact competence line to that chunk's entry in `toc.md`.
-
-Format: indented line under the chunk entry with a confidence tag and optional note on weakness.
-
-- `📊 solid` — all questions correct or minor gaps. Tag alone is enough if no notable gaps.
-- `📊 shaky` — got the gist but stumbled on a specific concept. Add a short note on what was weak.
-- `📊 weak` — fundamental misunderstanding surfaced; needs revisit. Add a short note on what was weak.
-
-Example:
-
-```markdown
-- [x] Prototype chain — how lookup walks the chain
-      📊 solid — hesitated on shadowing behavior
-- [x] `__proto__` vs `.prototype`
-      📊 weak — confused accessor with internal slot
-- [x] Quiz (chunks 1–2)
-      📊 shaky — solid on chain mechanics, weak on where `.constructor` points
-```
-
-On new sessions: read competence tags alongside calibration to adapt pacing — revisit weak areas, skip solid ones, probe shaky spots with a quick question before building on them.
-
-#### Tag upgrades
-
-When a re-assessment (remediation mini-quiz, review sweep, or any later quiz/test) shows improved understanding, update the competence tag in place. Append the new level so history is visible:
-
-```markdown
-- [x] `__proto__` vs `.prototype`
-      📊 weak → shaky — confused accessor with internal slot
-      📊 shaky → solid — nailed it on review sweep
-```
-
-The **current** (rightmost) level is what drives pacing decisions.
-
-### Quizzes and tests
-
-Interactive checkpoints woven into the toc alongside teaching chunks. **Not** saved as notes — they happen live in the session.
-
-- **Quiz** — covers the last 1–3 chunks. 3–5 questions. Checks recall and basic application.
-- **Test** — covers a major phase (multiple chunks). Broader, harder, tests how concepts connect. Forces synthesis.
-
-Placement rules:
-
-- **Quizzes** after every 2–3 thematically similar chunks. Group by relatedness, not rigid count.
-- **Tests** at roughly equal part boundaries (by chunk count). Each test covers its entire part.
-- **Final test** always present, always last. Cumulative across the whole course.
-- Not every chunk needs its own quiz — small or tightly coupled chunks share one.
-- Adjust to natural course boundaries.
-
-Example (10 chunks):
-
-```
-chunk1
-chunk2
-chunk3
-  → quiz (covers chunks 2–3)
-chunk4
-chunk5
-  → test (covers chunks 1–5 — end of part 1)
-chunk6
-chunk7
-chunk8
-  → quiz (covers chunks 7–8)
-chunk9
-chunk10
-  → test (covers chunks 6–10 — end of part 2)
-  → final test (cumulative, full course)
-```
-
-In `toc.md`: quiz/test entries use the same checkbox format as chunks. Mark `[x]` when completed.
-
-**Delivery:** Present quiz/test questions **one at a time**. Give the question, wait for the answer, provide feedback, then move to the next question.
-
-#### Remediation mini-quiz
-
-Triggered immediately after any understanding check, quiz, or test that produces a `shaky` or `weak` tag.
-
-1. **Brief re-teach** — revisit the weak concept from a different angle (new analogy, different example, contrast with a related concept). Keep it short — this isn't a full re-teach.
-2. **2–3 targeted questions** — focused narrowly on the weak point, not the full chunk. Deliver one at a time like normal.
-3. **Update the tag** — if the user now demonstrates understanding, upgrade the competence tag. If still shaky/weak, leave it for the next review sweep.
-4. **Don't loop endlessly.** One remediation attempt per weak point per session. If it doesn't land, move on — the review sweep will catch it later.
-
 ## Workflow Selection
 
 Auto-detect which workflow to use based on user input:
@@ -135,20 +52,33 @@ Auto-detect which workflow to use based on user input:
 
 ### Shared rules (discussion + course-guided)
 
-1. **Calibrate first.** Before teaching, ask:
-   - _Where are you starting from?_ Offer concrete levels tailored to the topic (e.g. "never touched it / used it but black box / know basics, fuzzy on [X] / know it well, want edges").
-   - _What do you want to walk away with?_ (e.g. "clean mental model / implementation fluency / deep mastery / something else").
-   - Use answers to set pacing: skip what's solid, slow down where it's fuzzy, pitch examples at the right level. Advanced start → jump to edges. Implementation fluency → every concept includes a "now write it" moment.
-   - After calibrating, state the planned arc so the user sees the map before entering the territory.
+These rules apply to both the discussion and course-guided workflows.
 
-2. **Persist calibration in `toc.md`.** Immediately after calibrating, before teaching begins, write a `## Calibration` section recording:
-   - The user's starting point and goals (brief, their own words).
-   - The planned teaching arc (ordered list of chunks/themes and how depth/pacing adapts).
-   - On a new session, read this section instead of re-asking. Only re-calibrate if the user says their level or goal has changed.
+#### 1. Calibrate first
 
-3. **Teach** using the teaching approach below.
+Before teaching, ask two questions:
 
-4. **Save only on explicit ask.** "Save this" → write a markdown file capturing conclusions and non-obvious details, not a transcript. Organize by the mental model that emerged — not by session or course order.
+- _Where are you starting from?_ Offer concrete levels tailored to the topic (e.g. "never touched it / used it but black box / know basics, fuzzy on [X] / know it well, want edges").
+- _What do you want to walk away with?_ (e.g. "clean mental model / implementation fluency / deep mastery / something else").
+
+Use answers to set pacing: skip what's solid, slow down where it's fuzzy, pitch examples at the right level. After calibrating, state the planned arc so the user sees the map before entering the territory.
+
+#### 2. Persist calibration in `toc.md`
+
+Immediately after calibrating, before teaching begins, write a `## Calibration` section in `toc.md` recording:
+
+- The user's starting point and goals (brief, their own words).
+- The planned teaching arc (ordered list of chunks/themes and how depth/pacing adapts).
+
+On a new session, read this section instead of re-asking. Only re-calibrate if the user says their level or goal has changed.
+
+#### 3. Teach using the teaching approach
+
+See the "Teaching Approach" section below.
+
+#### 4. Save only on explicit ask
+
+"Save this" → write a markdown file capturing conclusions and non-obvious details, not a transcript. Organize by the mental model that emerged — not by session or course order.
 
 ### Discussion workflow
 
@@ -159,25 +89,19 @@ Auto-detect which workflow to use based on user input:
 ### Course-guided workflow
 
 1. User provides a course outline — accept it as the session roadmap. Clarify ambiguity before starting.
-2. **Create `toc.md`** in the topic folder. Parse the outline into logical chunks (group related lessons), write one checkbox entry per chunk with a brief scope note. Add quiz and test entries following the placement rules above.
+2. **Create `toc.md`** in the topic folder. Parse the outline into logical chunks (group related lessons), write one checkbox entry per chunk with a brief scope note. Add quiz and test entries following the placement rules in the "Quizzes and Tests" section.
 3. Apply shared rules: calibrate → teach → save on ask.
 4. **Teach chunk by chunk in course order**, but teach freely — restructure, reorder within a chunk, add missing context. Don't narrate slides.
-5. **Prompt before moving on.** After finishing a chunk, tell the user the chunk is done and ask if they want to save it as a note. State what the next chunk is.
+5. **Prompt before moving on.** After finishing a chunk (including the understanding check and competence tag update), tell the user the chunk is done and ask if they want to save it as a note. State what the next chunk is.
 6. **One note per chunk** (on explicit ask). The note captures the mental model — not a transcript. Organize by understanding, not course order. Update `toc.md` — mark the completed chunk `[x]`.
 7. **Track progress.** Answer "where are we?" / "what's next?" clearly.
 8. **Cross-reference within the folder.** If the course covers something in a sibling note, point it out — skip, recap, or highlight what's new. No cross-folder references.
-9. **Critical lens.** Flag wrong, outdated, or oversimplified course content.
-10. **Review sweep before tests.** Before starting any part test or the final test, scan `toc.md` for `shaky` or `weak` tags in the chunks that test will cover. For each:
-    - Brief re-teach of the weak concept (different angle than the original).
-    - 2–3 targeted questions.
-    - Update the competence tag on success.
-    - Then proceed to the test itself.
-11. **End-of-course solidification pass.** After the final test, scan all competence tags across `toc.md`. If any remain below `solid`:
-    - Group related weak points.
-    - Re-teach each group with fresh examples and a synthesis angle (how the weak concept connects to things now understood).
-    - Test with 2–3 questions per group.
-    - Update tags. Repeat once more for anything still below solid. If it still doesn't land after two passes, note it as a known gap and move on — the user can revisit later.
-    - The course is complete when all tags are `solid` or the user opts out of further remediation.
+9. **Critical lens.** Flag wrong, outdated, or oversimplified course content. Use inline notes (e.g. "> ⚠️ The original source claims X, but...") rather than silently passing through or dropping.
+10. **Review sweep before tests.** Before starting any part test or the final test, scan `toc.md` for `shaky` or `weak` competence tags in the chunks that test will cover. For each, do a brief re-teach and 2–3 targeted questions. Update the competence tag on success. Then proceed to the test.
+11. **End-of-course solidification pass.** After the final test, two review steps:
+    - **Competence gaps:** Scan all competence tags across `toc.md`. If any remain below `solid`: group related weak points, re-teach with fresh examples and synthesis, test with 2–3 questions per group, update tags. Repeat once more for anything still below solid. If it still doesn't land after two passes, note it as a known gap and move on.
+    - **Refinement patterns:** Scan all `🔧 Refinements` entries. Group recurring themes (e.g. terminology imprecision, confusing descriptors with values). Present a summary of patterns and suggest targeted improvements. This is informational — no re-testing unless the user wants it.
+      The course is complete when all tags are `solid` (or the user opts out) and refinement patterns have been reviewed.
 12. **Session management.** Prefer short sessions — one chunk (or a few small related chunks) per session. After saving a chunk's note and updating `toc.md`, that's a natural stopping point. On a new session, read `toc.md` and existing notes in the folder to recover full state — no prior conversation needed.
 
 ### Content-to-note workflow
@@ -210,13 +134,13 @@ Ask whether to teach in sequence or focus on connections (compare/contrast, how 
 
 Teaching is a conversation, not a lecture.
 
-**End-of-chunk understanding check (mandatory).** After finishing each chunk, present 2–3 short questions testing whether core ideas landed. Deliver one at a time — give a question, wait for the answer, provide feedback, then move to the next. Only after all questions are answered, prompt about saving and the next chunk.
+**End-of-chunk understanding check (mandatory).** After finishing each chunk, present 2–3 short questions. Deliver one at a time — give a question, wait for the answer, provide feedback, then move to the next. Only after all questions are answered, update the competence tag in `toc.md`, then prompt about saving and the next chunk.
 
 Question design:
 
 - Target the chunk's key concepts, not trivia.
 - Mix types across chunks: predict the output, walk through step-by-step, true-or-false targeting a misconception, what would break, describe the structure, explain _why_ not just _what_.
-- Scale difficulty to calibration.
+- Scale difficulty to calibration level.
 
 Feedback approach:
 
@@ -225,7 +149,85 @@ Feedback approach:
 
 **Pacing signal:** All correct → move on. Struggled → slow down, revisit the weak spot with a different angle before proceeding.
 
-**Persist competence.** After the understanding check, update the chunk's entry in `toc.md` with a competence tag before prompting about saving or moving on. Same applies after quizzes and tests.
+## Competence Tracking
+
+All competence tracking lives in `toc.md`. After every understanding check, quiz, or test, append a competence line to the relevant chunk entry.
+
+### Tag levels
+
+- `📊 solid` — all questions correct or minor gaps. Tag alone is enough if no notable gaps.
+- `📊 shaky` — got the gist but stumbled on a specific concept. Add a short note on what was weak.
+- `📊 weak` — fundamental misunderstanding surfaced; needs revisit. Add a short note on what was weak.
+
+### Tag format
+
+Indented line under the chunk entry:
+
+```markdown
+- [x] Prototype chain — how lookup walks the chain
+      📊 solid — hesitated on shadowing behavior
+```
+
+### Refinement notes
+
+Even when a chunk scores `solid`, specific answers may reveal imprecise reasoning or terminology gaps that are worth tracking. After each understanding check, quiz, or test, record any answer that needed correction or refinement — regardless of the overall tag level.
+
+Format: a `🔧 Refinements:` block indented under the competence tag. Each item is a compact one-liner: what was off and what the correct framing is.
+
+```markdown
+- [x] Advanced prototypes quiz
+      📊 solid — core mechanics strong
+      🔧 Refinements: - Confused property descriptor `{ value: 42 }` with the value itself (`42`) on `defineProperty` shadowing - Said "engine's internal slot" when the answer is `Dog.prototype` — a regular JS object, not engine metadata
+```
+
+These refinements serve two purposes:
+
+- **End-of-course review:** After the final test, scan all `🔧 Refinements` across `toc.md`. Group related gaps (e.g. repeated terminology confusion) and suggest targeted improvements.
+- **Cross-session awareness:** On new sessions, skim refinements alongside competence tags to catch recurring patterns early.
+
+### Tag upgrades
+
+When a re-assessment shows improved understanding, append the new level on a new indented line so history is visible:
+
+```markdown
+- [x] `__proto__` vs `.prototype`
+      📊 weak → shaky — confused accessor with internal slot
+      📊 shaky → solid — nailed it on review sweep
+```
+
+The **current** (rightmost) level drives pacing decisions.
+
+### Using tags across sessions
+
+On new sessions, read competence tags alongside calibration to adapt pacing — revisit weak areas, skip solid ones, probe shaky spots with a quick question before building on them.
+
+### Remediation mini-quiz
+
+Triggered immediately after any understanding check, quiz, or test that produces a `shaky` or `weak` tag.
+
+1. **Brief re-teach** — revisit the weak concept from a different angle (new analogy, different example, contrast with a related concept). Keep it short.
+2. **2–3 targeted questions** — focused narrowly on the weak point, not the full chunk. Deliver one at a time.
+3. **Update the tag** — if the user now demonstrates understanding, upgrade the competence tag. If still shaky/weak, leave it for the next review sweep.
+4. **Don't loop endlessly.** One remediation attempt per weak point per session. If it doesn't land, move on.
+
+## Quizzes and Tests
+
+Interactive checkpoints woven into the `toc.md` alongside teaching chunks. **Not** saved as notes — they happen live in the session.
+
+- **Quiz** — covers the last 1–3 chunks. 3–5 questions. Checks recall and basic application.
+- **Test** — covers a major phase (multiple chunks). Broader, harder, tests how concepts connect. Forces synthesis.
+
+### Placement rules
+
+- **Quizzes** after every 2–3 thematically similar chunks. Group by relatedness, not rigid count.
+- **Tests** at roughly equal part boundaries (by chunk count). Each test covers its entire part.
+- **Final test** always present, always last. Cumulative across the whole course.
+- Not every chunk needs its own quiz — small or tightly coupled chunks share one.
+- Adjust to natural course boundaries.
+
+### Delivery
+
+Present quiz/test questions **one at a time**. Give the question, wait for the answer, provide feedback, then move to the next question. In `toc.md`, quiz/test entries use the same checkbox format as chunks. Mark `[x]` when completed. Update competence tags after completion.
 
 ## Writing Guidelines
 
