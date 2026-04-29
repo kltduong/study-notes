@@ -36,8 +36,10 @@ Progress tracker for the course. Chunks grouped by theme.
 - [x] **`__proto__`** — What it is, ECMAScript history, Annex B deprecation, pronunciation, defining custom getter/setter, exercises (Section 4: "**proto** introduction" through "**proto** quiz")
 - [x] **Modern prototype access** — `Object.getPrototypeOf`, `Object.setPrototypeOf`, problems with `__proto__` (configurable, special keyword, null prototype), MDN warnings (Section 5: "Modern alternatives..." through "Hang the Dunder on the wall")
       📊 shaky — solid on setPrototypeOf perf cost and Object.create distinction; fuzzy on the specific cases where **proto** breaks (shadowing, null-prototype unreachability vs getter returning undefined)
+      📊 shaky → solid — correctly traced chain-walk failure on Object.create(null)
 - [x] **`.prototype` property** — Only functions have it, exceptions, `[[Call]]`/`[[Construct]]`, constructor property, overwriting `.prototype`, full chain revealed, `Object.prototype` at the top, `.prototype` vs `[[Prototype]]` (Section 6: "Only functions have a .prototype property" through "Function prototype quiz")
       📊 shaky — solid on .prototype vs [[Prototype]] distinction and [[Construct]]; missed that .constructor chain-walks to Object.prototype when overwritten
+      📊 shaky → solid — correctly traced .constructor chain walk through replaced User.prototype to Object.prototype
 - [x] **Advanced prototypes quiz**
       📊 solid — core mechanics strong; chain walk, shadowing, class fields vs prototype methods all correct
       🔧 Refinements: - Q1: Correct conclusion on `Object.create(null)` + `__proto__` but reasoning skipped _why_ the accessor wasn't found — key point is the accessor lives on `Object.prototype` and the chain doesn't reach it - Q3: Confused property descriptor `{ value: 42 }` with the value itself (`42`) when `defineProperty` shadows `__proto__` - Q4: Said `bark` lives in "engine's internal slot" — it lives on `Dog.prototype`, a regular JS object; the _link_ is engine-internal, the _target_ is not
