@@ -4,7 +4,7 @@ JavaScript doesn't have classical inheritance — it has **prototype delegation*
 
 ## Reading order
 
-Start with **Foundations**, then **[[Prototype]] Deep Dive**, then **Chain & Behavior**, then **Instantiation Patterns**, then **`__proto__`**. Foundations establishes the chain-walk mental model; the deep dive zooms in on the link itself and the edges (primitives, auto-boxing, `this` binding); chain & behavior covers what happens during the walk — shadowing, enumeration, and mutation traps; instantiation patterns shows the five ways to wire that chain in practice and why each exists; `__proto__` explains the legacy accessor that made `[[Prototype]]` accessible before modern APIs, and when its magic breaks.
+Start with **Foundations**, then **[[Prototype]] Deep Dive**, then **Chain & Behavior**, then **Instantiation Patterns**, then **`__proto__`**, then **Modern Access**. Foundations establishes the chain-walk mental model; the deep dive zooms in on the link itself and the edges (primitives, auto-boxing, `this` binding); chain & behavior covers what happens during the walk — shadowing, enumeration, and mutation traps; instantiation patterns shows the five ways to wire that chain in practice and why each exists; `__proto__` explains the legacy accessor that made `[[Prototype]]` accessible before modern APIs, and when its magic breaks; modern access covers the official APIs (`getPrototypeOf`, `setPrototypeOf`, `Object.create`) that bypass property lookup entirely, and why wiring at creation beats mutating after the fact.
 
 ## Notes
 
@@ -13,6 +13,7 @@ Start with **Foundations**, then **[[Prototype]] Deep Dive**, then **Chain & Beh
 - [Chain & Behavior](chain-behavior.md) — Shadowing (reads walk up, writes stay put), mutable reference trap, chain termination at `null`, enumerability and iteration tools, why runtime prototype mutation kills performance.
 - [Instantiation Patterns](instantiation.md) — Five patterns (functional → functional shared → prototypal → pseudoclassical → class), class fields vs prototype methods, `[[Prototype]]` as pointer to an object not a variable.
 - [`__proto__`](dunder-proto.md) — The legacy accessor on `Object.prototype`, Annex B status, when the magic disappears (`Object.create(null)`, `defineProperty` shadowing), prototype pollution.
+- [Modern Access](modern-access.md) — `Object.getPrototypeOf`, `Object.setPrototypeOf`, `Object.create`, `Reflect` variants. Why these bypass every `__proto__` failure mode, and why wiring at creation beats post-creation mutation.
 
 ## Cross-cutting concepts
 

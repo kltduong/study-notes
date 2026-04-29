@@ -32,7 +32,8 @@ Progress tracker for the course. Chunks grouped by theme.
 - [x] **Instantiation patterns** — Functional, Functional Shared, Prototypal (`Object.create`), Pseudoclassical (`new` + constructor), Class syntax, arrow function caveats (Section 3: "Object Literals" through "Instantiation Patterns Quiz")
 - [x] **Prototypes & instantiation patterns test**
 - [x] **`__proto__`** — What it is, ECMAScript history, Annex B deprecation, pronunciation, defining custom getter/setter, exercises (Section 4: "**proto** introduction" through "**proto** quiz")
-- [ ] **Modern prototype access** — `Object.getPrototypeOf`, `Object.setPrototypeOf`, problems with `__proto__` (configurable, special keyword, null prototype), MDN warnings (Section 5: "Modern alternatives..." through "Hang the Dunder on the wall")
+- [x] **Modern prototype access** — `Object.getPrototypeOf`, `Object.setPrototypeOf`, problems with `__proto__` (configurable, special keyword, null prototype), MDN warnings (Section 5: "Modern alternatives..." through "Hang the Dunder on the wall")
+      📊 shaky — solid on setPrototypeOf perf cost and Object.create distinction; fuzzy on the specific cases where **proto** breaks (shadowing, null-prototype unreachability vs getter returning undefined)
 - [ ] **`.prototype` property** — Only functions have it, exceptions, `[[Call]]`/`[[Construct]]`, constructor property, overwriting `.prototype`, full chain revealed, `Object.prototype` at the top, `.prototype` vs `[[Prototype]]` (Section 6: "Only functions have a .prototype property" through "Function prototype quiz")
 - [ ] **Advanced prototypes quiz**
 - [ ] **Building prototype chains** — `new` keyword approach (pre-2011), `Object.create` (ES5), `Object.setPrototypeOf` (ES6), classes + `extends`, 3-level chains with constructors and classes, `call()` for inheritance, duplication problems (Section 7: "Course project overview" through "You've beaten prototypes")
