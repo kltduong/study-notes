@@ -25,6 +25,8 @@ Progress tracker for the course. Chunks grouped by theme.
 9. **Composition** — when inheritance is the wrong tool. Converting between patterns.
 10. Quizzes/tests woven in at natural checkpoints, not as separate chunks.
 
+## Progress
+
 - [x] **Foundations** — What JS is, why objects and prototypes matter, everything inherits from Object (Section 1: intro through "Use prototypes when creating objects with a similar type")
 - [x] **[[Prototype]] deep dive** — The hidden `[[Prototype]]` property, getting/setting prototypes, primitives vs objects, object wrappers, creating custom prototypes, prototype of object literals, inherited methods (Section 2: "Why understanding prototypes matter" through "Setting prototypes example")
 - [x] **Prototype chain & behavior** — Chain mechanics, null termination, shadowing, `this` binding, enumerable properties, iteration, warnings about mutating prototypes (Section 2 continued: "The prototype chain" through "Summary")

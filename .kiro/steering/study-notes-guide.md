@@ -35,9 +35,13 @@ Required sections:
 
 Created at the start of the course-guided workflow. Tracks original course structure and progress — a different job from `index.md`.
 
-- One entry per course section/chunk, in course order.
-- Each entry: checkbox + section title + brief scope note.
-- Mark chunks `[x]` as they are taught.
+Two required sections:
+
+- **`## Calibration`** — starting point, goals, and planned teaching arc. Written once at calibration time; read on new sessions.
+- **`## Progress`** — the live checklist. One entry per course section/chunk, in course order. Each entry: checkbox + section title + brief scope note. Mark chunks `[x]` as they are taught. Competence tags and refinements live here.
+
+Keep these separate — calibration is strategy, progress is execution.
+
 - `toc.md` is **not** linked from `index.md` — it's a progress artifact, not a study note.
 
 ## Workflow Selection
@@ -69,6 +73,8 @@ Immediately after calibrating, before teaching begins, write a `## Calibration` 
 
 - The user's starting point and goals (brief, their own words).
 - The planned teaching arc (ordered list of chunks/themes and how depth/pacing adapts).
+
+The chunk checklist goes under a separate `## Progress` heading — not inside calibration.
 
 On a new session, read this section instead of re-asking. Only re-calibrate if the user says their level or goal has changed.
 
