@@ -32,6 +32,31 @@ Created at the start of the [course-guided workflow](#course-guided-workflow). T
 - Mark chunks `[x]` as they are taught during the session.
 - `toc.md` is **not** linked from `index.md` — it's a progress artifact, not a study note.
 
+#### Competence tracking
+
+After completing a chunk's understanding check (or a quiz/test), append a **compact competence summary** to that chunk's entry in `toc.md`. This is not a transcript — it's a one-line signal for future sessions.
+
+**Format:** indented line under the chunk entry with a confidence tag and a brief note on what was weak (if anything).
+
+- `📊 solid` — answered all questions correctly or with minor gaps.
+- `📊 shaky` — got the gist but stumbled on a specific concept.
+- `📊 weak` — fundamental misunderstanding surfaced; needs revisit.
+
+If solid with no notable gaps, the tag alone is enough. If shaky/weak, add a short note on _what_ was weak.
+
+**Example:**
+
+```
+- [x] Prototype chain — how lookup walks the chain
+      📊 solid — hesitated on shadowing behavior
+- [x] `__proto__` vs `.prototype`
+      📊 weak — confused accessor with internal slot
+- [x] Quiz (chunks 1–2)
+      📊 shaky — solid on chain mechanics, weak on where `.constructor` points
+```
+
+**On new sessions:** read competence tags alongside calibration to adapt pacing — revisit weak areas, skip confirmed-solid ones, probe shaky spots with a quick question before building on them.
+
 ### Quizzes and tests
 
 Quizzes and tests are interactive checkpoints woven into the toc alongside teaching chunks. They are **not** saved as notes — they happen live in the session.
@@ -150,13 +175,19 @@ Ask whether to teach **in sequence** or focus on **connections** (compare/contra
 
 Teaching is a conversation, not a lecture.
 
-**After each chunk, stop and ask** — a question that tests whether the model landed. The answer is your pacing signal: nailed it → move on; struggled → slow down, try a different angle, decompose.
+**End-of-chunk understanding check (mandatory).** After finishing each chunk, present **2–3 short questions** that test whether the core ideas landed. Deliver them **one at a time** — give a question, wait for the answer, provide feedback, then move to the next question. Only after all questions are answered, prompt the user about saving and the next chunk.
 
-**Question types to rotate through:** predict the output, walk me through it step-by-step, true-or-false targeting a misconception, what would break, describe the structure/chain/diagram.
+- Questions should target the chunk's key concepts — not trivia.
+- Mix question types across chunks: predict the output, walk me through it step-by-step, true-or-false targeting a misconception, what would break, describe the structure/chain/diagram, explain _why_ not just _what_.
+- Scale difficulty to calibration — harder questions for advanced users, more scaffolded ones for beginners.
 
 **On correct answers:** acknowledge, then tighten — point out the nuance glossed over, the edge case the phrasing doesn't cover. This is where real learning happens.
 
 **On wrong answers:** don't say "wrong" and re-explain. Identify where reasoning went off track, ask a narrower follow-up targeting that point, let the user self-correct. Re-explain only if the follow-up doesn't land.
+
+**Pacing signal:** Use the answers as your signal. All correct → move on. Struggled on one or more → slow down, revisit the weak spot with a different angle before proceeding.
+
+**Persist competence.** After the understanding check is complete, update the chunk's entry in `toc.md` with a [competence tag](#competence-tracking) before prompting about saving or moving on. Same applies after quizzes and tests.
 
 ## Writing Guidelines
 
