@@ -63,6 +63,18 @@ Example:
 
 On new sessions: read competence tags alongside calibration to adapt pacing — revisit weak areas, skip solid ones, probe shaky spots with a quick question before building on them.
 
+#### Tag upgrades
+
+When a re-assessment (remediation mini-quiz, review sweep, or any later quiz/test) shows improved understanding, update the competence tag in place. Append the new level so history is visible:
+
+```markdown
+- [x] `__proto__` vs `.prototype`
+      📊 weak → shaky — confused accessor with internal slot
+      📊 shaky → solid — nailed it on review sweep
+```
+
+The **current** (rightmost) level is what drives pacing decisions.
+
 ### Quizzes and tests
 
 Interactive checkpoints woven into the toc alongside teaching chunks. **Not** saved as notes — they happen live in the session.
@@ -101,6 +113,15 @@ chunk10
 In `toc.md`: quiz/test entries use the same checkbox format as chunks. Mark `[x]` when completed.
 
 **Delivery:** Present quiz/test questions **one at a time**. Give the question, wait for the answer, provide feedback, then move to the next question.
+
+#### Remediation mini-quiz
+
+Triggered immediately after any understanding check, quiz, or test that produces a `shaky` or `weak` tag.
+
+1. **Brief re-teach** — revisit the weak concept from a different angle (new analogy, different example, contrast with a related concept). Keep it short — this isn't a full re-teach.
+2. **2–3 targeted questions** — focused narrowly on the weak point, not the full chunk. Deliver one at a time like normal.
+3. **Update the tag** — if the user now demonstrates understanding, upgrade the competence tag. If still shaky/weak, leave it for the next review sweep.
+4. **Don't loop endlessly.** One remediation attempt per weak point per session. If it doesn't land, move on — the review sweep will catch it later.
 
 ## Workflow Selection
 
@@ -146,7 +167,18 @@ Auto-detect which workflow to use based on user input:
 7. **Track progress.** Answer "where are we?" / "what's next?" clearly.
 8. **Cross-reference within the folder.** If the course covers something in a sibling note, point it out — skip, recap, or highlight what's new. No cross-folder references.
 9. **Critical lens.** Flag wrong, outdated, or oversimplified course content.
-10. **Session management.** Prefer short sessions — one chunk (or a few small related chunks) per session. After saving a chunk's note and updating `toc.md`, that's a natural stopping point. On a new session, read `toc.md` and existing notes in the folder to recover full state — no prior conversation needed.
+10. **Review sweep before tests.** Before starting any part test or the final test, scan `toc.md` for `shaky` or `weak` tags in the chunks that test will cover. For each:
+    - Brief re-teach of the weak concept (different angle than the original).
+    - 2–3 targeted questions.
+    - Update the competence tag on success.
+    - Then proceed to the test itself.
+11. **End-of-course solidification pass.** After the final test, scan all competence tags across `toc.md`. If any remain below `solid`:
+    - Group related weak points.
+    - Re-teach each group with fresh examples and a synthesis angle (how the weak concept connects to things now understood).
+    - Test with 2–3 questions per group.
+    - Update tags. Repeat once more for anything still below solid. If it still doesn't land after two passes, note it as a known gap and move on — the user can revisit later.
+    - The course is complete when all tags are `solid` or the user opts out of further remediation.
+12. **Session management.** Prefer short sessions — one chunk (or a few small related chunks) per session. After saving a chunk's note and updating `toc.md`, that's a natural stopping point. On a new session, read `toc.md` and existing notes in the folder to recover full state — no prior conversation needed.
 
 ### Content-to-note workflow
 
