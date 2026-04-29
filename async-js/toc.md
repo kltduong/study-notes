@@ -29,8 +29,9 @@ Throughout: emphasis on predicting execution order as the proof the mental model
       📊 solid
       🔧 Refinements: - Said "engine places callback into the task queue" — it's the runtime that enqueues, not the engine - Said two same-delay setTimeout callbacks aren't guaranteed ordered — they are, because the task queue is FIFO and the runtime enqueues in registration order
 
-- [ ] **Chunk 3: Callbacks**
+- [x] **Chunk 3: Callbacks**
       What Is a Callback In JavaScript?; Callbacks Are Not Always Asynchronous; How To Handle Errors In Asynchronous Code; Pros & Cons Of Callbacks; Callback Examples In JavaScript Libraries.
+      📊 solid
 
   → [ ] Quiz (chunks 2–3): event loop mechanics, callback fundamentals, error handling patterns.
 

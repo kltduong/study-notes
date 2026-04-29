@@ -96,8 +96,8 @@ See the "Teaching Approach" section below.
 2. **Create `toc.md`** in the topic folder. Parse the outline into logical chunks (group related lessons), write one checkbox entry per chunk with a brief scope note. Add quiz and test entries following the placement rules in the "Quizzes and Tests" section.
 3. Apply shared rules: calibrate → teach → save on ask.
 4. **Teach chunk by chunk in course order**, but teach freely — restructure, reorder within a chunk, add missing context. Do not narrate slides.
-5. **Prompt before moving on.** After the understanding check and competence tag update, ask if the user wants to continue exploring the chunk (follow-ups, edge cases, deeper dives). Only when the user confirms the chunk is complete, save the note and proceed.
-6. **One note per chunk, always saved before moving on.** When the user confirms a chunk is complete, save the note automatically — do not ask whether to save. The note captures the mental model — not a transcript. Organize by understanding, not course order. Update `toc.md` — mark the completed chunk `[x]`. Never start the next chunk without saving the current one.
+5. **Prompt before moving on (mandatory gate).** After the understanding check and competence tag update, **always** ask the user if they want to continue exploring the chunk (follow-ups, edge cases, deeper dives). Wait for the user's explicit confirmation that the chunk is done. Do NOT save the note, mention the next chunk, or offer to proceed until the user confirms. This is a hard gate — never skip it.
+6. **One note per chunk, saved only after user confirms done.** When the user confirms a chunk is complete, save the note automatically — do not ask whether to save. The note captures the mental model — not a transcript. Organize by understanding, not course order. Update `toc.md` — mark the completed chunk `[x]`. Never start the next chunk without saving the current one.
 7. **Track progress.** Answer "where are we?" / "what's next?" clearly.
 8. **Cross-reference within the folder.** If the course covers something in a sibling note, point it out — skip, recap, or highlight what's new. No cross-folder references.
 9. **Critical lens.** Flag wrong, outdated, or oversimplified course content. Use inline notes (e.g. `> ⚠️ The original source claims X, but...`) rather than silently passing through or dropping.
@@ -140,7 +140,13 @@ Ask whether to teach in sequence or focus on connections (compare/contrast, how 
 
 Teaching is a conversation, not a lecture.
 
-**End-of-chunk understanding check (mandatory).** After finishing each chunk, present 2–3 short questions. Deliver one at a time — give a question, wait for the answer, provide feedback, then move to the next. Only after all questions are answered, update the competence tag in `toc.md`, then prompt about saving and the next chunk.
+**End-of-chunk understanding check (mandatory).** After finishing each chunk, present 2–3 short questions. Deliver one at a time — give a question, wait for the answer, provide feedback, then move to the next. After all questions are answered, update the competence tag in `toc.md`. Then follow the post-check handoff sequence below — do NOT save the note or move on yet.
+
+**Post-check handoff (mandatory, every chunk).** This is the strict sequence after the understanding check. Do not skip or compress steps.
+
+1. Competence tag updated (done during the check above).
+2. **Ask the user:** "Anything you want to dig deeper into on this chunk — follow-ups, edge cases, deeper dives? Or ready to move on?" **Wait for the user's answer.** Do NOT save the note, do NOT mention the next chunk, do NOT offer to proceed until the user explicitly confirms the chunk is done.
+3. Only after the user confirms → save the note automatically, update `toc.md` checkbox, then proceed to the next chunk.
 
 **Question design:**
 

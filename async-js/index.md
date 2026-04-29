@@ -10,9 +10,11 @@ Start with [what-is-async](what-is-async.md) for the foundational "why" — why 
 
 - [what-is-async.md](what-is-async.md) — Why async exists: single-threaded engines, the runtime delegation model, sync vs async.
 - [event-loop-basics.md](event-loop-basics.md) — Call stack, task queue, event loop algorithm, execution tracing, ordering guarantees.
+- [callbacks.md](callbacks.md) — What callbacks are, sync vs async callbacks, error-first convention, pros/cons.
 
 ## Cross-Cutting Concepts
 
 - **Single-threaded engine, multi-threaded runtime** — the engine only does one thing at a time; the runtime handles I/O on separate threads. This distinction drives everything.
 - **"Later" not "parallel"** — async means deferred execution, not concurrent execution within the engine.
 - **The stack must be empty** — the event loop's one rule. No callback runs until the call stack drains. This explains every "surprising" execution order.
+- **try/catch can't cross async boundaries** — by the time an async callback runs, the original call stack (and any `try` block on it) is gone. This is why error-first conventions and later promises exist.
