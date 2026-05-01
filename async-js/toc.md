@@ -40,8 +40,10 @@ Throughout: emphasis on predicting execution order as the proof the mental model
       Callbacks Lack Readability; Making HTTP Requests From Your Browser; Callback Hell.
       📊 solid
 
-- [ ] **Chunk 5: Testing Callbacks**
+- [x] **Chunk 5: Testing Callbacks**
       Setting Up Testing Environment; Testing Callback Functions With Mocha And Chai.
+      📊 shaky — got the timeout consequence right but initially thought missing `done` causes a timeout (it actually causes a silent false pass); arrow function `this` reasoning was close but imprecise on the mechanism (said "global object" rather than lexical capture from enclosing scope)
+      🔧 Refinements: - Said missing `done` parameter causes a timeout — Mocha actually treats it as sync and passes immediately (false positive) - Said arrow function `this` falls back to global object — it captures `this` from the enclosing lexical scope at definition time, which may or may not be global
 
   → [ ] Test — Part 1 (chunks 1–5): async fundamentals, event loop, callbacks end-to-end.
 
