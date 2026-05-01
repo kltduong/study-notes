@@ -19,6 +19,99 @@ The test passes even if the assertion would fail. A false positive — the most 
 
 This is the same "try/catch can't cross async boundaries" problem from [callbacks.md](callbacks.md), applied to testing.
 
+## How Mocha Invokes Tests
+
+Mocha works in two phases: **registration** then **execution**.
+
+### Phase 1 — Registration
+
+When your test file loads, `it()` doesn't run your test function. It stores it:
+
+```js
+// Simplified Mocha internals
+function it(description, testFn) {
+  testSuite.push({
+    description: description,
+    fn: testFn, // your function — stored as a reference, NOT called
+  });
+}
+```
+
+So when you write:
+
+```js
+it("should do something", function (done) {
+  this.timeout(5000);
+  getUser(1, (err, user) => {
+    assert.equal(user.name, "Alice");
+    done();
+  });
+});
+```
+
+Mocha just stores `{ description: "should do something", fn: <your function> }`. Nothing executes yet. All `it()` calls across all test files are collected first.
+
+### Phase 2 — Execution
+
+Once all tests are registered, Mocha runs them one by one. For each test, it checks `testFn.length` — the number of declared formal parameters — to decide sync vs async mode:
+
+```js
+const testFn = test.fn;
+const testContext = { timeout: ..., slow: ..., retries: ... };
+
+if (testFn.length > 0) {
+  // ≥1 parameter declared → async mode
+  const done = createDoneCallback();
+  testFn.call(testContext, done);
+  // wait for done() to be called...
+} else {
+  // 0 parameters → sync mode
+  testFn.call(testContext);
+  // returned without throwing → pass
+}
+```
+
+The `.call(testContext, done)` does two things:
+
+- **First argument** → becomes `this` inside the function (Mocha's context object with `timeout()`, `slow()`, etc.)
+- **Second argument** → becomes the `done` parameter
+
+`testFn.length` is a built-in property on every function — it returns the count of declared parameters. That's the entire detection mechanism. Mocha doesn't parse your code or look for the word "done":
+
+```js
+((done) => {})
+  .length(
+    // 1 → async mode
+    () => {},
+  )
+  .length(
+    // 0 → sync mode
+    function (done) {},
+  )
+  .length(
+    // 1 → async mode
+    function () {},
+  ).length; // 0 → sync mode
+```
+
+### Why arrow functions break `this` but not `done`
+
+Both function styles receive `done` correctly — it's a regular argument. The difference is only `this`:
+
+```js
+it("test", function (done) {
+  // this === testContext  ✅  .call() sets it
+  // done === doneCallback ✅  passed as argument
+});
+
+it("test", (done) => {
+  // this === <enclosing scope's this>  ❌  arrow ignores .call()
+  // done === doneCallback              ✅  arguments still work
+});
+```
+
+Arrow functions are fine for most tests. They only break when you need `this.timeout()`, `this.slow()`, or `this.retries()` — methods on Mocha's context object that `this` must point to.
+
 ## The `done` Callback
 
 If your test function accepts a parameter, Mocha switches to async mode and **waits** for you to call it:
@@ -143,7 +236,7 @@ it("should handle slow operations", function (done) {
 });
 ```
 
-Requires a regular `function`, not an arrow function. Mocha calls the test function with `.call(mochaContext, done)`, setting `this` to its context object. A regular function's `this` is determined by **how it's called** — so `.call()` works. An arrow function's `this` is determined by **where it's defined** — it captures `this` from the enclosing scope at definition time and ignores `.call()`. Mocha can't override it.
+Requires a regular `function`, not an arrow function — see [How Mocha Invokes Tests](#how-mocha-invokes-tests) for why.
 
 ## Chai Assertion Styles
 
