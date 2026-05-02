@@ -136,6 +136,36 @@ Whichever happens second — settling or attaching — triggers the microtask en
 
 Either way, the handler runs after the stack drains.
 
+## `.then()` Always Returns a New Promise
+
+Every `.then()` call **always returns a new promise** — immediately, synchronously, at chain construction time. This happens before any handler runs. The handler's return value doesn't replace the promise — it determines what that already-existing promise **settles to**.
+
+Two separate moments:
+
+1. **Chain construction (synchronous):** `.then()` creates and returns a new promise. The next `.then()` is called on that promise — not on the handler's return value.
+2. **Handler execution (async, microtask):** the handler runs, returns a value, and that value settles the promise that was already created in step 1.
+
+```js
+// These promises are created synchronously, right now:
+const pB = promiseA.then(handler1); // pB exists immediately
+const pC = pB.then(handler2); // called on pB, not on handler1's return value
+
+// Later, when handler1 runs and returns 42:
+// pB (which already exists) fulfills with 42
+// handler2 receives 42 as its argument
+```
+
+What the handler returns controls the settlement:
+
+| Handler returns       | `.then()` promise becomes                            |
+| --------------------- | ---------------------------------------------------- |
+| A regular value       | Fulfilled with that value                            |
+| A promise             | Adopts that promise's state (waits for it to settle) |
+| Throws an error       | Rejected with that error                             |
+| Nothing (`undefined`) | Fulfilled with `undefined`                           |
+
+The second row is the key to chaining async operations — when a handler returns a promise, the chain **waits** for it to settle before the next `.then()` handler fires.
+
 ## Rejection Propagation
 
 When `.then()` has no `onRejected` handler, the rejection **propagates** — it passes through to the promise `.then()` returns and keeps flowing until something handles it:

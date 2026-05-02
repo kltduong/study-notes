@@ -57,8 +57,10 @@ Throughout: emphasis on predicting execution order as the proof the mental model
       📊 shaky → solid — initially said missing onRejected handler swallows the rejection (it propagates); nailed the distinction on follow-up
       🔧 Refinements: - Said missing onRejected in .then() silently swallows the rejection — it actually propagates through the chain until handled or surfaces as an unhandled rejection
 
-- [ ] **Chunk 7: Working with Promises**
+- [x] **Chunk 7: Working with Promises**
       Rewriting Our Function Using Promises; How To Promisify any JavaScript Function; Chaining Promises.
+      📊 solid — hardcoded values in promisification wrapper instead of passing through originals; corrected quickly
+      🔧 Refinements: - Hardcoded `reject(new Error("No city"))` and `resolve(22)` instead of passing through `err` and `value` — wrapper should be general-purpose, not tied to one call
 
   → [ ] Quiz (chunks 6–7): promise states, .then, chaining, promisification.
 

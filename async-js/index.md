@@ -4,7 +4,7 @@ How async actually works in JS — not just the syntax, but the execution model:
 
 ## Reading Order
 
-Start with [what-is-async](what-is-async.md) for the foundational "why" — why async exists, the three-part model (engine / runtime / event loop). Then [event-loop-basics](event-loop-basics.md) zooms into the mechanics of the call stack and task queue. [callbacks](callbacks.md) and [callback-problems](callback-problems.md) cover the original async pattern and why it needed replacing. [testing-callbacks](testing-callbacks.md) covers how to test async callback code with Mocha/Chai. From there, [promise-fundamentals](promise-fundamentals.md) introduces the language-level solution to callback problems.
+Start with [what-is-async](what-is-async.md) for the foundational "why" — why async exists, the three-part model (engine / runtime / event loop). Then [event-loop-basics](event-loop-basics.md) zooms into the mechanics of the call stack and task queue. [callbacks](callbacks.md) and [callback-problems](callback-problems.md) cover the original async pattern and why it needed replacing. [testing-callbacks](testing-callbacks.md) covers how to test async callback code with Mocha/Chai. From there, [promise-fundamentals](promise-fundamentals.md) introduces the language-level solution to callback problems, and [working-with-promises](working-with-promises.md) covers promisification, chaining, and branching.
 
 ## Notes
 
@@ -14,6 +14,7 @@ Start with [what-is-async](what-is-async.md) for the foundational "why" — why 
 - [callback-problems.md](callback-problems.md) — Why callbacks break down: composition pain, callback hell, XHR, and the limits that motivated promises.
 - [testing-callbacks.md](testing-callbacks.md) — Testing async callbacks with Mocha's `done` pattern, Chai assertions, timeout pitfalls.
 - [promise-fundamentals.md](promise-fundamentals.md) — Promise states, the executor, resolve/reject, `.then()`, microtask scheduling, rejection propagation.
+- [working-with-promises.md](working-with-promises.md) — Promisification, promise chaining mechanics, chaining vs branching, error propagation through chains.
 
 ## Cross-Cutting Concepts
 
