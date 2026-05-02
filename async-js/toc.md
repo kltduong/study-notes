@@ -62,7 +62,9 @@ Throughout: emphasis on predicting execution order as the proof the mental model
       📊 solid — hardcoded values in promisification wrapper instead of passing through originals; corrected quickly
       🔧 Refinements: - Hardcoded `reject(new Error("No city"))` and `resolve(22)` instead of passing through `err` and `value` — wrapper should be general-purpose, not tied to one call
 
-  → [ ] Quiz (chunks 6–7): promise states, .then, chaining, promisification.
+  → [x] Quiz (chunks 6–7): promise states, .then, chaining, promisification.
+  📊 solid
+  🔧 Refinements: - Said returning a plain value vs returning a promise from a .then() handler makes "no difference" — same resolved value, but different timing: returning a promise costs extra microtask ticks due to the adoption procedure
 
 - [ ] **Chunk 8: Fetch & Rejection Handling**
       Making HTTP Requests Using Fetch API; How To Avoid Callback Hell; Handling Promise Rejections; Promise.resolve and Promise.reject.
