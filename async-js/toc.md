@@ -46,12 +46,16 @@ Throughout: emphasis on predicting execution order as the proof the mental model
       🔧 Refinements: - Said missing `done` parameter causes a timeout — Mocha actually treats it as sync and passes immediately (false positive) - Said arrow function `this` falls back to global object — it captures `this` from the enclosing lexical scope at definition time, which may or may not be global
       📊 shaky → solid — nailed both weak spots on review sweep
 
-  → [ ] Test — Part 1 (chunks 1–5): async fundamentals, event loop, callbacks end-to-end.
+  → [x] Test — Part 1 (chunks 1–5): async fundamentals, event loop, callbacks end-to-end.
+  📊 solid — missed error scattering as a distinct structural problem (lumped it with composition/readability)
+  🔧 Refinements: - Listed nesting and readability as two separate problems instead of identifying the three distinct structural issues: inversion of control, inside-out composition, and scattered error handling
 
 ### Part 2 — Promises
 
-- [ ] **Chunk 6: Promise Fundamentals**
+- [x] **Chunk 6: Promise Fundamentals**
       What Is a Promise In JavaScript; How To Create A Promise; Final States Of The Promise; How To Consume JavaScript Promises: Promise.then.
+      📊 shaky → solid — initially said missing onRejected handler swallows the rejection (it propagates); nailed the distinction on follow-up
+      🔧 Refinements: - Said missing onRejected in .then() silently swallows the rejection — it actually propagates through the chain until handled or surfaces as an unhandled rejection
 
 - [ ] **Chunk 7: Working with Promises**
       Rewriting Our Function Using Promises; How To Promisify any JavaScript Function; Chaining Promises.
