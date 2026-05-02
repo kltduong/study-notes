@@ -66,8 +66,10 @@ Throughout: emphasis on predicting execution order as the proof the mental model
   📊 solid
   🔧 Refinements: - Said returning a plain value vs returning a promise from a .then() handler makes "no difference" — same resolved value, but different timing: returning a promise costs extra microtask ticks due to the adoption procedure
 
-- [ ] **Chunk 8: Fetch & Rejection Handling**
+- [x] **Chunk 8: Fetch & Rejection Handling**
       Making HTTP Requests Using Fetch API; How To Avoid Callback Hell; Handling Promise Rejections; Promise.resolve and Promise.reject.
+      📊 solid — nailed fetch fulfillment on HTTP errors and .finally() transparency; tripped on .catch() recovery (forgot downstream .then() sees fulfilled undefined)
+      🔧 Refinements: - Didn't trace past .catch() — forgot that .catch() returning normally fulfills the chain, so a downstream .then() runs with undefined
 
 - [ ] **Chunk 9: Promise.all & Promise.allSettled**
       Executing Promises In Parallel: Promise.all; How Promise.all Handles Rejections; Promise.all: Implementing From Scratch; Executing Promises In Parallel: Promise.allSettled; Promise.allSettled: Implementing From Scratch.
