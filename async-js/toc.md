@@ -71,8 +71,9 @@ Throughout: emphasis on predicting execution order as the proof the mental model
       📊 solid — nailed fetch fulfillment on HTTP errors and .finally() transparency; tripped on .catch() recovery (forgot downstream .then() sees fulfilled undefined)
       🔧 Refinements: - Didn't trace past .catch() — forgot that .catch() returning normally fulfills the chain, so a downstream .then() runs with undefined
 
-- [ ] **Chunk 9: Promise.all & Promise.allSettled**
+- [x] **Chunk 9: Promise.all & Promise.allSettled**
       Executing Promises In Parallel: Promise.all; How Promise.all Handles Rejections; Promise.all: Implementing From Scratch; Executing Promises In Parallel: Promise.allSettled; Promise.allSettled: Implementing From Scratch.
+      📊 solid
 
   → [ ] Quiz (chunks 8–9): fetch, rejection flows, parallel combinators.
 
