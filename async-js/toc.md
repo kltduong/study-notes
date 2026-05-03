@@ -75,7 +75,8 @@ Throughout: emphasis on predicting execution order as the proof the mental model
       Executing Promises In Parallel: Promise.all; How Promise.all Handles Rejections; Promise.all: Implementing From Scratch; Executing Promises In Parallel: Promise.allSettled; Promise.allSettled: Implementing From Scratch.
       📊 solid
 
-  → [ ] Quiz (chunks 8–9): fetch, rejection flows, parallel combinators.
+  → [x] Quiz (chunks 8–9): fetch, rejection flows, parallel combinators.
+  📊 solid
 
 - [ ] **Chunk 10: Promise.race & Promise.any**
       Which Promise Is Faster? Promise.race; Getting First Successful Promise: Promise.any; Promise.race: Implementing From Scratch; Promise.any: Implementing From Scratch.
