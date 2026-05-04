@@ -87,7 +87,9 @@ Throughout: emphasis on predicting execution order as the proof the mental model
       Setting Up Testing Environment; Testing JavaScript Promises Using Mocha And Chai; Timeouts In Mocha; Making Multiple Promise Assertions In One Test.
       📊 solid
 
-  → [ ] Test — Part 2 (chunks 6–11): promises end-to-end, combinators, testing.
+  → [x] Test — Part 2 (chunks 6–11): promises end-to-end, combinators, testing.
+  📊 solid — one detail slip on Q4 (asserted type instead of message content); corrected immediately when pointed out
+  🔧 Refinements: - Initial rejection test asserted `isObject(config)` instead of checking `err.message` for the required string — right structure, wrong assertion target
 
 ### Part 3 — Async/Await & Advanced Event Loop
 
