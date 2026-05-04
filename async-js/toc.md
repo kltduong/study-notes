@@ -83,8 +83,9 @@ Throughout: emphasis on predicting execution order as the proof the mental model
       📊 solid — needed a nudge on _why_ `race([])` hangs vs `any([])` rejects
       🔧 Refinements: - Knew the empty-input behaviors but couldn't articulate the reasoning: `race` is purely reactive (no failure condition), `any` can detect impossibility (zero possible fulfillments)
 
-- [ ] **Chunk 11: Testing Promises**
+- [x] **Chunk 11: Testing Promises**
       Setting Up Testing Environment; Testing JavaScript Promises Using Mocha And Chai; Timeouts In Mocha; Making Multiple Promise Assertions In One Test.
+      📊 solid
 
   → [ ] Test — Part 2 (chunks 6–11): promises end-to-end, combinators, testing.
 
