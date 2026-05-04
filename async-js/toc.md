@@ -93,10 +93,13 @@ Throughout: emphasis on predicting execution order as the proof the mental model
 
 ### Part 3 — Async/Await & Advanced Event Loop
 
-- [ ] **Chunk 12: Async/Await**
+- [x] **Chunk 12: Async/Await**
       Async Functions in JavaScript; Await Keyword in JavaScript; Using Async Await with Fetch API; Top Level Await; Handling Errors Using Async Await; Sequential vs Parallel Execution.
+      📊 solid — correctly traced await suspension and microtask scheduling; identified sequential-vs-parallel problem; initially fired dependent calls before awaiting the dependency but corrected when pointed out
+      🔧 Refinements: - Fired `fetchOrders(user.id)` before awaiting `fetchUser()` — `user` didn't exist yet; dependency analysis before parallelizing
 
-  → [ ] Quiz (chunk 12): async/await mechanics, error handling, sequential vs parallel.
+  → [x] Quiz (chunk 12): async/await mechanics, error handling, sequential vs parallel.
+  📊 solid
 
 - [ ] **Chunk 13: Task Priorities & Microtasks**
       What About Task Priorities?; A Closer Look at the Task Queue; Handling Long Tasks in JavaScript Part 1; Handling Long Tasks in JavaScript Part 2; Microtasks.
