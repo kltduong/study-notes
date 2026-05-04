@@ -78,8 +78,10 @@ Throughout: emphasis on predicting execution order as the proof the mental model
   → [x] Quiz (chunks 8–9): fetch, rejection flows, parallel combinators.
   📊 solid
 
-- [ ] **Chunk 10: Promise.race & Promise.any**
+- [x] **Chunk 10: Promise.race & Promise.any**
       Which Promise Is Faster? Promise.race; Getting First Successful Promise: Promise.any; Promise.race: Implementing From Scratch; Promise.any: Implementing From Scratch.
+      📊 solid — needed a nudge on _why_ `race([])` hangs vs `any([])` rejects
+      🔧 Refinements: - Knew the empty-input behaviors but couldn't articulate the reasoning: `race` is purely reactive (no failure condition), `any` can detect impossibility (zero possible fulfillments)
 
 - [ ] **Chunk 11: Testing Promises**
       Setting Up Testing Environment; Testing JavaScript Promises Using Mocha And Chai; Timeouts In Mocha; Making Multiple Promise Assertions In One Test.
