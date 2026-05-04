@@ -201,3 +201,24 @@ Missing handler = propagation. Empty handler = swallowing.
 | Inversion of control — trust the receiver            | Promise settles once, guaranteed by the language |
 | Scattered error handling — `if (err)` at every level | Rejections propagate; handle in one place        |
 | Inside-out composition — nested callbacks            | `.then()` returns a new promise → flat chaining  |
+
+## Sidenote: Promises as Monads
+
+> 📌 **Rabbit hole for later.** This isn't needed to use promises — it's a breadcrumb for when you want the deeper "why does this shape keep showing up" insight.
+
+A promise is a value wrapped in a context (the async/pending/settled lifecycle) plus a way to chain operations over that value (`.then()`). That pattern — **a value in a context + a way to chain operations that also return values in contexts** — is a monad.
+
+The monad interface, in its most distilled form, has two operations:
+
+- **Wrap** a plain value into the context — `Promise.resolve(42)` puts `42` into the promise context.
+- **Chain** (often called `flatMap` or `bind`) — `.then(fn)` takes a function that receives the unwrapped value and returns a new promise. The chain flattens: you get back a single promise, not a promise-of-a-promise.
+
+That flattening is the key. Without it, chaining async operations would nest: `Promise<Promise<Promise<value>>>`. `.then()` automatically unwraps one layer, keeping the chain flat — exactly what `flatMap` does for arrays, `Option` types, `Result` types, and other monads.
+
+**Related abstractions worth exploring later:**
+
+- **Functor** — a value in a context + `.map()` (transform the value, stay in the context). Promises blur this — `.then()` acts as both `map` and `flatMap` depending on what the handler returns.
+- **Applicative** — apply a function inside a context to a value inside a context. `Promise.all` is close: it takes multiple promise-wrapped values and combines them.
+- **Monad laws** — three rules (left identity, right identity, associativity) that any well-behaved monad should satisfy. JS promises _almost_ satisfy them but break associativity in edge cases due to the auto-flattening behavior of `.then()`.
+
+These concepts come from category theory via Haskell, but they show up everywhere: `Array.flatMap`, Rust's `Result`/`Option`, reactive streams (`Observable.pipe`). Understanding the pattern once makes all of them click.
