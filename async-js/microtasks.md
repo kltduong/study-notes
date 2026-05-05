@@ -83,26 +83,33 @@ Settlement walks the reactions list exactly once, draining it into the microtask
 
 ### Applying the fundamentals to a chain
 
+Split execution into two phases to see it clearly: **SETUP** (the sync pass when the code is first reached) and **LATER** (the microtask drain).
+
+`.then()` itself is a synchronous method call — it runs during SETUP, not LATER. What runs LATER is the _handler_ it registered. Conflating the two is the usual source of confusion.
+
 ```js
-Promise.resolve() // P0: fulfilled, reactions: []
-  .then(cbB) // P0 settled → cbB enqueued NOW
-  // returns P1: pending, reactions: []
-  .then(cbD); // P1 pending → cbD pushed onto P1.reactions
-// returns P2: pending, reactions: []
+Promise.resolve() // SETUP: P0 = { state: fulfilled, reactions: [] }
+  .then(cbB) // SETUP: P0 is settled → cbB enqueued to microtask queue now
+  //         returns P1 = { state: pending, reactions: [] }
+  .then(cbD); // SETUP: P1 is pending → cbD pushed onto P1.reactions
+//            returns P2 = { state: pending, reactions: [] }
 ```
 
-After the sync phase:
+State at the end of SETUP:
 
 - Microtask queue: `[cbB]`
 - `P1.reactions = [cbD]`
+- `cbD` is **not** in any queue yet.
 
-Drain:
+LATER (microtask drain begins):
 
-1. `cbB` runs, returns a value. Engine calls `settle(P1, value)`.
-2. Settlement walks `P1.reactions`, enqueues `cbD`.
-3. Drain loop picks `cbD` next iteration — still in the same drain cycle.
+1. `cbB` runs, returns a value. Engine calls `settle(P1, value)` as bookkeeping.
+2. Settlement walks `P1.reactions`, enqueues `cbD` onto the microtask queue.
+3. Drain loop picks `cbD` on the next iteration — still inside the same drain.
 
-This is not a special "chain behavior" — it's just fundamentals 1 and 2 composed. No tick boundary, no yield, no gap. `cbD`'s appearance in the queue is a side effect of `cbB` returning, bookkept by the engine synchronously as part of settlement.
+This is not a special "chain behavior" — it's fundamentals 1 and 2 composed. No tick boundary, no yield, no gap. `cbD`'s appearance in the queue is a side effect of `cbB` returning, bookkept by the engine synchronously as part of settlement.
+
+The SETUP/LATER split generalizes: whenever you see a chain, ask _what ran during SETUP_ (all the `.then()` calls, plus handlers on already-settled promises get enqueued) vs _what runs LATER_ (everything else, triggered by settlement cascades during the drain).
 
 ### `await` uses the same machinery
 
