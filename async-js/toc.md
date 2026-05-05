@@ -118,6 +118,11 @@ Throughout: emphasis on predicting execution order as the proof the mental model
       Quick Recap of Event Loop in the Browser; Summary.
       📊 solid
 
-  → [ ] Test — Part 3 (chunks 12–15): async/await, advanced event loop, microtasks, animations.
+  → [x] Test — Part 3 (chunks 12–15): async/await, advanced event loop, microtasks, animations.
+  📊 solid — strong on suspension/continuation, two-queue ordering, microtask-vs-task yielding, rAF timestamp reasoning; missed the `btn.click()` scripted-dispatch case (didn't address second half of Q5)
+  🔧 Refinements:
+  - Framed `await` as "keeping a reference to a callback" — more precise: `await` _suspends the execution context_ and registers the continuation as a `.then()` handler on the awaited promise
+  - Said the executor `r => setTimeout(r, 0)` could be the resolve function — `r` is the resolve function (injected by the Promise constructor); the executor is the arrow that receives it
+  - Didn't distinguish physical click vs `btn.click()` — microtask checkpoints gate on JS execution context stack emptiness, not on individual function returns; scripted dispatch nests listeners inside the caller's frame, so microtasks don't drain between them
 
   → [ ] **Final Test** (cumulative, full course).

@@ -84,6 +84,39 @@ See the "Teaching Approach" section below.
 
 "Save this" → write a markdown file capturing conclusions and non-obvious details, not a transcript. Organize by the mental model that emerged — not by session or course order.
 
+### 5. Capture user-initiated clarifications automatically
+
+When the user asks a clarifying question during teaching, quiz, or test that produces a substantive explanation (mechanism, distinction, or correction worth keeping permanently — not just a terminology fix), persist it without waiting for an explicit "save" ask.
+
+**What counts as a clarification worth capturing:**
+
+- User asks "what is X?" / "is X correct?" / "why does X work that way?" and the answer reveals a non-obvious mechanism, distinction, or gotcha.
+- User's follow-up surfaces a gap the original teaching didn't cover.
+- The explanation would be useful to future-self re-reading the notes.
+
+**What does not count** (still just a refinement or a tangent):
+
+- Pure terminology swaps with no mechanism.
+- Questions the existing note already answers clearly.
+- Restating something already covered from a different angle (unless the angle itself is valuable).
+
+**Where to put it:**
+
+1. **Relevant sibling note exists in the folder** → fold the clarification into it as a surgical edit. Pick the section the clarification belongs in. Do not reformat adjacent content.
+2. **Current chunk's note hasn't been saved yet** → hold the clarification mentally and include it when the note is written at chunk end.
+3. **No existing note fits** → surface the mismatch to the user ("this doesn't fit any current note — want a new one, or skip?"). Do not silently force-fit into a wrong-scope note.
+
+**Clarifications vs refinements — two different things, both can apply:**
+
+| Kind          | Tracks                                      | Lives in                 |
+| ------------- | ------------------------------------------- | ------------------------ |
+| 🔧 Refinement | What the user got wrong or imprecise        | `toc.md` under the chunk |
+| Clarification | What the user needed explained + the answer | The relevant study note  |
+
+The same exchange can produce both — e.g. user gives an imprecise answer (refinement) and then asks a follow-up that reveals a mechanism worth noting (clarification).
+
+**Timing:** apply at a natural break — end of a question, after feedback is delivered, before moving to the next question. Do not interrupt flow mid-exchange. Mention briefly when persisting ("Folding this into `promise-fundamentals.md`").
+
 ## Discussion Workflow
 
 1. User names the topic. If scope is ambiguous, clarify before starting.

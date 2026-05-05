@@ -46,6 +46,22 @@ console.log("after");
 // Output: before, inside executor, after
 ```
 
+### Reading compact executor patterns
+
+A common terse form trips people up:
+
+```js
+new Promise((r) => setTimeout(r, 0));
+```
+
+Breaking it down:
+
+- **Executor:** `(r) => setTimeout(r, 0)` — the arrow function itself.
+- **`r`:** the **resolve function**, injected by the Promise constructor as the first argument to the executor. `r` is just a short name for `resolve`.
+- **Body:** passes `r` (resolve) as the callback to `setTimeout`. When the timer fires, it calls `r()` → promise settles to fulfilled.
+
+The pattern "create a promise that settles when a callback fires" is the building block for promisifying any callback API. See [working-with-promises.md](working-with-promises.md) for the general wrapper.
+
 ## resolve and reject
 
 Two levers that move the promise out of pending:
