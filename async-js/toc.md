@@ -106,8 +106,9 @@ Throughout: emphasis on predicting execution order as the proof the mental model
       📊 solid — traced two-queue model correctly, derived promise state-machine fundamentals on request; two refinements worth logging
       🔧 Refinements: - Said `Promise.resolve().then()` is "just as good" as `setTimeout()` for breaking up long tasks — microtasks drain before render, so promise-based yielding freezes the page; must yield to the task queue, not microtask queue - Explained non-interleaving of click handlers by "clicks are slower than code" — real guarantee is structural: event loop runs one task to completion + drains microtasks before picking the next task, regardless of timing
 
-- [ ] **Chunk 14: Debugging & Animations**
+- [x] **Chunk 14: Debugging & Animations**
       Debugging Our Initial Example; Animations; Creating Animations Using requestAnimationFrame.
+      📊 solid
 
   → [ ] Quiz (chunks 13–14): microtasks vs macrotasks, task scheduling, rAF.
 
