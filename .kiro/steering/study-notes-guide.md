@@ -243,6 +243,8 @@ Interactive checkpoints woven into `toc.md` alongside teaching chunks. **Not** s
 
 Present quiz/test questions **one at a time**. Give the question, wait for the answer, provide feedback, then move to the next question. In `toc.md`, quiz/test entries use the same checkbox format as chunks. Mark `[x]` when completed. Update competence tags after completion.
 
+**Code blocks in questions must include line-number comments** (e.g. `// L1`, `// L2`) on every statement line so the user can reference specific lines in their answer. Empty lines and lone braces don't need labels.
+
 ## Writing Guidelines
 
 ### Before writing
