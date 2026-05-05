@@ -106,6 +106,13 @@ When the user asks a clarifying question during teaching, quiz, or test that pro
 2. **Current chunk's note hasn't been saved yet** → hold the clarification mentally and include it when the note is written at chunk end.
 3. **No existing note fits** → surface the mismatch to the user ("this doesn't fit any current note — want a new one, or skip?"). Do not silently force-fit into a wrong-scope note.
 
+**Before folding in, check for duplication.** Search the folder for existing coverage of the same principle. If the idea is already explained (even in different framing), prefer:
+
+- Doing nothing (the principle is covered; the specific example is a refinement note in `toc.md`).
+- A small cross-reference or pointer if the new angle genuinely adds value.
+
+Per the "each idea explained once" folder rule, a redundant clarification is worse than none. When in doubt, flag the mismatch to the user rather than silently adding duplicate content.
+
 **Clarifications vs refinements — two different things, both can apply:**
 
 | Kind          | Tracks                                      | Lives in                 |
