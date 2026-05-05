@@ -101,8 +101,10 @@ Throughout: emphasis on predicting execution order as the proof the mental model
   → [x] Quiz (chunk 12): async/await mechanics, error handling, sequential vs parallel.
   📊 solid
 
-- [ ] **Chunk 13: Task Priorities & Microtasks**
+- [x] **Chunk 13: Task Priorities & Microtasks**
       What About Task Priorities?; A Closer Look at the Task Queue; Handling Long Tasks in JavaScript Part 1; Handling Long Tasks in JavaScript Part 2; Microtasks.
+      📊 solid — traced two-queue model correctly, derived promise state-machine fundamentals on request; two refinements worth logging
+      🔧 Refinements: - Said `Promise.resolve().then()` is "just as good" as `setTimeout()` for breaking up long tasks — microtasks drain before render, so promise-based yielding freezes the page; must yield to the task queue, not microtask queue - Explained non-interleaving of click handlers by "clicks are slower than code" — real guarantee is structural: event loop runs one task to completion + drains microtasks before picking the next task, regardless of timing
 
 - [ ] **Chunk 14: Debugging & Animations**
       Debugging Our Initial Example; Animations; Creating Animations Using requestAnimationFrame.
