@@ -114,8 +114,9 @@ Throughout: emphasis on predicting execution order as the proof the mental model
   📊 solid — nailed microtask drain ordering, rAF scheduling, and microtask-based animation failure; missed the specific visual artifacts (jitter, frame-rate-dependent speed) on the setInterval-on-120Hz question
   🔧 Refinements: - On setInterval + high-refresh display: identified resource waste and background tabs instead of the visual problems (vsync drift causing jitter, speed tied to frame count not elapsed time) — need to connect scheduling theory to concrete rendering consequences
 
-- [ ] **Chunk 15: Wrap-Up**
+- [x] **Chunk 15: Wrap-Up**
       Quick Recap of Event Loop in the Browser; Summary.
+      📊 solid
 
   → [ ] Test — Part 3 (chunks 12–15): async/await, advanced event loop, microtasks, animations.
 
