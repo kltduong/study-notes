@@ -2,6 +2,8 @@
 inclusion: always
 ---
 
+# Study Notes Workflow Guide
+
 ## Project Overview
 
 Personal study-notes repository. The user learns a topic through interactive teaching or discussion, then saves takeaways as markdown. Topics are general (git, linux, networking, tooling, etc.) — not scoped to a single language or domain.
