@@ -8,13 +8,21 @@ Personal study-notes repository. The user learns a topic through interactive tea
 
 ## Repository Structure
 
-- One folder per topic (e.g. `git/`, `css/`). One markdown file per focused subtopic. Prefer several small files over one large file.
-- Kebab-case filenames, **≤ 25 characters** including `.md`. Drop filler words (`and`, `the`, `of`).
+Two top-level roots, each with a distinct purpose:
+
+- **`courses/<topic>/`** — course-guided workflow only. Structured curriculum, `toc.md` progress tracker with competence tags, notes written chunk-by-chunk as the course progresses. **Competence lives here.**
+- **`notes/<topic>/`** — discussion and content-to-note workflows. No `toc.md`, no calibration history, no per-chunk competence tracking. Pre-existing personal notes also live here.
+
+Inside each root, one folder per topic (e.g. `courses/async-js/`, `notes/git/`). One markdown file per focused subtopic. Prefer several small files over one large file.
+
+Kebab-case filenames, **≤ 25 characters** including `.md`. Drop filler words (`and`, `the`, `of`).
 
 ### Folder isolation rules
 
-- **No cross-directory links.** If two folders need the same concept, each explains it independently. Duplication across folders is acceptable.
-- **No reading across directories.** When working in a folder, only read files inside that folder. Treat each folder as if the others don't exist.
+Folder boundaries apply **per topic folder**, not per root. `courses/async-js/` is one isolated folder; `notes/client-side/` is another.
+
+- **No cross-directory links.** If two folders need the same concept, each explains it independently. Duplication across folders is acceptable. This also means no links between `courses/` and `notes/`, and no links between sibling topics in the same root.
+- **No reading across directories.** When working in a folder, only read files inside that folder. Treat every other folder as if it doesn't exist — including folders in the other root.
 - **No duplication within a folder.** Each idea explained once; notes link to siblings; `index.md` is the glue.
 - **Each note stands on its own** within its folder. Cover the declared scope fully. If a note can't stand alone, its scope is wrong — narrow it or absorb the missing piece.
 
@@ -33,7 +41,7 @@ Required sections:
 
 ### `toc.md` — course progress tracker
 
-Created only during the course-guided workflow. Tracks course structure and learning progress — a different job from `index.md`.
+Created only during the course-guided workflow. Lives in `courses/<topic>/` — never in `notes/`. Tracks course structure and learning progress — a different job from `index.md`.
 
 Two required sections:
 
@@ -44,26 +52,33 @@ Two required sections:
 
 ## Workflow Selection
 
-Auto-detect which workflow to use based on user input:
+Auto-detect which workflow to use based on user input, then pick the correct root:
 
-| User input                                                               | Workflow        |
-| ------------------------------------------------------------------------ | --------------- |
-| Pasted/attached content (article, transcript, notes dump, docs excerpt)  | Content-to-note |
-| Structured course outline (sections, chapters, numbered TOC, curriculum) | Course-guided   |
-| Topic name or question (anything else)                                   | Discussion      |
+| User input                                                               | Workflow        | Writes to                |
+| ------------------------------------------------------------------------ | --------------- | ------------------------ |
+| Pasted/attached content (article, transcript, notes dump, docs excerpt)  | Content-to-note | `notes/<topic>/`         |
+| Structured course outline (sections, chapters, numbered TOC, curriculum) | Course-guided   | `courses/<topic>/`       |
+| Topic name or question (anything else)                                   | Discussion      | `notes/<topic>/` on save |
 
-If ambiguous, ask the user to clarify before proceeding.
+If ambiguous, ask the user to clarify before proceeding. Root selection is not negotiable — courses go in `courses/`, everything else in `notes/`.
 
 ## Shared Rules (discussion + course-guided)
 
 ### 1. Calibrate first
 
-Before teaching, ask two questions:
+**Before calibrating, consult `learner-profile.md`.** It holds cross-course background, preferences, aggregated topic competence, and session calibration defaults. Use it to skip or shorten the two calibration questions when the topic falls within the profile.
+
+- **Topic covered by profile** (existing folder with a competence rollup, or adjacent to one) → state the assumed calibration in one line ("Working from profile: you know basics on X, fuzzy on Y, want a clean mental model — correct?"), invite correction, proceed if none.
+- **Topic outside the profile** (new folder, unfamiliar domain) → ask both questions below in full.
+
+The two questions:
 
 - _Where are you starting from?_ Offer concrete levels tailored to the topic (e.g. "never touched it / used it but black box / know basics, fuzzy on [X] / know it well, want edges").
 - _What do you want to walk away with?_ (e.g. "clean mental model / implementation fluency / deep mastery / something else").
 
 Use answers to set pacing: skip what's solid, slow down where it's fuzzy, pitch examples at the right level. After calibrating, state the planned arc so the user sees the map before entering the territory.
+
+Also check cross-cutting weaknesses in the profile for patterns relevant to the topic — probe those proactively during teaching rather than waiting for them to resurface.
 
 ### 2. Persist calibration in `toc.md`
 
@@ -74,7 +89,7 @@ Immediately after calibrating (before teaching begins), write a `## Calibration`
 
 The chunk checklist goes under a separate `## Progress` heading — not inside calibration.
 
-On a new session, read `toc.md` instead of re-asking. Only re-calibrate if the user says their level or goal has changed.
+On a new session, read `toc.md` and `learner-profile.md` to recover state. Only re-calibrate if the user says their level or goal has changed.
 
 ### 3. Teach using the teaching approach
 
@@ -129,11 +144,12 @@ The same exchange can produce both — e.g. user gives an imprecise answer (refi
 1. User names the topic. If scope is ambiguous, clarify before starting.
 2. Apply shared rules: calibrate → teach → save on ask.
 3. User asks follow-ups, pushes back, explores edge cases throughout.
+4. On save, write to `notes/<topic>/`. If a `courses/<topic>/` exists on the same subject, the discussion is extending surrounding exploration — still save to `notes/`, keep `courses/` untouched (it's the structured-curriculum record).
 
 ## Course-Guided Workflow
 
 1. User provides a course outline — accept it as the session roadmap. Clarify ambiguity before starting.
-2. **Create `toc.md`** in the topic folder. Parse the outline into logical chunks (group related lessons), write one checkbox entry per chunk with a brief scope note. Add quiz and test entries following the placement rules in the "Quizzes and Tests" section.
+2. **Create `toc.md`** in `courses/<topic>/` (never in `notes/`). Parse the outline into logical chunks (group related lessons), write one checkbox entry per chunk with a brief scope note. Add quiz and test entries following the placement rules in the "Quizzes and Tests" section.
 3. Apply shared rules: calibrate → teach → save on ask.
 4. **Teach chunk by chunk in course order**, but teach freely — restructure, reorder within a chunk, add missing context. Do not narrate slides.
 5. **Prompt before moving on (mandatory gate).** After the understanding check and competence tag update, **always** ask the user if they want to continue exploring the chunk (follow-ups, edge cases, deeper dives). Wait for the user's explicit confirmation that the chunk is done. Do NOT save the note, mention the next chunk, or offer to proceed until the user confirms. This is a hard gate — never skip it.
@@ -145,18 +161,20 @@ The same exchange can produce both — e.g. user gives an imprecise answer (refi
 11. **End-of-course solidification pass.** After the final test:
     - **Competence gaps:** Scan all competence tags in `toc.md`. If any remain below `solid`: group related weak points, re-teach with fresh examples and synthesis, test with 2–3 questions per group, update tags. Repeat once more for anything still below solid. If it still doesn't land after two passes, note it as a known gap and move on.
     - **Refinement patterns:** Scan all `🔧 Refinements` entries. Group recurring themes (e.g. terminology imprecision, confusing descriptors with values). Present a summary of patterns and suggest targeted improvements. This is informational — no re-testing unless the user wants it.
-    - The course is complete when all tags are `solid` (or the user opts out) and refinement patterns have been reviewed.
-12. **Session management.** Prefer short sessions — one chunk (or a few small related chunks) per session. After saving a chunk's note and updating `toc.md`, that is a natural stopping point. On a new session, read `toc.md` and existing notes in the folder to recover full state — no prior conversation needed.
+    - **Update `learner-profile.md`.** Refresh the competence rollup for this course **against its stated goal** (per `toc.md` → `## Calibration` → _Goal_). `solid` on a "clean mental model" course is not the same thing as `solid` on a "deep mastery" course — the level is always relative to what the course aimed for. Record the goal alongside the level. Only courses under `courses/` with a `toc.md` produced by the workflow belong in the competence table — content under `notes/` is never added. Fold any recurring refinement theme that also appears in other courses into the cross-cutting weaknesses list. Upgrade inferred profile items to confirmed where the course surfaced enough signal. See the profile's `Maintenance` section for trigger rules.
+    - The course is complete when all tags are `solid` (or the user opts out), refinement patterns have been reviewed, and the profile has been updated.
+12. **Session management.** Prefer short sessions — one chunk (or a few small related chunks) per session. After saving a chunk's note and updating `toc.md`, that is a natural stopping point. On a new session, read `learner-profile.md`, `toc.md`, and existing notes in the folder to recover full state — no prior conversation needed.
 
 ## Content-to-Note Workflow
 
-The user has content and wants it organized into notes.
+The user has content and wants it organized into notes. Notes from this workflow go under `notes/<topic>/`, never `courses/`.
 
-1. **Identify the topic folder.** Use existing or create new. Ask if ambiguous.
-2. **Assess scope.** Single note or split into multiple? If splitting, tell the user the plan first.
-3. **Reorganize, don't transcribe.** Apply all writing guidelines: TL;DR at top, top-down reading order, clear headings, code blocks / tables / mermaid where clearer, cut filler, preserve substance and non-obvious details.
-4. **Critical lens.** Flag wrong/outdated/oversimplified content with inline notes (e.g. `> ⚠️ The original source claims X, but...`) rather than silently passing through or dropping.
-5. **Update `index.md`** if folder now has 2+ notes.
+1. **Identify the topic folder** under `notes/`. Use existing or create new. Ask if ambiguous.
+2. **Check `learner-profile.md`** for the learner's level on this topic and cross-cutting preferences (mental-model orientation, concrete → general, no ASCII art, etc.). Pitch depth and tone accordingly.
+3. **Assess scope.** Single note or split into multiple? If splitting, tell the user the plan first.
+4. **Reorganize, don't transcribe.** Apply all writing guidelines: TL;DR at top, top-down reading order, clear headings, code blocks / tables / mermaid where clearer, cut filler, preserve substance and non-obvious details.
+5. **Critical lens.** Flag wrong/outdated/oversimplified content with inline notes (e.g. `> ⚠️ The original source claims X, but...`) rather than silently passing through or dropping.
+6. **Update `index.md`** if folder now has 2+ notes.
 
 ## Teaching Approach
 
@@ -253,7 +271,7 @@ The **current** (latest) level drives pacing decisions.
 
 ### Cross-session tag usage
 
-On new sessions, read competence tags alongside calibration to adapt pacing — revisit weak areas, skip solid ones, probe shaky spots with a quick question before building on them.
+On new sessions, read competence tags in `toc.md` alongside calibration to adapt pacing — revisit weak areas, skip solid ones, probe shaky spots with a quick question before building on them. Also check `learner-profile.md` for cross-cutting weaknesses that may apply to the current topic even if the topic-specific tag is `solid`.
 
 ### Remediation mini-quiz
 
