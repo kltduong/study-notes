@@ -140,13 +140,85 @@ Two axes to remember:
 - **How many matter?** All (`all`, `allSettled`) vs first (`race`, `any`).
 - **What counts?** Any settlement (`race`, `allSettled`) vs only fulfillment (`all`, `any`).
 
-## Empty-Input Logic
+The empty-input column isn't arbitrary — it falls out of formal logic. See [Formal Structure](#formal-structure-behind-the-combinators) below.
 
-The empty-input behaviors follow from each combinator's definition:
+## Formal Structure Behind the Combinators
 
-- **`Promise.all([])`** — "all must fulfill." Zero things to fulfill → condition trivially met → fulfills with `[]`.
-- **`Promise.allSettled([])`** — "all must settle." Zero things to settle → trivially done → fulfills with `[]`.
-- **`Promise.race([])`** — "mirror the first to settle." Zero inputs → no settlement can ever arrive. `race` is purely reactive with no failure condition → hangs forever.
-- **`Promise.any([])`** — "first to fulfill." Zero inputs → fulfillment is impossible, and `any` _can_ detect impossibility → rejects immediately with `AggregateError`.
+The four combinators aren't arbitrary API choices — they implement well-known logical and algebraic operations. Their behaviors (including the "weird" empty-input cases) fall out mechanically from this structure.
 
-The difference between `race` and `any` on empty input: `any` has a built-in failure mode (all rejected / none possible), so it can fail decisively. `race` has no opinion on _what_ a settlement means — it just waits, indefinitely if needed.
+### Logical quantifiers
+
+`all` and `any` map directly to the universal (∀) and existential (∃) quantifiers from predicate logic, where the predicate is "fulfills":
+
+| Combinator    | Quantifier  | Question it answers          |
+| ------------- | ----------- | ---------------------------- |
+| `Promise.all` | ∀ (for all) | "Do all promises fulfill?"   |
+| `Promise.any` | ∃ (exists)  | "Does at least one fulfill?" |
+
+This mapping determines short-circuit behavior:
+
+- **∀ short-circuits on counterexample.** One rejection disproves "all fulfill" — no need to wait for the rest. → `all` rejects on first rejection.
+- **∃ short-circuits on witness.** One fulfillment proves "at least one fulfills" — done. → `any` resolves on first fulfillment.
+
+### Vacuous truth and empty inputs
+
+The key principle: **a universal statement over an empty set is true; an existential statement over an empty set is false.**
+
+- "All unicorns are blue" (∀x ∈ ∅, P(x)) → **true** — no counterexample exists.
+- "Some unicorn is blue" (∃x ∈ ∅, P(x)) → **false** — no witness exists.
+
+Applied directly:
+
+| Expression        | Logic                      | Result                     |
+| ----------------- | -------------------------- | -------------------------- |
+| `Promise.all([])` | ∀x ∈ ∅, x fulfills → true  | Resolves with `[]`         |
+| `Promise.any([])` | ∃x ∈ ∅, x fulfills → false | Rejects (`AggregateError`) |
+
+No special cases — the empty-input behavior is a mechanical consequence of which quantifier the combinator implements.
+
+### Algebraic view: folds with identity elements
+
+Another angle on the same structure — think of each combinator as a fold (reduction) over the input collection:
+
+| Combinator    | Fold operation | Identity element | Empty fold result    |
+| ------------- | -------------- | ---------------- | -------------------- |
+| `Promise.all` | AND (∧)        | true             | true → resolves `[]` |
+| `Promise.any` | OR (∨)         | false            | false → rejects      |
+
+AND's identity is `true` (x ∧ true = x), so folding AND over nothing yields `true`.  
+OR's identity is `false` (x ∨ false = x), so folding OR over nothing yields `false`.
+
+Same conclusion, different derivation path. Pick whichever clicks faster in the moment.
+
+### Where `race` and `allSettled` don't fit the logic model
+
+`race` and `allSettled` aren't logical quantifiers — they operate on a different axis:
+
+- **`Promise.race`** — temporal, not logical. It answers "what settles first?" not "do they fulfill?" It has no truth condition and no failure condition of its own. It's purely reactive: wait for an event, mirror it. Empty input → no event can ever arrive → **pending forever**. There's no identity element for "first in time over nothing." And it _can't_ reject as a fallback either — a rejected `race` is indistinguishable from "an input settled with a rejection," which would fabricate an event that never happened. Pending is the only honest state.
+
+- **`Promise.allSettled`** — observational. It answers "what happened to each?" — collecting outcomes without judging them. It's ∀ over _settlement_ (not fulfillment), and since both fulfillment and rejection count as settling, it can never short-circuit. Empty input → ∀x ∈ ∅, x settles → trivially true → **resolves with `[]`**.
+
+### The two axes, formalized
+
+```mermaid
+quadrantChart
+    title Promise Combinators
+    x-axis "First wins" --> "All required"
+    y-axis "Any outcome" --> "Fulfillment only"
+    quadrant-1 "all (∀ fulfill)"
+    quadrant-2 "any (∃ fulfill)"
+    quadrant-3 "race (first event)"
+    quadrant-4 "allSettled (∀ settle)"
+    "Promise.all": [0.8, 0.8]
+    "Promise.any": [0.2, 0.8]
+    "Promise.race": [0.2, 0.2]
+    "Promise.allSettled": [0.8, 0.2]
+```
+
+| Axis                 | Values                                                                  |
+| -------------------- | ----------------------------------------------------------------------- |
+| **How many matter?** | All (`all`, `allSettled`) vs first (`race`, `any`)                      |
+| **What counts?**     | Fulfillment only (`all`, `any`) vs any outcome (`race`, `allSettled`)   |
+| **Operator type**    | Logical (`all`, `any`) vs temporal/observational (`race`, `allSettled`) |
+
+The logical pair (`all`/`any`) gets clean algebraic behavior and vacuous-truth empty semantics. The temporal/observational pair (`race`/`allSettled`) follows event-system semantics instead — "no events" means either "wait forever" or "trivially done collecting nothing."
