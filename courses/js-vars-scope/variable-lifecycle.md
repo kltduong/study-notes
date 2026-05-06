@@ -23,20 +23,46 @@ Every variable goes through up to three stages in order: declaration → initial
 
 ## Why separate declaration from initialization?
 
-The engine needs to know at creation time which names exist in a scope, but it doesn't have to give them a value yet. Separating the two stages gives the spec a slot to enforce "you declared it, but you can't use it yet" — which is exactly TDZ.
+This is the design choice that makes TDZ possible. Follow the chain:
 
-- `var` collapses stages 1 and 2 into one atomic operation during creation: declare + initialize to `undefined`. No gap → no TDZ.
-- `let` and `const` perform only stage 1 during creation. Stage 2 is deferred to the point in execution where the declarator appears in source text. Between creation and that point, the binding is in the TDZ — it exists (you can't re-declare it) but accessing it throws `ReferenceError`.
+### 1. JS has features that force pre-registration
 
-### Why not just throw like Python?
+JS resolves scope _statically_ — every name-to-scope binding is determined before any code runs. It has to, because of three features covered in later chunks:
 
-Python throws `NameError` on use-before-assignment because it has no creation phase that pre-registers names. JS _does_ pre-register names — it needs to for **static scope resolution**:
+- **`var` hoisting** — `var` is function-scoped, and the engine must know a `var` name belongs to the function even if its declarator sits inside an `if (false)` branch. See [hoisting.md](hoisting.md).
+- **Mutual recursion via function declarations** — two functions can call each other regardless of textual order, which requires both names to exist before either body runs.
+- **Block-scoped shadowing** — `{ console.log(x); let x = 2; }` must know at compile time that the inner `x` shadows any outer `x`. See [scope-lexical.md](scope-lexical.md).
 
-1. Detect duplicate declarations (`let x; let x;` → `SyntaxError`)
-2. Resolve the scope chain at compile time without running code
-3. Distinguish "undeclared" (`ReferenceError: x is not defined`) from "declared but uninitialized" (`ReferenceError: Cannot access 'x' before initialization`)
+All three need the engine to "know what names exist where" before execution starts. That's what the **creation phase** does — it walks the scope and registers every declared name.
 
-Since JS can't remove pre-registration without losing these capabilities, TDZ is the mechanism that achieves "use-before-initialization = error" (the Python-like safety) while preserving the two-phase architecture that static scope resolution depends on.
+### 2. The creation phase leaves a window
+
+Once names are pre-registered, there's a window between "name exists" (end of creation) and "value assigned" (execution reaches the declarator line). Something has to happen if code reads the binding during that window. Two options:
+
+- **Give it a default value** — the `var` approach: auto-initialize to `undefined`. No window, no errors, but silent bugs slip through:
+
+  ```js
+  if (!user) {
+    // L1 — runs, because user is undefined
+    redirectToLogin(); // L2 — wrong branch taken
+  }
+  var user = getUser(); // L3
+  ```
+
+  Python doesn't have this problem because it throws `NameError` on use-before-assignment — but Python has no creation phase to leave a window in.
+
+- **Throw on access** — the `let`/`const` approach: the binding exists but is marked uninitialized. Any read in the window throws `ReferenceError: Cannot access 'x' before initialization`.
+
+### 3. TDZ is option 2
+
+TDZ (Temporal Dead Zone) is the name for that "declared but uninitialized" window. It's how JS gets Python-like use-before-init errors while keeping the creation phase that `var` hoisting, mutual recursion, and block shadowing all require.
+
+The lifecycle mapping falls out of this:
+
+- `var` → option 1. Stages 1+2 collapse during creation; the window is filled with `undefined`.
+- `let`/`const` → option 2. Only stage 1 runs in creation; stage 2 is deferred; the window is the TDZ.
+
+**The principle:** JS is a _statically scoped language with dynamic execution_. Static scoping requires the creation phase. The creation phase creates a window. TDZ is the cheapest mechanism for making that window safe.
 
 ## How each keyword maps to the stages
 
