@@ -15,11 +15,11 @@ The full machinery behind these phases (execution contexts, Environment Records)
 
 Every variable goes through up to three stages in order: declaration → initialization → assignment. Not every keyword permits all three, and they fire at different times — that's the entire source of `var`/`let`/`const` behavioral differences.
 
-| Stage              | What happens                                                                                                                                                                               | When it's "done"                                          |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
-| **Declaration**    | The engine registers the name in the current scope's Environment Record. The binding exists but has no value — not even `undefined`.                                                       | Creation phase                                            |
-| **Initialization** | The binding receives its first value. For `var` this is auto-initialized to `undefined`; for `let`/`const` it stays uninitialized until the engine reaches the declarator in source order. | Creation phase (`var`) or execution phase (`let`/`const`) |
-| **Assignment**     | A new value is written to an already-initialized binding.                                                                                                                                  | Execution phase (any subsequent `=`)                      |
+| Stage              | What happens                                                                                                                                                                               |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Declaration**    | The engine registers the name in the current scope's Environment Record. The binding exists but has no value — not even `undefined`.                                                       |
+| **Initialization** | The binding receives its first value. For `var` this is auto-initialized to `undefined`; for `let`/`const` it stays uninitialized until the engine reaches the declarator in source order. |
+| **Assignment**     | A new value is written to an already-initialized binding.                                                                                                                                  |
 
 ## Why separate declaration from initialization?
 
@@ -32,7 +32,7 @@ JS resolves scope _statically_ — every name-to-scope binding is determined bef
 - **Hoisting** (`var` + function declarations) — names (and for functions, values) must be available before their textual position. The engine must know a `var` name belongs to the function even if its declarator sits inside an `if (false)` branch. See [hoisting.md](hoisting.md).
 - **Block-scoped shadowing** — `{ console.log(x); let x = 2; }` must know at compile time that the inner `x` shadows any outer `x`. See [scope-lexical.md](scope-lexical.md).
 
-All three need the engine to "know what names exist where" before execution starts. That's what the **creation phase** does — it walks the scope and registers every declared name.
+Both need the engine to "know what names exist where" before execution starts. That's what the **creation phase** does — it walks the scope and registers every declared name.
 
 ### 2. The creation phase leaves a window
 
@@ -54,7 +54,7 @@ Once names are pre-registered, there's a window between "name exists" (end of cr
 
 ### 3. TDZ is option 2
 
-TDZ (Temporal Dead Zone) is the name for that "declared but uninitialized" window. It's how JS gets Python-like use-before-init errors while keeping the creation phase that `var` hoisting, mutual recursion, and block shadowing all require. Full treatment in [tdz.md](tdz.md).
+TDZ (Temporal Dead Zone) is the name for that "declared but uninitialized" window. It's how JS gets Python-like use-before-init errors while keeping the creation phase that hoisting and block shadowing require. Full treatment in [tdz.md](tdz.md).
 
 The lifecycle mapping falls out of this:
 
@@ -81,7 +81,7 @@ console.log(b); // ReferenceError (TDZ)               // L2
 console.log(c); // ReferenceError (TDZ)               // L3
 
 var a = 1; // L4 — assignment (stage 3)
-let b = 2; // L5 — initialization + assignment
+let b = 2; // L5 — initialization (stage 2). TDZ ends.
 const c = 3; // L6 — initialization (stage 2). No stage 3 ever.
 ```
 
@@ -134,7 +134,7 @@ graph LR
     A["Declaration<br/>(name registered)"] --> B["Initialization<br/>(first value)"]
     B --> C["Assignment<br/>(subsequent values)"]
 
-    style A fill:#b68,stroke:#fff,color:#fff
+    style A fill:#c9a,stroke:#fff,color:#fff
     style B fill:#46c,stroke:#fff,color:#fff
     style C fill:#3a7,stroke:#fff,color:#fff
 ```
