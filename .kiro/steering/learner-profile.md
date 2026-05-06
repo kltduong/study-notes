@@ -23,6 +23,7 @@ Only folders under `courses/` with a workflow-produced `toc.md` feed this profil
 ## Learning Preferences
 
 - **First principles over cookbook.** Wants _why_ before _what_. Definitional/procedural content alone lands poorly — derive behavior from fundamentals.
+- **Formal/abstract structure when it exists.** If a behavior maps to a known mathematical or logical structure (quantifiers, algebraic identities, folds, type relationships), surface it explicitly. The formal framing is valued as a _separate layer of understanding_ — not a substitute for the mechanism, but a complement that reveals why the design is the only coherent choice. Derive behavior from the abstraction, don't just label it.
 - **Mental model orientation.** Compact takeaways that survive months later beat exhaustive reference coverage.
 - **Concrete → general.** Anchor the mechanism in a real example before abstracting.
 - **Mechanism-level precision.** "Close but not quite" is unacceptable — give the precise version even when the conclusion was right. Refinement tracking exists for this.
@@ -52,6 +53,7 @@ Anchor points to reach for when teaching adjacent topics:
 - **Queue and scheduling mental models.** Task queue, microtask queue, FIFO ordering, drain semantics all reasoned well.
 - **Derivation from two fundamentals.** Given a compact pair of invariants, derives consequences correctly (e.g. promise state-machine + `.then()` scheduling rule).
 - **Engine/runtime split.** The "single-threaded engine, multi-threaded runtime" distinction is internalized.
+- **Formal abstraction recognition.** Spots when a system's behavior maps to known math/logic structures (∀/∃ quantifiers, fold identities, vacuous truth) and uses the formal layer to reason about edge cases (e.g. empty-input combinator behavior).
 
 ## Cross-Cutting Weaknesses / Refinement Patterns
 

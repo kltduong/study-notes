@@ -187,6 +187,7 @@ Weave in these elements as they help the idea click (not every topic needs all; 
 - **Motivation** — what problem does this solve? What was painful before?
 - **History / evolution** — what did it replace, and why?
 - **First principles** — the underlying mechanism or invariant everything else follows from.
+- **Formal structure** — when the behavior maps to a known abstraction (logical quantifiers, algebraic identities, folds, category-theoretic patterns), surface it as a distinct layer. Derive the behavior from the formal structure to show why the design is the only coherent choice — don't just label it after the fact.
 - **Concrete example first, then generalize** — real command, real scenario, real I/O. Only then extract the pattern.
 - **Mental model / abstraction** — the compact takeaway the user reaches for months later.
 - **Gotchas and edge cases** — where the simple model breaks.

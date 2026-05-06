@@ -200,29 +200,57 @@ Behaves identically to `Promise.resolve().then(fn)` for scheduling. Cleaner when
 
 Not to be confused with yielding for long tasks — `queueMicrotask` has the same starvation problem as `.then()` chains.
 
-## Event Handler Atomicity
+## Event Dispatch and Microtask Timing
 
-A user clicks twice in quick succession:
+### Tasks are jobs, not callbacks
 
-```js
-button.addEventListener("click", () => {
-  console.log("start");
-  Promise.resolve().then(() => console.log("promise"));
-  console.log("end");
-});
+The "1 task = 1 callback" model is a simplification that works for `setTimeout` (a timer task's job really is "call this one function"). But a task is a **unit of work the browser needs to do** — sometimes that involves calling one JS function, sometimes several, sometimes none (purely internal browser work).
+
+For a click event, the task is: **"dispatch the click event on this element."** The browser's way of doing that job is to walk the listener list and call each handler:
+
+```
+Task queue: [ "dispatch click on #btn" ]   ← one task, not two callbacks
 ```
 
-Output (click 1): `start, end, promise`. Output (click 2): `start, end, promise`. Never interleaved.
+When the event loop picks that task, the browser (native code, not JS) executes its dispatch algorithm:
 
-The guarantee is structural, not timing-based:
+```
+for each listener on this element:
+    call listener()        ← enters JS (fresh top-level invocation)
+    listener returns       ← exits JS, stack empty
+    // microtask checkpoint happens here automatically
+```
 
-- Each click handler invocation is its own **task**.
-- The event loop runs one task to completion, drains microtasks, then picks the next task.
-- Click 2's task cannot start until click 1's task finishes AND its microtasks drain.
+Each `call listener()` is a **fresh entry into JS from native code**. The handler's frame is the only thing on the JS stack — nothing sits below it. When it returns, the stack is truly empty. The browser's dispatch loop isn't JavaScript, so it occupies no JS stack frame between calls.
 
-Even if both clicks landed instantaneously, the order would be the same. There's no slot in the event loop model for "interleave two tasks." JS is single-threaded; tasks are atomic; microtasks drain between them.
+### Physical click vs `btn.click()` — stack traces
 
-This is why you can rely on promise chains triggered by an event to complete before the next event handler sees the world.
+The difference comes down to what's on the stack when handlers run:
+
+**Physical click** — browser's native dispatch calls each handler as a top-level JS entry:
+
+```
+During handler1:  stack = [ handler1 ]         ← nothing below
+After handler1:   stack = [ ]                  ← empty → microtasks drain
+During handler2:  stack = [ handler2 ]
+After handler2:   stack = [ ]                  ← empty → microtasks drain
+Output: listener1, microtask1, listener2, microtask2
+```
+
+**`btn.click()`** — JS function that loops through listeners, stays on the stack:
+
+```
+During handler1:  stack = [ script, btn.click(), handler1 ]
+After handler1:   stack = [ script, btn.click() ]   ← NOT empty, no drain
+During handler2:  stack = [ script, btn.click(), handler2 ]
+After handler2:   stack = [ script, btn.click() ]   ← still not empty
+After btn.click() returns: stack = [ ]              ← NOW microtasks drain
+Output: listener1, listener2, microtask1, microtask2
+```
+
+No new rules — same "microtasks drain when JS stack is empty" applied to different stack shapes.
+
+This generalizes to any scripted dispatch — `dispatchEvent(new Event(...))`, `.click()`, `.focus()`, `.blur()` — all are synchronous JS calls that keep the caller on the stack. No task is created, microtasks wait until the stack unwinds.
 
 ## Scheduling Sources Summary
 
