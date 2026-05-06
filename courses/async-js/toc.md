@@ -125,4 +125,6 @@ Throughout: emphasis on predicting execution order as the proof the mental model
   - Said the executor `r => setTimeout(r, 0)` could be the resolve function — `r` is the resolve function (injected by the Promise constructor); the executor is the arrow that receives it
   - Didn't distinguish physical click vs `btn.click()` — microtask checkpoints gate on JS execution context stack emptiness, not on individual function returns; scripted dispatch nests listeners inside the caller's frame, so microtasks don't drain between them
 
-  → [ ] **Final Test** (cumulative, full course).
+  → [x] **Final Test** (cumulative, full course).
+  📊 solid — strong on two-queue tracing, rejection propagation, promisification, combinators, fetch/race patterns, dispatch timing, structural callback problems. Soft on articulating rAF's render-step placement (knew the fact, vague on the "why" initially).
+  🔧 Refinements: - Q6: described rAF placement vaguely ("difference list belong to animation") rather than precisely naming the render step as a third category in the event loop cycle - Q7 discussion surfaced a gap in the note (not the understanding) — "tasks are jobs, not callbacks" reframe was needed to explain why the stack empties between physical-click listeners

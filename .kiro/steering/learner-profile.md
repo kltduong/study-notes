@@ -14,7 +14,7 @@ Only folders under `courses/` with a workflow-produced `toc.md` feed this profil
 
 ## Background
 
-🟡 inferred (from `courses/async-js/`, `courses/js-inheritance/`):
+✅ confirmed (from `courses/async-js/` completion, `courses/js-inheritance/` in progress):
 
 - Working JavaScript developer; comfortable with modern JS (ES6+, async/await, modules).
 - Interest goes past day-to-day usage into spec-level mechanics (event loop, microtasks, `[[Prototype]]`).
@@ -38,10 +38,10 @@ Coarse rollup per `courses/<topic>/`. Refresh only at end-of-course solidificati
 
 Level is **relative to the course's stated goal** (`toc.md` → `## Calibration` → _Goal_), not absolute. `solid` on a "clean mental model" goal is not the same bar as `solid` on a "deep mastery" goal — always consult the goal column when interpreting a level.
 
-| Course                    | Goal (per `toc.md`)                                     | Level vs goal  | Notes                                                                                                                                                                                                                                                       |
-| ------------------------- | ------------------------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `courses/async-js/`       | Clean mental model of how async JS works under the hood | `solid`        | Event loop, promises, microtasks, async/await, combinators, testing — all drilled. Final test pending. Strong on execution-order reasoning.                                                                                                                 |
-| `courses/js-inheritance/` | Mental model + implementation fluency + deep mastery    | `shaky` so far | Core mechanics (chain walk, `[[Prototype]]`, instantiation patterns) solid against a mental-model bar. Course ~70% done — building chains, OOP/class, composition remaining. Level against the full three-part goal can't be set until the course finishes. |
+| Course                    | Goal (per `toc.md`)                                     | Level vs goal  | Notes                                                                                                                                                                                                                                                                             |
+| ------------------------- | ------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `courses/async-js/`       | Clean mental model of how async JS works under the hood | `solid`        | Course complete. Event loop, promises, microtasks, async/await, combinators, testing, rAF — all drilled and tested. Final test passed. Strong on execution-order reasoning; persistent minor pattern of right-conclusion-imprecise-mechanism under pressure, improving over time. |
+| `courses/js-inheritance/` | Mental model + implementation fluency + deep mastery    | `shaky` so far | Core mechanics (chain walk, `[[Prototype]]`, instantiation patterns) solid against a mental-model bar. Course ~70% done — building chains, OOP/class, composition remaining. Level against the full three-part goal can't be set until the course finishes.                       |
 
 **Not tracked** (no `courses/<topic>/` folder): `notes/git/`, `notes/css/`, `notes/client-side/`. If a course on any of these subjects starts later, create a new `courses/<topic>/` with its own `toc.md` and add a row here.
 
