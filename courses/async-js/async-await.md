@@ -162,3 +162,51 @@ export const config = await res.json();
 ```
 
 Only works in ES modules (`.mjs` or `type: "module"`), not in scripts or CommonJS.
+
+## The Complete Model — Six Rules
+
+Everything above derives from six rules. Two describe what happens _inside_ the function (execution), three describe what the _caller_ sees (the returned promise), and one connects both sides.
+
+### Inside (execution, top → down)
+
+1. **`await p`** — if `p` fulfills → gives the value; if `p` rejects → throws at the `await` site (like a synchronous `throw`).
+2. **Normal flow** — between `await` points, code runs top-to-bottom like synchronous code.
+3. **End of function** — reaching the closing `}` without an explicit `return` behaves like `return undefined`.
+
+### Outside (what the caller sees)
+
+4. **Everything wraps into a promise** — `return x` → `Promise.resolve(x)`; `throw e` → `Promise.reject(e)`.
+5. **Returning a promise** — `return p` adopts `p` (pass-through, no extra wrapping).
+
+### Cross-cutting (connects inside ↔ outside)
+
+6. **Ignored promises** — a promise that is neither `await`ed nor `return`ed does not affect the function's result. If it rejects, nothing catches it → unhandled rejection.
+
+### Deriving behavior from the rules
+
+```js
+// Rule 1 → throws at await; Rule 4 → wraps into rejection
+async function f1() {
+  await Promise.reject("err");
+}
+// caller sees: rejected promise ("err")
+
+// Rule 5 → adopts the rejected promise directly
+async function f2() {
+  return Promise.reject("err");
+}
+// caller sees: rejected promise ("err")
+
+// Rule 6 → promise ignored; Rule 3 → implicit return undefined; Rule 4 → wraps
+async function f3() {
+  Promise.reject("err");
+}
+// caller sees: fulfilled promise (undefined) + unhandled rejection
+
+// Rule 1 → unwrap; Rule 4 → re-wrap (same result as return p, but try/catch works)
+async function f4() {
+  return await p;
+}
+```
+
+One-line compression: inside, `await` = unwrap-or-throw. Outside, `return`/`throw` = wrap into promise. Gap: not awaited and not returned = invisible to the function.
