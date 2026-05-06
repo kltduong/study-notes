@@ -19,10 +19,16 @@ Only folders under `courses/` with a workflow-produced `toc.md` feed the compete
 - Working JavaScript developer; comfortable with modern JS (ES6+, async/await, modules).
 - Interest goes past day-to-day usage into spec-level mechanics (event loop, microtasks, `[[Prototype]]`).
 - Not a beginner in the JS topics covered through the workflow so far.
+- Background in Python — uses it as a reference point for language design comparisons.
+- Background in math / mathematical logic — comfortable with formal reasoning, proofs, logical structures.
+- Wants underlying principles surfaced so that explanations follow from them rather than appearing as arbitrary rules.
 
 ## Learning Preferences
 
 - **First principles over cookbook.** Wants _why_ before _what_. Definitional/procedural content alone lands poorly — derive behavior from fundamentals.
+- **Axiom-and-derivation teaching.** Analogy the learner uses: Newton's three laws → all of classical mechanics. At the start of each topic/chunk, name the small set (2–4) of invariants the rest follows from. Teach by derivation — show how behavior falls out of the axioms — rather than cataloging rules. A compact axiom set the learner can reconstruct from is the target.
+- **Flag genuinely arbitrary things.** Not every behavior derives from a principle. Historical accidents (`typeof null === "object"`), committee compromises (ES6 class syntax), legacy tradeoffs — call these out as "arbitrary, memorize" rather than inventing a false derivation. The skill is knowing which category something falls into.
+- **Cross-language comparison as explanation tool.** Python is a natural reference point — the learner thinks in it. When a JS design choice becomes clearer by contrast with Python (or another familiar language), reach for the comparison. Especially useful for "why didn't JS just do X?" questions.
 - **Formal/abstract structure when it exists.** If a behavior maps to a known mathematical or logical structure (quantifiers, algebraic identities, folds, type relationships), surface it explicitly. The formal framing is valued as a _separate layer of understanding_ — not a substitute for the mechanism, but a complement that reveals why the design is the only coherent choice. Derive behavior from the abstraction, don't just label it.
 - **Mental model orientation.** Compact takeaways that survive months later beat exhaustive reference coverage.
 - **Concrete → general.** Anchor the mechanism in a real example before abstracting.
