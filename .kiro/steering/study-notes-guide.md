@@ -13,7 +13,7 @@ Personal study-notes repository. The user learns a topic through interactive tea
 Two top-level roots, each with a distinct purpose:
 
 - **`courses/<topic>/`** — course-guided workflow only. Structured curriculum, `toc.md` progress tracker with competence tags, notes written chunk-by-chunk as the course progresses. **Competence lives here.**
-- **`notes/<topic>/`** — discussion and content-to-note workflows. No `toc.md`, no calibration history, no per-chunk competence tracking. Pre-existing personal notes also live here.
+- **`notes/<topic>/`** — discussion and content-to-note workflows. Reference material for later reading. No `toc.md`, no calibration history, no per-chunk competence tracking. Pre-existing personal notes also live here.
 
 Inside each root, one folder per topic (e.g. `courses/async-js/`, `notes/git/`). One markdown file per focused subtopic. Prefer several small files over one large file.
 
@@ -68,10 +68,10 @@ If ambiguous, ask the user to clarify before proceeding. Root selection is not n
 
 ### 1. Calibrate first
 
-**Before calibrating, consult `learner-profile.md`.** It holds cross-course background, preferences, aggregated topic competence, and session calibration defaults. Use it to skip or shorten the two calibration questions when the topic falls within the profile.
+**Before calibrating, consult `learner-profile.md`.** It holds cross-course background, preferences, global topic competence, and session calibration defaults. Use it to skip or shorten the two calibration questions when the topic falls within the profile.
 
-- **Topic covered by profile** (existing folder with a competence rollup, or adjacent to one) → state the assumed calibration in one line ("Working from profile: you know basics on X, fuzzy on Y, want a clean mental model — correct?"), invite correction, proceed if none.
-- **Topic outside the profile** (new folder, unfamiliar domain) → ask both questions below in full.
+- **Topic covered by profile** (existing competence row, or closely adjacent to one) → state the assumed calibration in one line ("Working from profile: you know basics on X, fuzzy on Y, want a clean mental model — correct?"), invite correction, proceed if none.
+- **Topic outside the profile** (no competence row, unfamiliar domain) → ask both questions below in full.
 
 The two questions:
 
@@ -163,7 +163,7 @@ The same exchange can produce both — e.g. user gives an imprecise answer (refi
 11. **End-of-course solidification pass.** After the final test:
     - **Competence gaps:** Scan all competence tags in `toc.md`. If any remain below `solid`: group related weak points, re-teach with fresh examples and synthesis, test with 2–3 questions per group, update tags. Repeat once more for anything still below solid. If it still doesn't land after two passes, note it as a known gap and move on.
     - **Refinement patterns:** Scan all `🔧 Refinements` entries. Group recurring themes (e.g. terminology imprecision, confusing descriptors with values). Present a summary of patterns and suggest targeted improvements. This is informational — no re-testing unless the user wants it.
-    - **Update `learner-profile.md`.** Refresh the competence rollup for this course **against its stated goal** (per `toc.md` → `## Calibration` → _Goal_). `solid` on a "clean mental model" course is not the same thing as `solid` on a "deep mastery" course — the level is always relative to what the course aimed for. Record the goal alongside the level. Only courses under `courses/` with a `toc.md` produced by the workflow belong in the competence table — content under `notes/` is never added. Fold any recurring refinement theme that also appears in other courses into the cross-cutting weaknesses list. Upgrade inferred profile items to confirmed where the course surfaced enough signal. See the profile's `Maintenance` section for trigger rules.
+    - **Update `learner-profile.md`.** Refresh the topic's competence row with the learner's current absolute level of understanding. This is not relative to the course's goal — it reflects what the learner actually knows now. The course goal remains recorded in `toc.md` → `## Calibration` for context. Only topics taught through `courses/` with a workflow-produced `toc.md` belong in the competence table — content under `notes/` is reference material and is never added. Fold any recurring refinement theme that also appears in other courses into the cross-cutting weaknesses list. Upgrade inferred profile items to confirmed where the course surfaced enough signal. See the profile's `Maintenance` section for trigger rules.
     - The course is complete when all tags are `solid` (or the user opts out), refinement patterns have been reviewed, and the profile has been updated.
 12. **Session management.** Prefer short sessions — one chunk (or a few small related chunks) per session. After saving a chunk's note and updating `toc.md`, that is a natural stopping point. On a new session, read `learner-profile.md`, `toc.md`, and existing notes in the folder to recover full state — no prior conversation needed.
 
@@ -274,7 +274,7 @@ The **current** (latest) level drives pacing decisions.
 
 ### Cross-session tag usage
 
-On new sessions, read competence tags in `toc.md` alongside calibration to adapt pacing — revisit weak areas, skip solid ones, probe shaky spots with a quick question before building on them. Also check `learner-profile.md` for cross-cutting weaknesses that may apply to the current topic even if the topic-specific tag is `solid`.
+On new sessions, read competence tags in `toc.md` alongside calibration to adapt pacing — revisit weak areas, skip solid ones, probe shaky spots with a quick question before building on them. Also check `learner-profile.md` for global competence on adjacent topics and cross-cutting weaknesses that may apply to the current topic even if the topic-specific tag is `solid`.
 
 ### Remediation mini-quiz
 

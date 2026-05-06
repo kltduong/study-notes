@@ -8,7 +8,7 @@ Cross-course picture of the learner's background, preferences, and aggregated co
 
 ## Scope rule (hard)
 
-Only folders under `courses/` with a workflow-produced `toc.md` feed this profile. Do not infer background, competence, or refinement patterns from content under `notes/` — that material has no calibration or assessment history. Never add `notes/` rows to the competence table.
+Only folders under `courses/` with a workflow-produced `toc.md` feed the competence table. Content under `notes/` is reference material for later reading — it has no calibration or assessment history and never appears in the competence table.
 
 > ⚙️ **Bootstrap note.** Items marked `🟡 inferred` came from existing course notes before a calibration happened. Confirm or correct them during the next calibration and upgrade to `✅ confirmed` once verified.
 
@@ -32,18 +32,16 @@ Only folders under `courses/` with a workflow-produced `toc.md` feed this profil
 - **Rabbit holes flagged, not interleaved.** Sidenote / "for later" blocks work well.
 - **Pace:** moderate on scheduling and mechanics; lighter on review of known material. Comfortable going deep when the _why_ requires it.
 
-## Topic Competence (Aggregated)
+## Topic Competence (Global)
 
-Coarse rollup per `courses/<topic>/`. Refresh only at end-of-course solidification.
+Absolute picture of what the learner currently knows per topic. Updated at end-of-course solidification. Level reflects actual understanding — not relative to any single course's goal.
 
-Level is **relative to the course's stated goal** (`toc.md` → `## Calibration` → _Goal_), not absolute. `solid` on a "clean mental model" goal is not the same bar as `solid` on a "deep mastery" goal — always consult the goal column when interpreting a level.
+| Topic                     | Level   | Notes                                                                                                                                                                                                         |
+| ------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Async JS                  | `solid` | Event loop, promises, microtasks, async/await, combinators, testing, rAF — all drilled and tested. Strong on execution-order reasoning; minor pattern of right-conclusion-imprecise-mechanism under pressure. |
+| JS prototypal inheritance | `shaky` | Core mechanics (chain walk, `[[Prototype]]`, instantiation patterns, `.prototype` property) solid. Course ~70% done — building chains, OOP/class, composition not yet covered.                                |
 
-| Course                    | Goal (per `toc.md`)                                     | Level vs goal  | Notes                                                                                                                                                                                                                                                                             |
-| ------------------------- | ------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `courses/async-js/`       | Clean mental model of how async JS works under the hood | `solid`        | Course complete. Event loop, promises, microtasks, async/await, combinators, testing, rAF — all drilled and tested. Final test passed. Strong on execution-order reasoning; persistent minor pattern of right-conclusion-imprecise-mechanism under pressure, improving over time. |
-| `courses/js-inheritance/` | Mental model + implementation fluency + deep mastery    | `shaky` so far | Core mechanics (chain walk, `[[Prototype]]`, instantiation patterns) solid against a mental-model bar. Course ~70% done — building chains, OOP/class, composition remaining. Level against the full three-part goal can't be set until the course finishes.                       |
-
-**Not tracked** (no `courses/<topic>/` folder): `notes/git/`, `notes/css/`, `notes/client-side/`. If a course on any of these subjects starts later, create a new `courses/<topic>/` with its own `toc.md` and add a row here.
+**Not tracked here:** `notes/` content. Notes are reference material for later reading — they have no calibration or assessment history and do not feed this table.
 
 ## Cross-Cutting Strengths
 
@@ -79,6 +77,6 @@ Default assumptions — shorten or skip the two calibration questions unless the
 
 Update only on these triggers:
 
-1. **End-of-course solidification.** Refresh that course's competence row, fold recurring refinement themes into the cross-cutting weaknesses list, and upgrade relevant `🟡 inferred` items to `✅ confirmed`.
+1. **End-of-course solidification.** Refresh that topic's competence row with the learner's current absolute level. Fold recurring refinement themes into the cross-cutting weaknesses list. Upgrade relevant `🟡 inferred` items to `✅ confirmed`.
 2. **Cross-course refinement patterns.** If the same imprecision surfaces in two or more courses, add it to the weaknesses list.
 3. **Explicit user correction.** If the user says "I'm stronger/weaker on X than you assumed," update immediately.
