@@ -329,6 +329,10 @@ Present quiz/test questions **one at a time**. Give the question, wait for the a
 - No unexplained forward references. If deferring detail, give enough plain-language context now + a forward link.
 - Each idea explained once. Pick the best section for the full treatment; link from elsewhere.
 - Do not restate before forwarding. One statement + forward link is enough.
+- **Deepen, don't stack.** When a clarification expands an existing argument, weave the new material into the relevant section — don't add a parallel subsection. Multiple sibling sections that each answer a variant of the same "why?" question are a signal to merge into one linear chain of reasoning.
+- **If a prerequisite has its own chunk, one-line + forward link** — don't mini-explain it inline. Give enough context for the current argument to land, then link out.
+- **Show the bug, not the label.** When explaining why a design choice is better than an alternative, demonstrate the concrete failure the alternative would cause (small example, real symptom). "Silent bugs" as a phrase is weaker than a three-line snippet showing `if (!user)` firing wrongly.
+- **List only independent items.** When enumerating (causes, features, examples, steps, comparisons), check whether any item is a consequence of another in the list. If so, drop it or fold it as a sub-point under its cause. A list of N items implies N independent points — don't inflate it with derivable ones.
 
 **Format:** Markdown with headings, fenced code blocks (with language tags), tables, and mermaid diagrams where they clarify. **No ASCII/Unicode box-drawing art** — use mermaid instead (plain text in code blocks for pseudo-code/asm is fine). **Mermaid node styling:** use dark fills with white text (e.g. `fill:#46c,stroke:#fff,color:#fff`) so diagrams are legible in dark mode. Avoid light pastel fills with dark text.
 

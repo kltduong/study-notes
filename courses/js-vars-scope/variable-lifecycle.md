@@ -27,10 +27,9 @@ This is the design choice that makes TDZ possible. Follow the chain:
 
 ### 1. JS has features that force pre-registration
 
-JS resolves scope _statically_ — every name-to-scope binding is determined before any code runs. It has to, because of three features covered in later chunks:
+JS resolves scope _statically_ — every name-to-scope binding is determined before any code runs. This isn't optional; two features force it:
 
-- **`var` hoisting** — `var` is function-scoped, and the engine must know a `var` name belongs to the function even if its declarator sits inside an `if (false)` branch. See [hoisting.md](hoisting.md).
-- **Mutual recursion via function declarations** — two functions can call each other regardless of textual order, which requires both names to exist before either body runs.
+- **Hoisting** (`var` + function declarations) — names (and for functions, values) must be available before their textual position. The engine must know a `var` name belongs to the function even if its declarator sits inside an `if (false)` branch. See [hoisting.md](hoisting.md).
 - **Block-scoped shadowing** — `{ console.log(x); let x = 2; }` must know at compile time that the inner `x` shadows any outer `x`. See [scope-lexical.md](scope-lexical.md).
 
 All three need the engine to "know what names exist where" before execution starts. That's what the **creation phase** does — it walks the scope and registers every declared name.
@@ -55,7 +54,7 @@ Once names are pre-registered, there's a window between "name exists" (end of cr
 
 ### 3. TDZ is option 2
 
-TDZ (Temporal Dead Zone) is the name for that "declared but uninitialized" window. It's how JS gets Python-like use-before-init errors while keeping the creation phase that `var` hoisting, mutual recursion, and block shadowing all require.
+TDZ (Temporal Dead Zone) is the name for that "declared but uninitialized" window. It's how JS gets Python-like use-before-init errors while keeping the creation phase that `var` hoisting, mutual recursion, and block shadowing all require. Full treatment in [tdz.md](tdz.md).
 
 The lifecycle mapping falls out of this:
 
