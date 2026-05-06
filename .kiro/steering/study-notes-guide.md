@@ -330,7 +330,7 @@ Present quiz/test questions **one at a time**. Give the question, wait for the a
 - Each idea explained once. Pick the best section for the full treatment; link from elsewhere.
 - Do not restate before forwarding. One statement + forward link is enough.
 
-**Format:** Markdown with headings, fenced code blocks (with language tags), tables, and mermaid diagrams where they clarify. **No ASCII/Unicode box-drawing art** — use mermaid instead (plain text in code blocks for pseudo-code/asm is fine).
+**Format:** Markdown with headings, fenced code blocks (with language tags), tables, and mermaid diagrams where they clarify. **No ASCII/Unicode box-drawing art** — use mermaid instead (plain text in code blocks for pseudo-code/asm is fine). **Mermaid node styling:** use dark fills with white text (e.g. `fill:#46c,stroke:#fff,color:#fff`) so diagrams are legible in dark mode. Avoid light pastel fills with dark text.
 
 **Tone:** Concise — notes are for future-self, not strangers. No filler. Match existing note style in the folder.
 
