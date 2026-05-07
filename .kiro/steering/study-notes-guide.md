@@ -204,11 +204,11 @@ Judge per chunk which mode fits. If the user asks to switch mid-chunk, comply.
 
 ### Teaching content delivery
 
-Write teaching content to a **temp `.md` file in `_buk/`** rather than inline in chat. Mermaid diagrams and tables render properly in the editor's markdown preview but not in the chat panel.
+Write teaching content to a **temp `.md` file in the same topic folder** rather than inline in chat. Mermaid diagrams and tables render properly in the editor's markdown preview but not in the chat panel.
 
-- **During teaching:** write content to `_buk/<descriptive-name>-draft.md`. Mention the filename so the user knows to open it.
-- **After chunk confirmation:** write the final note to `courses/<topic>/` (reorganized by mental model, not teaching order), then delete the draft from `_buk/`.
-- **Chat messages** during teaching should be short — signposting ("wrote the next section to `_buk/foo-draft.md`"), questions, feedback, understanding checks. Not full content dumps.
+- **During teaching:** write content to `courses/<topic>/<descriptive-name>-draft.md`. Mention the filename so the user knows to open it.
+- **After chunk confirmation:** write the final note to `courses/<topic>/` (reorganized by mental model, not teaching order), then delete the draft file.
+- **Chat messages** during teaching should be short — signposting ("wrote the next section to `courses/<topic>/foo-draft.md`"), questions, feedback, understanding checks. Not full content dumps.
 - **Mode B (gradual):** append to or overwrite the same draft file as new sections are taught. One draft file per chunk, not one per section.
 
 ### Multiple topics
