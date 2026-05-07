@@ -4,7 +4,7 @@ inclusion: always
 
 # Learner Profile
 
-Cross-course picture of the learner's background, preferences, and aggregated competence. Read at session start, alongside `courses/<topic>/toc.md` when one exists. Update only at end-of-course solidification — never per-chunk or per-session (that noise belongs in `toc.md`).
+Cross-course picture of the learner's background, preferences, and aggregated competence. Read at session start alongside `courses/<topic>/toc.md` when one exists. Update only at end-of-course solidification — never per-chunk or per-session (that noise belongs in `toc.md`).
 
 ## Scope rule (hard)
 
@@ -29,11 +29,11 @@ Only folders under `courses/` with a workflow-produced `toc.md` feed the compete
 - **Axiom-and-derivation teaching.** Analogy the learner uses: Newton's three laws → all of classical mechanics. At the start of each topic/chunk, name the small set (2–4) of invariants the rest follows from. Teach by derivation — show how behavior falls out of the axioms — rather than cataloging rules. A compact axiom set the learner can reconstruct from is the target.
 - **Flag genuinely arbitrary things.** Not every behavior derives from a principle. Historical accidents (`typeof null === "object"`), committee compromises (ES6 class syntax), legacy tradeoffs — call these out as "arbitrary, memorize" rather than inventing a false derivation. The skill is knowing which category something falls into.
 - **Cross-language comparison as explanation tool.** Python is a natural reference point — the learner thinks in it. When a JS design choice becomes clearer by contrast with Python (or another familiar language), reach for the comparison. Especially useful for "why didn't JS just do X?" questions.
-- **Formal/abstract structure when it exists.** If a behavior maps to a known mathematical or logical structure (quantifiers, algebraic identities, folds, type relationships), surface it explicitly. The formal framing is valued as a _separate layer of understanding_ — not a substitute for the mechanism, but a complement that reveals why the design is the only coherent choice. Derive behavior from the abstraction, don't just label it.
+- **Formal/abstract structure when it exists.** If a behavior maps to a known mathematical or logical structure (quantifiers, algebraic identities, folds, type relationships), surface it explicitly. The formal framing is a _separate layer of understanding_ — not a substitute for the mechanism, but a complement that reveals why the design is the only coherent choice. Derive behavior from the abstraction, don't just label it.
 - **Mental model orientation.** Compact takeaways that survive months later beat exhaustive reference coverage.
 - **Concrete → general.** Anchor the mechanism in a real example before abstracting.
 - **Mechanism-level precision.** "Close but not quite" is unacceptable — give the precise version even when the conclusion was right. Refinement tracking exists for this.
-- **Mermaid diagrams and comparison tables** land well. No ASCII/Unicode box-drawing art.
+- **Comparison tables** land well; mermaid diagrams also welcome.
 - **History/evolution** only when load-bearing (what it replaced and why). Skip pure chronology.
 - **Rabbit holes flagged, not interleaved.** Sidenote / "for later" blocks work well.
 - **Pace:** moderate on scheduling and mechanics; lighter on review of known material. Comfortable going deep when the _why_ requires it.
@@ -47,8 +47,6 @@ Absolute picture of what the learner currently knows per topic. Updated at end-o
 | Async JS                  | `solid` | Event loop, promises, microtasks, async/await, combinators, testing, rAF — all drilled and tested. Strong on execution-order reasoning; minor pattern of right-conclusion-imprecise-mechanism under pressure. |
 | JS prototypal inheritance | `shaky` | Core mechanics (chain walk, `[[Prototype]]`, instantiation patterns, `.prototype` property) solid. Course ~70% done — building chains, OOP/class, composition not yet covered.                                |
 
-**Not tracked here:** `notes/` content. Notes are reference material for later reading — they have no calibration or assessment history and do not feed this table.
-
 ## Cross-Cutting Strengths
 
 Anchor points to reach for when teaching adjacent topics:
@@ -57,7 +55,7 @@ Anchor points to reach for when teaching adjacent topics:
 - **Queue and scheduling mental models.** Task queue, microtask queue, FIFO ordering, drain semantics all reasoned well.
 - **Derivation from two fundamentals.** Given a compact pair of invariants, derives consequences correctly (e.g. promise state-machine + `.then()` scheduling rule).
 - **Engine/runtime split.** The "single-threaded engine, multi-threaded runtime" distinction is internalized.
-- **Formal abstraction recognition.** Spots when a system's behavior maps to known math/logic structures (∀/∃ quantifiers, fold identities, vacuous truth) and uses the formal layer to reason about edge cases (e.g. empty-input combinator behavior).
+- **Formal abstraction recognition.** Spots when behavior maps to known math/logic structures (∀/∃ quantifiers, fold identities, vacuous truth) and uses the formal layer to reason about edge cases (e.g. empty-input combinator behavior).
 
 ## Cross-Cutting Weaknesses / Refinement Patterns
 
@@ -83,6 +81,6 @@ Default assumptions — shorten or skip the two calibration questions unless the
 
 Update only on these triggers:
 
-1. **End-of-course solidification.** Refresh that topic's competence row with the learner's current absolute level. Fold recurring refinement themes into the cross-cutting weaknesses list. Upgrade relevant `🟡 inferred` items to `✅ confirmed`.
+1. **End-of-course solidification.** Refresh that topic's competence row with the current absolute level. Fold recurring refinement themes into the cross-cutting weaknesses list. Upgrade relevant `🟡 inferred` items to `✅ confirmed`.
 2. **Cross-course refinement patterns.** If the same imprecision surfaces in two or more courses, add it to the weaknesses list.
-3. **Explicit user correction.** If the user says "I'm stronger/weaker on X than you assumed," update immediately.
+3. **Explicit user correction.** If the user says _"I'm stronger/weaker on X than you assumed,"_ update immediately.
