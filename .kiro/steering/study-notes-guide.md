@@ -193,6 +193,24 @@ Weave in these elements as they help the idea click (not every topic needs all; 
 - **Gotchas and edge cases** — where the simple model breaks.
 - **Connections** — how this relates to things the user already knows.
 
+### Delivery mode per chunk
+
+Choose between two modes based on chunk character:
+
+- **Mode A — Full upfront, then discuss.** Present the entire chunk's content in one pass, then discuss and check understanding. Use for **structural/map chunks** — where the value is seeing the whole landscape at once and understanding how parts relate (e.g. type hierarchies, component inventories, scope models).
+- **Mode B — Gradual build-up.** Teach in smaller pieces (one concept or section at a time), pause for absorption or quick checks, then build the next piece on top. Understanding check still happens at the end. Use for **derivation/chain chunks** — where each step depends on the previous one landing correctly (e.g. "why does TDZ exist?", creation/execution phase walkthrough, hoisting-as-consequence reasoning).
+
+Judge per chunk which mode fits. If the user asks to switch mid-chunk, comply.
+
+### Teaching content delivery
+
+Write teaching content to a **temp `.md` file in `_buk/`** rather than inline in chat. Mermaid diagrams and tables render properly in the editor's markdown preview but not in the chat panel.
+
+- **During teaching:** write content to `_buk/<descriptive-name>-draft.md`. Mention the filename so the user knows to open it.
+- **After chunk confirmation:** write the final note to `courses/<topic>/` (reorganized by mental model, not teaching order), then delete the draft from `_buk/`.
+- **Chat messages** during teaching should be short — signposting ("wrote the next section to `_buk/foo-draft.md`"), questions, feedback, understanding checks. Not full content dumps.
+- **Mode B (gradual):** append to or overwrite the same draft file as new sections are taught. One draft file per chunk, not one per section.
+
 ### Multiple topics
 
 Ask whether to teach in sequence or focus on connections (compare/contrast, how one builds on the other). Do not silently interleave.
