@@ -308,6 +308,10 @@ Present questions **one at a time** — question, answer, feedback, next. In `to
 - **If a prerequisite has its own chunk, one-line + forward link** — don't mini-explain it inline.
 - **Show the bug, not the label.** When explaining why a design choice beats an alternative, demonstrate the concrete failure (small example, real symptom). "Silent bugs" as a phrase is weaker than a three-line snippet showing `if (!user)` firing wrongly.
 - **List only independent items.** When enumerating, check whether any item is a consequence of another in the list. If so, drop or fold it as a sub-point. N items implies N independent points — don't inflate with derivable ones.
+- **Asides in blockquotes.** Tangential content that's useful but sits outside the main derivation — terminology sidebars, meta-notes, historical context, formal-layer remarks — goes in a `> **Aside —** …` blockquote rather than its own heading. The note should read top-to-bottom without the asides and still land. Guardrails:
+  - **Don't aside a prerequisite.** If the next section builds on the content, it's a step, not an aside.
+  - **Don't stack asides.** Two in a row means the main thread is too thin — rework the flow instead.
+  - **One role per blockquote prefix.** `> ⚠️` is reserved for critical-lens flags on source content; `> **Aside —**` is for tangents; `> 🔖 Later:` flags an explicit rabbit hole for future exploration. Don't mix.
 
 **Format:** Markdown with headings, fenced code blocks (with language tags), tables, and mermaid diagrams. **No ASCII/Unicode box-drawing art** — use mermaid instead (plain text in code blocks for pseudo-code/asm is fine). Mermaid node styling: dark fills with white text (e.g. `fill:#46c,stroke:#fff,color:#fff`) for dark-mode legibility. Avoid light pastel fills with dark text.
 

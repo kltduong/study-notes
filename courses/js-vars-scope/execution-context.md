@@ -4,16 +4,16 @@
 
 ## Two axioms everything follows from
 
-1. **Every unit of code runs inside an Execution Context** — the EC is the complete environment needed to execute: what names are visible, what `this` is, what realm it belongs to.
+1. **Every unit of code runs inside an Execution Context** — the EC is the complete environment needed to execute: what names are visible, what `this` is, what realm it belongs to. Concretely: an EC is what the call stack stores — each frame is an EC. See [Connection to async-js](#connection-to-async-js).
 2. **Name resolution is a lookup in a chain of Environment Records** — each EC holds pointers to ERs, and each ER has an `[[OuterEnv]]` link forming a chain. Resolving a name = walking that chain.
 
 Hoisting, TDZ, scope chains, closures, and `this`-binding all follow from these two. This note builds the container; [creation-execution.md](creation-execution.md) fills it with the step-by-step walkthrough.
 
-## What is a spec-level data structure?
-
-An EC is a **spec-level data structure** — a formally defined shape with named fields that exists only in the ECMAScript specification's model of execution. It's not a JS object you can `console.log`, and it doesn't prescribe how engines implement it internally. V8 may compile the equivalent of an EC lookup into a single machine instruction with no struct ever allocated.
-
-The double-bracket notation (`[[Realm]]`, `[[OuterEnv]]`, `[[ThisValue]]`) marks internal fields that no JS code can directly access. They exist so the spec can define behavior unambiguously. Some have JS-visible reflections (e.g. `Object.getPrototypeOf()` exposes `[[Prototype]]`), but the slot itself is spec-level.
+> **Aside — what is a spec-level data structure?**
+>
+> An EC is a **spec-level data structure** — a formally defined shape with named fields that exists only in the ECMAScript specification's model of execution. It's not a JS object you can `console.log`, and it doesn't prescribe how engines implement it internally. V8 may compile the equivalent of an EC lookup into a single machine instruction with no struct ever allocated.
+>
+> The double-bracket notation (`[[Realm]]`, `[[OuterEnv]]`, `[[ThisValue]]`) marks internal fields that no JS code can directly access. They exist so the spec can define behavior unambiguously. Some have JS-visible reflections (e.g. `Object.getPrototypeOf()` exposes `[[Prototype]]`), but the slot itself is spec-level.
 
 ## Execution Context types
 
@@ -30,12 +30,11 @@ Every running program has exactly one _running_ EC at any moment (single-threade
 ## Components of an Execution Context
 
 ```
-Execution Context
-├── Realm                → holds a Realm Record directly
-├── LexicalEnvironment   → pointer to an ER (let/const/class/function declarations)
-├── VariableEnvironment  → pointer to an ER (var declarations)
-├── PrivateEnvironment   → (ES2022+) for class #private fields
-└── (Function ECs also have: Generator, ScriptOrModule, etc.)
+EC.Realm                = <Realm Record>              -- held directly
+EC.LexicalEnvironment   = <pointer to an ER>          -- let/const/class/function declarations
+EC.VariableEnvironment  = <pointer to an ER>          -- var declarations
+EC.PrivateEnvironment   = <pointer to an ER>          -- (ES2022+) class #private fields
+(Function ECs also have: Generator, ScriptOrModule, etc.)
 ```
 
 `Realm` is a direct value — the EC holds the Realm Record itself. `LexicalEnvironment` and `VariableEnvironment` are **pointers** — they don't hold bindings directly, they point to Environment Record instances that do. The ERs are separate structures; the EC just holds references to them.
@@ -54,11 +53,11 @@ A **Realm Record** is the complete JS universe for a script:
 
 Each `<iframe>` gets its own Realm. That's why `[] instanceof Array` can be `false` across frames — the `Array` in one realm is a different object than in another.
 
-**How `globalThis` enters the picture:** when the Realm is created, the engine wires `[[GlobalObject]]` as the backing object for the Object ER component of the Global Environment Record. `globalThis`, `window` (browser), and `global` (Node) are all the same object — just different names for `[[GlobalObject]]`. So when `var x = 1` routes to the Object ER, it creates a property directly on that object. See [Global Environment Record](#global-environment-record) below.
+**How `globalThis` enters the picture:** `globalThis`, `window` (browser), and `global` (Node) are all the same object — `[[GlobalObject]]` from the Realm Record. The Global Environment Record uses this object as backing storage for certain declarations (`var`, `function`). How that routing works is covered in [Global Environment Record](#global-environment-record) below.
 
 ## Environment Records — where bindings actually live
 
-An **Environment Record** (ER) is a spec-level structure that holds name→value bindings. Every scope corresponds to an ER instance.
+An **Environment Record** (ER) is a spec-level structure that holds name→value bindings. The scope-to-ER mapping is strictly **1:1** — one scope creates exactly one ER, and that ER belongs to exactly one scope. No ER is ever shared across scopes or reused. The Global ER is no exception to this rule — it's still one ER for one scope. Its only wrinkle is _internal_: it's a composite that bundles two sub-ERs as storage components inside a single scope (details in [Global Environment Record](#global-environment-record)).
 
 The spec defines a type hierarchy — think of it like a class inheritance hierarchy, where each subtype adds fields or changes storage behavior:
 
@@ -91,25 +90,36 @@ The normal case. Holds bindings in an internal hidden table — not a JS object,
 
 ### Object Environment Record
 
-Backed by an actual JS object. The binding table _is_ that object's properties — creating a binding = creating a property, reading a binding = reading a property. Used for `with` statements (legacy, ignore) and the object component of the Global ER.
+A thin spec-level wrapper around a real JS object. It holds a `[[BindingObject]]` field — a reference to the JS object it delegates to. Every ER operation forwards to a property operation on that object:
+
+| ER operation        | Property operation on `[[BindingObject]]` |
+| ------------------- | ----------------------------------------- |
+| Create binding `x`  | `DefineOwnProperty("x", ...)`             |
+| Set `x = 1`         | `Set("x", 1)`                             |
+| Read `x`            | `Get("x")`                                |
+| Check if `x` exists | `HasProperty("x")`                        |
+
+No hidden table — the binding table _is_ the object's properties. Used for `with` statements (legacy, ignore) and the object component of the Global ER, where `[[BindingObject]]` is `globalThis`.
 
 ### Global Environment Record
 
-A composite — not a single storage, but two ER instances stitched together:
+A composite — not itself backed by a JS object, but a router that delegates to two sub-ER instances:
 
 ```
-Global Environment Record
+Global Environment Record  (composite router, not itself an object)
 ├── [[DeclarativeRecord]]  →  instance of Declarative ER (hidden table)
 ├── [[ObjectRecord]]       →  instance of Object ER backed by globalThis
 └── [[VarNames]]           →  bookkeeping list (see below)
 ```
 
-`[[DeclarativeRecord]]` and `[[ObjectRecord]]` are **fields holding instances** — not types themselves. The actual thing holding a binding is the instance each field points to:
+The Global ER never stores bindings directly. Every operation (create, read, write) is forwarded to one sub-ER or the other based on the declaration keyword.
 
-- `let x` lives in the **Declarative ER instance** referenced by `[[DeclarativeRecord]]`.
-- `var y` lives in the **Object ER instance** referenced by `[[ObjectRecord]]` — backed by `globalThis`.
+`[[DeclarativeRecord]]` and `[[ObjectRecord]]` are **fields on the Global ER**, each holding an instance of the corresponding type (Declarative ER and Object ER respectively). Bindings live inside those instances:
 
-Declarations are routed to one component or the other based on keyword:
+- `let x` at global scope → lives in the **Declarative ER instance** referenced by `[[DeclarativeRecord]]`.
+- `var y` at global scope → lives in the **Object ER instance** referenced by `[[ObjectRecord]]` — backed by `globalThis`.
+
+At global scope, declarations are routed to one component or the other based on keyword:
 
 | Declaration         | Routed to               | Consequence                              |
 | ------------------- | ----------------------- | ---------------------------------------- |
@@ -121,11 +131,16 @@ Declarations are routed to one component or the other based on keyword:
 
 This is why `var x = 1` at global level creates `window.x` but `let y = 2` does not — they land in different components of the same Global ER.
 
-Historical note: in ES3, all global declarations were `var`/`function` and the global scope _was_ the global object. When ES6 added `let`/`const`, they needed block scoping and TDZ — which don't work if the binding is a plain object property. So the Declarative ER component was added alongside the existing Object ER. Legacy declarations still route to the object (backward compat); new ones route to the hidden table.
+> **Aside — why the composite design?** In ES3, all global declarations were `var`/`function` and the global scope _was_ the global object. When ES6 added `let`/`const`, they needed block scoping and TDZ — which don't work if the binding is a plain object property. So the Declarative ER component was added alongside the existing Object ER. Legacy declarations still route to the object (backward compat); new ones route to the hidden table.
 
 ### Function Environment Record
 
 Extends Declarative ER with `[[ThisValue]]`, `arguments`, and `new.target`. Created fresh on every function call — each call gets its own instance. When the function returns, the EC is popped and the ER becomes unreachable, eligible for GC. Exception: if a closure captures a variable, it holds a reference to the ER, keeping it alive. See [scope-lexical.md](scope-lexical.md).
+
+Inside a function, no Object ER exists in the local scope — declarations here never create properties on `globalThis`. All local bindings land in Declarative ERs. The difference is which one:
+
+- `var` → Function ER (via `VariableEnvironment`, never moves)
+- `let`/`const` → current block ER (via `LexicalEnvironment` — which is the Function ER itself if there's no enclosing block)
 
 ### Module Environment Record
 
