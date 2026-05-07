@@ -61,7 +61,7 @@ Solid arrow (`var`) = no gap between phases — stages 1+2 collapse, so the bind
 
 ## Why separate declaration from initialization?
 
-The split isn't a free design choice — static scoping forces stage 1 into the creation phase, and without that pressure stages 1 and 2 would fuse at the declarator line. The gap that opens up is what makes TDZ possible. Follow the chain:
+The split isn't a free design choice. Static scoping forces declaration (stage 1) into the creation phase — it must happen before execution begins. Without that pressure, stages 1 and 2 would fuse into a single event at the declarator line (the Python model: name springs into existence at assignment, no gap). But because JS pulls declaration forward while leaving initialization behind, a temporal window opens between them. That window is the TDZ. Follow the chain:
 
 ### 1. JS has features that force declaration in creation
 
