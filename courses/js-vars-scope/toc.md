@@ -31,7 +31,9 @@ Progress tracker for the course. Chunks grouped by theme.
 - [x] **Variable lifecycle** — 3 stages (declaration → initialization → assignment), how `var`/`let`/`const` differ at each stage, why JS separates declaration from initialization
       📊 solid — core model strong; minor terminology slip (called shadowing "not shadowing" while describing the mechanism correctly)
       🔧 Refinements: - Called `let x = 5` "declaration, initialization, assignment" (3 stages) — it's only stages 1+2; the `= 5` is the initializer, not a stage-3 assignment - Described block-scoped shadowing as "without shadowing" while correctly explaining the shadowing mechanism
-- [ ] **Execution context internals** — EC types and phases, Realm Record (`[[Intrinsics]]`, `[[GlobalObject]]`, `[[GlobalEnv]]`), Environment Records, `[[VarNames]]`, lexical vs variable environment
+- [x] **Execution context internals** — EC types and phases, Realm Record (`[[Intrinsics]]`, `[[GlobalObject]]`, `[[GlobalEnv]]`), Environment Records, `[[VarNames]]`, lexical vs variable environment
+      📊 solid — all correct; minor imprecision on Q2 (conflated EC pointer names with ER instances — draft ambiguity, fixed); "goes away" on Q3 correct in substance, precise mechanism is GC eligibility not instant deletion
+      🔧 Refinements: - Said "LexicalEnvironment/VariableEnvironment are ERs" — they are pointers on the EC that point to ER instances; the draft diagram invited this, now fixed - Said `globalThis.x !== x` for the `let` case — more precisely, `globalThis.x` is `undefined` (property doesn't exist), not just a different value
 - [ ] **Creation & execution phases** — what happens in each phase, variable/function setup, call stack, function execution contexts, worked examples
 - [ ] **Hoisting mechanics** — hoisting as consequence of creation phase (not code movement), why `var` → `undefined`, `let`/`const` spec definitions per ECMAScript
 - [ ] **TDZ** — design rationale, what "temporal" means, identifying TDZ in practice, relationship to the creation phase model
