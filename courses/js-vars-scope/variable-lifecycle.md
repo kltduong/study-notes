@@ -1,8 +1,8 @@
 # Variable Lifecycle — The 3-Stage Model
 
-**TL;DR:** Every JS variable goes through three stages: declaration (name registered), initialization (first value), assignment (subsequent values). The differences between `var`, `let`, and `const` reduce to _when_ each stage fires and _whether_ stage 3 is allowed. The gap between stages 1 and 2 for `let`/`const` is the TDZ (Temporal Dead Zone).
+**TL;DR:** Every JS variable goes through three stages: declaration (name registered), initialization (first value), assignment (subsequent values). The differences between `var`, `let`, and `const` reduce to _when_ each stage fires and _whether_ stage 3 is allowed. The gap between stages 1 and 2 for `let`/`const` is the TDZ (Temporal Dead Zone — accessing a declared-but-uninitialized binding throws `ReferenceError`).
 
-## Two phases (just enough to read the table)
+## Two phases (just enough to read the rest)
 
 When a scope is entered, the engine works in two passes:
 
@@ -21,11 +21,49 @@ Every variable goes through up to three stages in order: declaration → initial
 | **Initialization** | The binding receives its first value. For `var` this is auto-initialized to `undefined`; for `let`/`const` it stays uninitialized until the engine reaches the declarator in source order. |
 | **Assignment**     | A new value is written to an already-initialized binding.                                                                                                                                  |
 
+## How each keyword maps to the stages
+
+| Keyword | Stage 1 (declaration) | Stage 2 (initialization)             | Stage 3 (assignment)        |
+| ------- | --------------------- | ------------------------------------ | --------------------------- |
+| `var`   | Creation phase        | Creation phase (auto → `undefined`)  | Execution phase, repeatable |
+| `let`   | Creation phase        | Execution phase (at declarator line) | Execution phase, repeatable |
+| `const` | Creation phase        | Execution phase (at declarator line) | **Never** — `TypeError`     |
+
+`const` and `let` are identical through stages 1 and 2. The only difference: `const` makes stage 3 permanently forbidden.
+
+```mermaid
+graph TD
+    subgraph Creation Phase
+        var_c["var: Stage 1 + Stage 2<br/>(declare + init to undefined)"]
+        let_c["let: Stage 1 only<br/>(declare, leave uninitialized)"]
+        const_c["const: Stage 1 only<br/>(declare, leave uninitialized)"]
+    end
+
+    subgraph Execution Phase
+        var_e["var: Stage 3<br/>(assignment, repeatable)"]
+        let_e["let: Stage 2 → Stage 3<br/>(init at declarator, assign after)"]
+        const_e["const: Stage 2 only<br/>(init at declarator, no assign ever)"]
+    end
+
+    var_c --> var_e
+    let_c -.->|"TDZ window"| let_e
+    const_c -.->|"TDZ window"| const_e
+
+    style var_c fill:#46c,stroke:#fff,color:#fff
+    style var_e fill:#3a7,stroke:#fff,color:#fff
+    style let_c fill:#c9a,stroke:#fff,color:#fff
+    style let_e fill:#46c,stroke:#fff,color:#fff
+    style const_c fill:#c9a,stroke:#fff,color:#fff
+    style const_e fill:#46c,stroke:#fff,color:#fff
+```
+
+Solid arrow (`var`) = no gap between phases — stages 1+2 collapse, so the binding is immediately usable. Dashed arrows (`let`/`const`) = TDZ window — stage 1 fires in creation but stage 2 waits for execution, leaving a gap where the binding is declared but uninitialized.
+
 ## Why separate declaration from initialization?
 
-This is the design choice that makes TDZ possible. Follow the chain:
+The split isn't a free design choice — static scoping forces stage 1 into the creation phase, and without that pressure stages 1 and 2 would fuse at the declarator line. The gap that opens up is what makes TDZ possible. Follow the chain:
 
-### 1. JS has features that force pre-registration
+### 1. JS has features that force declaration in creation
 
 JS resolves scope _statically_ — every name-to-scope binding is determined before any code runs. This isn't optional; two features force it:
 
@@ -34,11 +72,11 @@ JS resolves scope _statically_ — every name-to-scope binding is determined bef
 
 Both need the engine to "know what names exist where" before execution starts. That's what the **creation phase** does — it walks the scope and registers every declared name.
 
-### 2. The creation phase leaves a window
+### 2. When does initialization happen?
 
-Once names are pre-registered, there's a window between "name exists" (end of creation) and "value assigned" (execution reaches the declarator line). Something has to happen if code reads the binding during that window. Two options:
+Declaration (stage 1) must happen in the creation phase. The design question is: when does stage 2 (initialization) happen? Two approaches:
 
-- **Give it a default value** — the `var` approach: auto-initialize to `undefined`. No window, no errors, but silent bugs slip through:
+- **Collapse stages 1+2 in creation** — the `var` approach: auto-initialize to `undefined` immediately. The binding is always usable, but silent bugs slip through:
 
   ```js
   if (!user) {
@@ -50,63 +88,49 @@ Once names are pre-registered, there's a window between "name exists" (end of cr
 
   Python doesn't have this problem because it throws `NameError` on use-before-assignment — but Python has no creation phase to leave a window in.
 
-- **Throw on access** — the `let`/`const` approach: the binding exists but is marked uninitialized. Any read in the window throws `ReferenceError: Cannot access 'x' before initialization`.
+- **Defer stage 2 to execution** — the `let`/`const` approach: stage 1 runs in creation, stage 2 waits until the declarator line. Between them, the binding exists but is marked uninitialized — any read throws `ReferenceError: Cannot access 'x' before initialization`.
 
 ### 3. TDZ is option 2
 
-TDZ (Temporal Dead Zone) is the name for that "declared but uninitialized" window. It's how JS gets Python-like use-before-init errors while keeping the creation phase that hoisting and block shadowing require. Full treatment in [tdz.md](tdz.md).
+TDZ is the name for that "declared but uninitialized" window. It's how JS gets Python-like use-before-init errors while keeping the creation phase that hoisting and block shadowing require. Full treatment in [tdz.md](tdz.md).
 
 The lifecycle mapping falls out of this:
 
-- `var` → option 1. Stages 1+2 collapse during creation; the window is filled with `undefined`.
+- `var` → option 1. Stages 1+2 collapse during creation; no window exists.
 - `let`/`const` → option 2. Only stage 1 runs in creation; stage 2 is deferred; the window is the TDZ.
 
-**The principle:** JS is a _statically scoped language with dynamic execution_. Static scoping requires the creation phase. The creation phase creates a window. TDZ is the cheapest mechanism for making that window safe.
+**The principle:** JS is a _statically scoped language with dynamic execution_. Static scoping requires the creation phase. Deferring initialization creates a window. TDZ is the cheapest mechanism for making that window safe.
 
-## How each keyword maps to the stages
+## Worked examples — each keyword through its stages
 
-| Keyword | Stage 1 (declaration) | Stage 2 (initialization)             | Stage 3 (assignment)        |
-| ------- | --------------------- | ------------------------------------ | --------------------------- |
-| `var`   | Creation phase        | Creation phase (auto → `undefined`)  | Execution phase, repeatable |
-| `let`   | Creation phase        | Execution phase (at declarator line) | Execution phase, repeatable |
-| `const` | Creation phase        | Execution phase (at declarator line) | **Never** — `TypeError`     |
-
-`const` and `let` are identical through stages 1 and 2. The only difference: `const` makes stage 3 permanently forbidden.
-
-## Worked example — all three keywords
+### `var` — stages 1+2 collapse, stage 3 repeatable
 
 ```js
-console.log(a); // undefined                          // L1
-console.log(b); // ReferenceError (TDZ)               // L2
-console.log(c); // ReferenceError (TDZ)               // L3
+// --- Creation phase: `y` declared AND initialized to undefined (stages 1+2) ---
 
-var a = 1; // L4 — assignment (stage 3)
-let b = 2; // L5 — initialization (stage 2). TDZ ends.
-const c = 3; // L6 — initialization (stage 2). No stage 3 ever.
+console.log(y); // L1 — undefined (no TDZ, already initialized)
+
+var y = 10; // L2 — assignment (stage 3). Overwrites undefined with 10.
+
+console.log(y); // L3 — 10
+
+y = 20; // L4 — assignment (stage 3 again). New value written.
+
+console.log(y); // L5 — 20
 ```
 
-**Creation phase** scans the scope:
+| Point                | Stage              | Binding state     | Access result |
+| -------------------- | ------------------ | ----------------- | ------------- |
+| After creation phase | 1+2 (initialized)  | holds `undefined` | `undefined`   |
+| After L2 executes    | 3 (assigned)       | holds `10`        | `10`          |
+| After L4 executes    | 3 (assigned again) | holds `20`        | `20`          |
 
-| Binding | Stage 1       | Stage 2                    | State after creation        |
-| ------- | ------------- | -------------------------- | --------------------------- |
-| `a`     | ✅ registered | ✅ auto-set to `undefined` | usable (value: `undefined`) |
-| `b`     | ✅ registered | ❌ deferred                | in TDZ                      |
-| `c`     | ✅ registered | ❌ deferred                | in TDZ                      |
+No TDZ — stages 1 and 2 happen together, so there's never a window where the binding is uninitialized.
 
-**Execution phase** runs top-to-bottom:
-
-- L1: `a` is initialized → reads `undefined`.
-- L2: `b` is uninitialized → `ReferenceError`.
-- L3: `c` is uninitialized → `ReferenceError` (same as `let` in TDZ).
-- L4: assigns `1` to `a` (stage 3).
-- L5: initializes `b` to `2` (stage 2).
-- L6: initializes `c` to `3` (stage 2). Any later `c = 5` → `TypeError`.
-
-## `let` moving through all three stages
+### `let` — stage 1 at creation, stages 2+3 at execution
 
 ```js
-// --- Creation phase has already run ---
-// `x` is declared (stage 1 done), but uninitialized. TDZ active.
+// --- Creation phase: `x` declared but NOT initialized (stage 1 only). TDZ active. ---
 
 console.log(x); // L1 — ReferenceError: x is in TDZ (stage 1 only)
 
@@ -127,22 +151,28 @@ console.log(x); // L5 — 20
 
 Stage 3 is repeatable — each `x = ...` writes a new value to the already-initialized binding.
 
-## The mental model
+### `const` — stage 1 at creation, stage 2 at execution, stage 3 never
 
-```mermaid
-graph LR
-    A["Declaration<br/>(name registered)"] --> B["Initialization<br/>(first value)"]
-    B --> C["Assignment<br/>(subsequent values)"]
+```js
+// --- Creation phase: `z` declared but NOT initialized (stage 1 only). TDZ active. ---
 
-    style A fill:#c9a,stroke:#fff,color:#fff
-    style B fill:#46c,stroke:#fff,color:#fff
-    style C fill:#3a7,stroke:#fff,color:#fff
+console.log(z); // L1 — ReferenceError: z is in TDZ (stage 1 only)
+
+const z = 10; // L2 — initialization to 10 (stage 2). TDZ ends.
+
+console.log(z); // L3 — 10
+
+z = 20; // L4 — TypeError: Assignment to constant variable (stage 3 forbidden)
 ```
 
-- `var`: A and B happen together at creation. C at runtime.
-- `let`: A at creation. B at the declarator line. C anytime after.
-- `const`: A at creation. B at the declarator line. C **never**.
+| Point                | Stage           | Binding state         | Access result    |
+| -------------------- | --------------- | --------------------- | ---------------- |
+| After creation phase | 1 (declared)    | exists, uninitialized | `ReferenceError` |
+| After L2 executes    | 2 (initialized) | holds `10`            | `10`             |
+| L4 attempted         | 3 (blocked)     | still holds `10`      | `TypeError`      |
 
-The gap between A and B for `let`/`const` _is_ the TDZ. No gap for `var` → no TDZ.
+Stage 3 is permanently locked. The binding holds its initialization value forever — but the _value itself_ can still be mutated if it's an object (e.g. `const arr = []; arr.push(1)` works fine).
+
+---
 
 Everything else in this course — hoisting, TDZ details, scope rules — will be consequences of _where_ and _when_ these three stages fire for each declaration kind.
