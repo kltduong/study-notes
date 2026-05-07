@@ -211,6 +211,17 @@ Write teaching content to a **temp `.md` file in the same topic folder** rather 
 - **Chat messages** during teaching should be short — signposting ("wrote the next section to `courses/<topic>/foo-draft.md`"), questions, feedback, understanding checks. Not full content dumps.
 - **Mode B (gradual):** append to or overwrite the same draft file as new sections are taught. One draft file per chunk, not one per section.
 
+### Chunk opener (teaser-first sequence)
+
+Before teaching each chunk, run a short teaser sequence to prime the mental model:
+
+1. **Teaser snippet** — a short piece of code that embodies the chunk's core idea. Present it with no explanation: "What do you think happens here, and why?"
+2. **User predicts** — they reason through it, likely getting something wrong or partially right.
+3. **The reveal** — explain what actually happens and _why_, using their prediction as the foil. This is where motivation, first principles, and the "wow" moment go.
+4. **Then start the chunk** — the hook is now in memory; teaching builds on it.
+
+**Snippet format:** runnable (Node / browser console) when the concept surfaces cleanly in output. Mental-trace when it doesn't (e.g. execution-context internals that don't produce visible output). Default to runnable; fall back to mental-trace only when necessary.
+
 ### Multiple topics
 
 Ask whether to teach in sequence or focus on connections (compare/contrast, how one builds on the other). Do not silently interleave.
