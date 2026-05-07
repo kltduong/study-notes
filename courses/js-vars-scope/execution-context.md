@@ -57,7 +57,53 @@ Each `<iframe>` gets its own Realm. That's why `[] instanceof Array` can be `fal
 
 ## Environment Records — where bindings actually live
 
-An **Environment Record** (ER) is a spec-level structure that holds name→value bindings. The scope-to-ER mapping is strictly **1:1** — one scope creates exactly one ER, and that ER belongs to exactly one scope. No ER is ever shared across scopes or reused. The Global ER is no exception to this rule — it's still one ER for one scope. Its only wrinkle is _internal_: it's a composite that bundles two sub-ERs as storage components inside a single scope (details in [Global Environment Record](#global-environment-record)).
+An **Environment Record** (ER) is a spec-level structure that holds name→value bindings.
+
+Two independent questions govern how ERs work. Mixing them up is the most common source of confusion — they look related but operate on different axes:
+
+**Axis 1 — Existence (the 1:1 rule):** every scope boundary (block, function, global) creates exactly one fresh ER. One scope, one ER — no sharing, no reuse. Nesting depth determines how many ERs exist: a function with three nested blocks means four ERs (function + three blocks). The Global ER is no exception; its only wrinkle is _internal_ storage (details in [Global Environment Record](#global-environment-record)).
+
+**Axis 2 — Navigation (always two pointers):** the EC doesn't contain ERs — it holds exactly two pointers that navigate among however many ERs exist:
+
+- `LexicalEnvironment` → points to the ER of the **innermost scope currently executing**. Moves when entering/exiting blocks.
+- `VariableEnvironment` → pinned to the **function-scope ER**. Never moves within a function.
+
+The pointer count is fixed at two regardless of how many ERs exist. `LexicalEnvironment` moves to track the current block; `VariableEnvironment` stays put.
+
+```mermaid
+graph LR
+    subgraph "Existence axis (1:1 rule)"
+        FER["Function ER"]
+        B1["Block ER 1"]
+        B2["Block ER 2"]
+        B3["Block ER 3"]
+        GER["Global ER"]
+        Null["null"]
+    end
+
+    subgraph "Navigation axis (always 2)"
+        EC["EC"]
+    end
+
+    EC -- "VariableEnvironment<br/>(pinned)" --> FER
+    EC -- "LexicalEnvironment<br/>(moves)" --> B3
+
+    B3 -->|"[[OuterEnv]]"| B2
+    B2 -->|"[[OuterEnv]]"| B1
+    B1 -->|"[[OuterEnv]]"| FER
+    FER -->|"[[OuterEnv]]"| GER
+    GER -->|"[[OuterEnv]]"| Null
+
+    style EC fill:#555,stroke:#fff,color:#fff
+    style FER fill:#46c,stroke:#fff,color:#fff
+    style B1 fill:#46c,stroke:#fff,color:#fff
+    style B2 fill:#46c,stroke:#fff,color:#fff
+    style B3 fill:#46c,stroke:#fff,color:#fff
+    style GER fill:#5a5,stroke:#fff,color:#fff
+    style Null fill:#555,stroke:#fff,color:#fff
+```
+
+Name resolution walks the `[[OuterEnv]]` chain from whichever ER the relevant pointer targets — so bindings from enclosing scopes are visible, but new bindings are only _created_ in the ER targeted by the relevant pointer (`let`/`const` → `LexicalEnvironment`, `var` → `VariableEnvironment`).
 
 The spec defines a type hierarchy — think of it like a class inheritance hierarchy, where each subtype adds fields or changes storage behavior:
 
