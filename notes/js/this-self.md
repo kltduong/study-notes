@@ -9,7 +9,7 @@ A function needs to know which object it's operating on. Two design choices:
 1. **Explicit parameter** (Python) — the receiver is a regular argument in the signature. Visible, predictable, no special rules.
 2. **Implicit keyword** (JS) — the receiver is injected as `this` based on how the function is called. Hidden from the signature, governed by call-site rules.
 
-Both solve the same problem (method sharing — one function, multiple objects). They differ in visibility and determination rules.
+Both solve the same problem (method sharing — one function, multiple objects). They differ in visibility and determination rules. JS's implicit approach trades predictability for flexibility — one function can serve multiple objects without classes or copying.
 
 ## `this` does not violate lexical scoping
 
