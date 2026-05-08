@@ -53,6 +53,8 @@ A **Realm Record** is the complete JS universe for a script:
 
 Each `<iframe>` gets its own Realm. That's why `[] instanceof Array` can be `false` across frames — the `Array` in one realm is a different object than in another.
 
+> **Aside — why does the Realm hold `[[GlobalEnv]]` when the `[[OuterEnv]]` chain already reaches it? ** Two reasons: (1) O(1) access — the chain can be arbitrarily deep, and spec algorithms that need the Global ER (e.g. `var` hoisting checks in `eval`, script-level declaration instantiation) shouldn't walk N links every time. (2) The Realm owns the Global ER — it's created at Realm initialization, before any EC exists. Some algorithms (script setup, module linking) need it when the EC stack is empty and no chain is available to walk.
+
 **How `globalThis` enters the picture:** `globalThis`, `window` (browser), and `global` (Node) are all the same object — `[[GlobalObject]]` from the Realm Record. The Global Environment Record uses this object as backing storage for certain declarations (`var`, `function`). How that routing works is covered in [Global Environment Record](#global-environment-record) below.
 
 ## Environment Records — where bindings actually live
@@ -241,6 +243,17 @@ When execution enters the block at L4:
 `var c` at L5 goes into the Function ER via VariableEnvironment. `let d` at L6 goes into the block ER via LexicalEnvironment. When the block ends at L7, LexicalEnvironment reverts to the Function ER.
 
 **The invariant:** VariableEnvironment never moves within a function. LexicalEnvironment tracks current block depth. This is the mechanism behind `var` being function-scoped and `let`/`const` being block-scoped — they're stored via different pointers.
+
+### Pointer behavior summary
+
+| Pointer               | Points to                                         | Moves?                                    |
+| --------------------- | ------------------------------------------------- | ----------------------------------------- |
+| `VariableEnvironment` | Nearest function-or-global scope ER               | Never (pinned for the lifetime of the EC) |
+| `LexicalEnvironment`  | Innermost scope currently executing (any ER type) | Yes — updates on block entry/exit         |
+
+Both pointers can (and do) point to the same ER — this is the default state at function entry before any block is entered. They diverge only when execution enters a block scope, at which point `LexicalEnvironment` moves to the new block ER while `VariableEnvironment` stays put.
+
+Note that `VariableEnvironment` doesn't always target a Function ER specifically — in the Global EC it points to the Global ER. The invariant is about scope level (function-or-global), not ER subtype.
 
 ## `[[VarNames]]` and the `delete` behavior
 
