@@ -25,6 +25,7 @@ Start with the platform layers, then the object model (semantics + implementatio
 5. **[events-targets.md](./events-targets.md)** — why `EventTarget` is its own interface above `Node`, and all the non-Node things that also fire events.
 6. **[event-dispatch.md](./event-dispatch.md)** — what actually happens inside event dispatch: tasks as jobs (not callbacks), the native→JS boundary, physical vs scripted dispatch, and a map for going deeper (WHATWG spec, DOM dispatch algorithm, V8 internals, Scheduler API).
 7. **[rendering-path.md](./rendering-path.md)** — the Critical Rendering Path: how the browser turns HTML/CSS/JS into pixels (DOM → CSSOM → Render Tree → Layout → Paint → Composite), and what blocks what along the way. Where `async`, `defer`, `preload`, and critical CSS fit in.
+8. **[this-self.md](./this-self.md)** — how `this` (JS) vs `self` (Python) is determined across function kinds. Why `this` doesn't violate lexical scoping, the detachment problem, and arrow functions as the bridge.
 
 ## Cross-cutting ideas
 
