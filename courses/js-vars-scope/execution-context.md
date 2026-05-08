@@ -282,6 +282,331 @@ delete window.y; // true
 
 `[[VarNames]]` is the spec's own internal record on top of this — used by re-declaration checks and `eval` conflict detection algorithms that operate at the spec level, not the property level.
 
+## Full walkthrough — EC and ER state at every line
+
+The following sample exercises every scope boundary type: global, function, nested block, nested function. We trace the full spec-level state at each line.
+
+```js
+var g = "global"; // L1
+let h = "hidden"; // L2
+
+function outer(p) {
+  // L3
+  var a = "outer-var"; // L4
+  let b = "outer-let"; // L5
+  {
+    // L6 — block opens
+    let c = "block-let"; // L7
+    var d = "block-var"; // L8
+
+    function inner() {
+      // L9
+      let e = "inner-let"; // L10
+      console.log(e, c, a, g); // L11
+    } // L12
+
+    inner(); // L13
+  } // L14 — block closes
+  console.log(a, d, b); // L15
+} // L16
+
+outer("arg"); // L17
+```
+
+### ER inventory (existence axis — 1:1 rule)
+
+Before tracing pointers, count the ERs that will exist when execution reaches the deepest point (L11):
+
+| ER instance           | Type                           | Holds bindings                                                                               | `[[OuterEnv]]`    |
+| --------------------- | ------------------------------ | -------------------------------------------------------------------------------------------- | ----------------- |
+| **Global ER**         | Global (composite)             | `g`, `outer` → `[[ObjectRecord]]`; `h` → `[[DeclarativeRecord]]`                             | `null`            |
+| **outer Function ER** | Function (extends Declarative) | `p`, `a`, `d`, `arguments`, `[[ThisValue]]` (via VarEnv); `b` (via LexEnv at function level) | Global ER         |
+| **Block ER** (L6–L14) | Declarative                    | `c`, `inner` (block-scoped function¹)                                                        | outer Function ER |
+| **inner Function ER** | Function (extends Declarative) | `e`, `arguments`, `[[ThisValue]]`                                                            | Block ER          |
+
+> ¹ In strict mode, `function` declarations inside blocks are block-scoped (`let`-like). In sloppy mode the behavior is more complex (legacy web compat). This walkthrough assumes strict mode.
+
+### Line-by-line state
+
+Each entry shows the **running EC** and its two pointers, plus the full `[[OuterEnv]]` chain from each pointer. Realm is the same throughout (single `<script>`, one realm) — noted once.
+
+---
+
+#### L1 — `var g = "global";`
+
+| Field                   | Value                                                                                                              |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **Running EC**          | Global EC                                                                                                          |
+| **Realm**               | The page's Realm Record (`[[GlobalObject]]` = `window`, `[[Intrinsics]]` = built-ins, `[[GlobalEnv]]` = Global ER) |
+| **VariableEnvironment** | → Global ER (composite)                                                                                            |
+| **LexicalEnvironment**  | → Global ER (same — no block entered)                                                                              |
+
+`var g` routes through `VariableEnvironment` → Global ER → `[[ObjectRecord]]` (Object ER backed by `globalThis`). Result: `window.g === "global"`.
+
+**Chain from both pointers:** `Global ER → null`
+
+---
+
+#### L2 — `let h = "hidden";`
+
+| Field                   | Value       |
+| ----------------------- | ----------- |
+| **Running EC**          | Global EC   |
+| **VariableEnvironment** | → Global ER |
+| **LexicalEnvironment**  | → Global ER |
+
+`let h` routes through `LexicalEnvironment` → Global ER → `[[DeclarativeRecord]]` (Declarative ER, hidden table). Result: `window.h === undefined`, but `h` resolves to `"hidden"` via the chain.
+
+**Chain from both pointers:** `Global ER → null`
+
+---
+
+#### L3 — `function outer(p) {` (declaration hoisted, but call at L17 creates the EC)
+
+The `function` declaration is hoisted during Global Declaration Instantiation — `outer` is created as a binding in `[[ObjectRecord]]` of the Global ER (so `window.outer` exists). No new EC yet — that happens at the call site (L17).
+
+---
+
+#### L17 — `outer("arg");` (call — new EC pushed)
+
+A new **Function EC** is created and pushed onto the call stack.
+
+| Field                   | Value                                     |
+| ----------------------- | ----------------------------------------- |
+| **Running EC**          | outer's Function EC                       |
+| **Realm**               | Same Realm Record (inherited from caller) |
+| **VariableEnvironment** | → outer Function ER (fresh instance)      |
+| **LexicalEnvironment**  | → outer Function ER (same — no block yet) |
+
+**outer Function ER contents (after creation phase):**
+
+- `p` = `"arg"` (parameter binding)
+- `a` = `undefined` (var, hoisted)
+- `d` = `undefined` (var from L8, hoisted to function scope)
+- `arguments` = Arguments object
+- `b` = `<uninitialized>` (let, in TDZ until L5 executes)
+
+**Chain from both pointers:** `outer Function ER → Global ER → null`
+
+---
+
+#### L4 — `var a = "outer-var";`
+
+| Field                   | Value               |
+| ----------------------- | ------------------- |
+| **Running EC**          | outer's Function EC |
+| **VariableEnvironment** | → outer Function ER |
+| **LexicalEnvironment**  | → outer Function ER |
+
+Assignment goes through `VariableEnvironment` → outer Function ER. `a` already exists (hoisted), now set to `"outer-var"`.
+
+**Chain:** `outer Function ER → Global ER → null`
+
+---
+
+#### L5 — `let b = "outer-let";`
+
+| Field                   | Value               |
+| ----------------------- | ------------------- |
+| **Running EC**          | outer's Function EC |
+| **VariableEnvironment** | → outer Function ER |
+| **LexicalEnvironment**  | → outer Function ER |
+
+`let b` goes through `LexicalEnvironment` → outer Function ER (since no block is active, both pointers target the same ER). `b` exits TDZ, set to `"outer-let"`.
+
+**Chain:** `outer Function ER → Global ER → null`
+
+---
+
+#### L6 — `{` (block opens)
+
+A new **Declarative ER** (Block ER) is created:
+
+- `[[OuterEnv]]` → outer Function ER
+- Bindings: `c` = `<uninitialized>`, `inner` (block-scoped function)
+
+**LexicalEnvironment moves.** VariableEnvironment stays.
+
+| Field                   | Value                             |
+| ----------------------- | --------------------------------- |
+| **Running EC**          | outer's Function EC               |
+| **VariableEnvironment** | → outer Function ER _(unchanged)_ |
+| **LexicalEnvironment**  | → **Block ER** _(moved!)_         |
+
+**Chain from LexicalEnvironment:** `Block ER → outer Function ER → Global ER → null`
+**Chain from VariableEnvironment:** `outer Function ER → Global ER → null`
+
+---
+
+#### L7 — `let c = "block-let";`
+
+| Field                   | Value               |
+| ----------------------- | ------------------- |
+| **Running EC**          | outer's Function EC |
+| **VariableEnvironment** | → outer Function ER |
+| **LexicalEnvironment**  | → Block ER          |
+
+`let c` goes through `LexicalEnvironment` → Block ER. `c` exits TDZ, set to `"block-let"`.
+
+---
+
+#### L8 — `var d = "block-var";`
+
+| Field                   | Value               |
+| ----------------------- | ------------------- |
+| **Running EC**          | outer's Function EC |
+| **VariableEnvironment** | → outer Function ER |
+| **LexicalEnvironment**  | → Block ER          |
+
+`var d` goes through `VariableEnvironment` → outer Function ER (not the Block ER!). `d` was already hoisted there; now set to `"block-var"`. This is why `var` "escapes" blocks — it always targets the pinned pointer.
+
+---
+
+#### L13 — `inner();` (call — new EC pushed)
+
+A new **Function EC** is created for `inner` and pushed on top.
+
+| Field                   | Value                                              |
+| ----------------------- | -------------------------------------------------- |
+| **Running EC**          | inner's Function EC                                |
+| **Realm**               | Same Realm Record                                  |
+| **VariableEnvironment** | → inner Function ER (fresh instance)               |
+| **LexicalEnvironment**  | → inner Function ER (same — no block inside inner) |
+
+**inner Function ER contents:**
+
+- `e` = `<uninitialized>` (let, TDZ)
+- `arguments` = Arguments object
+- `[[ThisValue]]` = `undefined` (strict mode, plain call)
+
+**Critical: `[[OuterEnv]]` of inner Function ER** → Block ER (where `inner` was _defined_, not where it's _called_ — lexical scoping).
+
+**Chain from both pointers:** `inner Function ER → Block ER → outer Function ER → Global ER → null`
+
+---
+
+#### L10 — `let e = "inner-let";`
+
+| Field                   | Value               |
+| ----------------------- | ------------------- |
+| **Running EC**          | inner's Function EC |
+| **VariableEnvironment** | → inner Function ER |
+| **LexicalEnvironment**  | → inner Function ER |
+
+`e` exits TDZ, set to `"inner-let"`.
+
+---
+
+#### L11 — `console.log(e, c, a, g);`
+
+Name resolution demonstrates the chain walk:
+
+| Name      | Lookup path                                                                               | Found in                        | Value              |
+| --------- | ----------------------------------------------------------------------------------------- | ------------------------------- | ------------------ |
+| `console` | inner Function ER → Block ER → outer Function ER → Global ER → `[[ObjectRecord]]`         | Object ER (globalThis property) | the console object |
+| `e`       | inner Function ER                                                                         | inner Function ER               | `"inner-let"`      |
+| `c`       | inner Function ER ✗ → Block ER ✓                                                          | Block ER                        | `"block-let"`      |
+| `a`       | inner Function ER ✗ → Block ER ✗ → outer Function ER ✓                                    | outer Function ER               | `"outer-var"`      |
+| `g`       | inner Function ER ✗ → Block ER ✗ → outer Function ER ✗ → Global ER → `[[ObjectRecord]]` ✓ | Object ER (globalThis)          | `"global"`         |
+
+Output: `"inner-let" "block-let" "outer-var" "global"`
+
+---
+
+#### L12 — `}` (inner returns)
+
+inner's Function EC is popped from the call stack. inner Function ER becomes eligible for GC (no closure captures it).
+
+| Field                   | Value                               |
+| ----------------------- | ----------------------------------- |
+| **Running EC**          | outer's Function EC (restored)      |
+| **VariableEnvironment** | → outer Function ER                 |
+| **LexicalEnvironment**  | → Block ER (still inside the block) |
+
+---
+
+#### L14 — `}` (block closes)
+
+Block ER is no longer reachable from the EC. **LexicalEnvironment reverts** to outer Function ER.
+
+| Field                   | Value                                 |
+| ----------------------- | ------------------------------------- |
+| **Running EC**          | outer's Function EC                   |
+| **VariableEnvironment** | → outer Function ER                   |
+| **LexicalEnvironment**  | → **outer Function ER** _(reverted!)_ |
+
+**Chain from both pointers:** `outer Function ER → Global ER → null`
+
+`c` is now unreachable — it lived in the Block ER which is eligible for GC. `d` survives — it was in the Function ER all along.
+
+---
+
+#### L15 — `console.log(a, d, b);`
+
+| Name | Found in          | Value         |
+| ---- | ----------------- | ------------- |
+| `a`  | outer Function ER | `"outer-var"` |
+| `d`  | outer Function ER | `"block-var"` |
+| `b`  | outer Function ER | `"outer-let"` |
+
+All three live in the same ER (outer Function ER) — `a` and `d` via var hoisting, `b` via let at function level (no block was active when `b` was declared, so LexicalEnvironment pointed to the Function ER).
+
+Output: `"outer-var" "block-var" "outer-let"`
+
+---
+
+#### L16 — `}` (outer returns)
+
+outer's Function EC is popped. Control returns to the Global EC.
+
+| Field                   | Value       |
+| ----------------------- | ----------- |
+| **Running EC**          | Global EC   |
+| **VariableEnvironment** | → Global ER |
+| **LexicalEnvironment**  | → Global ER |
+
+### Summary diagram — all ERs and chains at deepest point (L11)
+
+```mermaid
+graph TD
+    subgraph "Call Stack (top → bottom)"
+        EC3["inner's Function EC"]
+        EC2["outer's Function EC<br/>(suspended)"]
+        EC1["Global EC<br/>(suspended)"]
+    end
+
+    subgraph "Environment Records"
+        IER["inner Function ER<br/>e = 'inner-let'"]
+        BER["Block ER<br/>c = 'block-let', inner"]
+        OER["outer Function ER<br/>p = 'arg', a = 'outer-var'<br/>d = 'block-var', b = 'outer-let'"]
+        GER["Global ER (composite)<br/>[[ObjectRecord]]: g, outer<br/>[[DeclarativeRecord]]: h"]
+        NULL["null"]
+    end
+
+    EC3 -- "VarEnv" --> IER
+    EC3 -- "LexEnv" --> IER
+    EC2 -- "VarEnv" --> OER
+    EC2 -- "LexEnv" --> BER
+    EC1 -- "VarEnv" --> GER
+    EC1 -- "LexEnv" --> GER
+
+    IER -->|"[[OuterEnv]]"| BER
+    BER -->|"[[OuterEnv]]"| OER
+    OER -->|"[[OuterEnv]]"| GER
+    GER -->|"[[OuterEnv]]"| NULL
+
+    style EC3 fill:#c64,stroke:#fff,color:#fff
+    style EC2 fill:#555,stroke:#fff,color:#fff
+    style EC1 fill:#555,stroke:#fff,color:#fff
+    style IER fill:#46c,stroke:#fff,color:#fff
+    style BER fill:#46c,stroke:#fff,color:#fff
+    style OER fill:#46c,stroke:#fff,color:#fff
+    style GER fill:#5a5,stroke:#fff,color:#fff
+    style NULL fill:#333,stroke:#fff,color:#fff
+```
+
+Note how outer's Function EC (suspended on the stack) has its `LexicalEnvironment` pointing to the Block ER — it was suspended mid-block. The `VariableEnvironment` still points to the Function ER, as always.
+
 ## Connection to async-js
 
 From async-js: each function call pushes a frame onto the call stack, return pops it. That "frame" is an Execution Context — carrying its Realm pointer and its ER pointers. When `await` suspends a function, this entire EC structure is shelved and later restored. The call stack is a stack of ECs.

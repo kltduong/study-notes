@@ -104,6 +104,41 @@ Execution halts at L2. Nothing after runs. If we comment out L2 and L3:
 
 ## Part 3 — Function calls push new ECs (each with its own creation phase)
 
+Each EC does create→execute as a **pair**. It's not "all creation phases first, then all execution." A function call _during_ execution triggers a new create→execute pair for the callee — recursively nested:
+
+```mermaid
+graph TD
+    S_C["Script EC: create"]
+    S_E["Script EC: execute"]
+    F_C["foo EC: create"]
+    F_E["foo EC: execute"]
+    B_C["bar EC: create"]
+    B_E["bar EC: execute"]
+    POP_B["bar EC: pop"]
+    POP_F["foo EC: pop"]
+
+    S_C --> S_E
+    S_E -->|"hits foo()"| F_C
+    F_C --> F_E
+    F_E -->|"hits bar()"| B_C
+    B_C --> B_E
+    B_E --> POP_B
+    POP_B -->|"returns to foo"| F_E
+    F_E --> POP_F
+    POP_F -->|"returns to script"| S_E
+
+    style S_C fill:#5a5,stroke:#fff,color:#fff
+    style S_E fill:#46c,stroke:#fff,color:#fff
+    style F_C fill:#5a5,stroke:#fff,color:#fff
+    style F_E fill:#46c,stroke:#fff,color:#fff
+    style B_C fill:#5a5,stroke:#fff,color:#fff
+    style B_E fill:#46c,stroke:#fff,color:#fff
+    style POP_B fill:#555,stroke:#fff,color:#fff
+    style POP_F fill:#555,stroke:#fff,color:#fff
+```
+
+Green = creation phase, blue = execution phase, grey = pop. Each call is a nested create→execute pair inside the caller's execution phase. This _is_ the call stack from async-js — each "push a frame" is "create→execute a new EC."
+
 Every function call creates a **new Function EC** and runs its own creation phase before executing the body.
 
 ```js
@@ -122,7 +157,7 @@ outer(42); // L8
 When L8 calls `outer(42)`:
 
 1. **A new Function EC is pushed** onto the call stack.
-2. **A new Function ER** is created (Declarative ER + `[[ThisValue]]` / `arguments` / `new.target`). Its `[[OuterEnv]]` points to the Global ER (because `outer` was _defined_ at global scope — lexical scoping). The EC's pointers are set:
+2. **A new Function ER** is created (Declarative ER + `[[ThisValue]]`, `arguments`, `new.target`). Its `[[OuterEnv]]` points to the Global ER — because `outer` was _defined_ at the top level, and `[[OuterEnv]]` is always set to the ER of the scope where the function's source text lives (not where it's called from). The EC's pointers are set:
    - **LexicalEnvironment** → this Function ER
    - **VariableEnvironment** → this Function ER
 

@@ -17,7 +17,7 @@ Lexical scoping governs **variable name resolution** — "what does `x` refer to
 
 | Question                             | System                             | Determined by                     |
 | ------------------------------------ | ---------------------------------- | --------------------------------- |
-| "What does the name `x` resolve to?" | Scope chain                        | Where the function is **written** |
+| "What does the name `x` resolve to?" | ER chain (`[[OuterEnv]]` links)    | Where the function is **written** |
 | "What does `this` refer to?"         | `[[ThisValue]]` on the Function ER | How the function is **called**    |
 
 ## Why JS has more flexibility than Python
@@ -122,12 +122,17 @@ new greet(); // this = fresh object (constructor call)
 
 ```js
 function outer() {
-  const arrow = () => console.log(this.name);
-  arrow(); // uses outer's this
-  arrow.call({ name: "ignored" }); // still uses outer's this
+  const arrow = () => console.log("value of this.name", this.name);
+  arrow(); // arrow's this = outer's this
+  arrow.call({ name: "ignored" }); // .call() cannot override — same output
 }
 
-outer.call({ name: "Alice" }); // "Alice" — arrow captured outer's this
+outer.call({ name: "Alice" }); // triggers both logs — arrow captures { name: "Alice" } as this
+
+outer(); // "value of this.name" undefined — bare call, outer's this = globalThis (no .name)
+
+const bob = { name: "Bob", outer };
+bob.outer(); // "value of this.name" "Bob" — obj.fn() sets outer's this = bob, arrow inherits it
 ```
 
 ### JS — class method
