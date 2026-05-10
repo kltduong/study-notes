@@ -23,6 +23,19 @@ Every variable goes through up to three stages in order: declaration → initial
 
 ## How each keyword maps to the stages
 
+The grid — all six declarator forms, what fires in each phase:
+
+| Form           | Stage 1 (creation)             | Stage 2 (execution, at declarator line)                                                                                    | Stage 3 (execution, later)  |
+| -------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| `let x = 5;`   | declare                        | initialize to `5`                                                                                                          | repeatable assignment       |
+| `let x;`       | declare                        | initialize to `undefined`                                                                                                  | repeatable assignment       |
+| `const x = 5;` | declare                        | initialize to `5`                                                                                                          | **never** — `TypeError`     |
+| `const x;`     | **SyntaxError** at parse time — `const` requires an initializer (no stage 3 means a missing initializer would leave it permanently uninitialized) | —                           | —                           |
+| `var x = 5;`   | declare + initialize to `undefined` | nothing (stage 2 already fired in creation); the `= 5` is stage 3, not stage 2                                         | runs `x = 5` here, then repeatable |
+| `var x;`       | declare + initialize to `undefined` | nothing                                                                                                                | repeatable assignment       |
+
+Compressed version for the essentials:
+
 | Keyword | Stage 1 (declaration) | Stage 2 (initialization)             | Stage 3 (assignment)        |
 | ------- | --------------------- | ------------------------------------ | --------------------------- |
 | `var`   | Creation phase        | Creation phase (auto → `undefined`)  | Execution phase, repeatable |

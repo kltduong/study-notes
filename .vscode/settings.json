@@ -1,3 +1,6 @@
 {
-  "markdown.styles": [".vscode/markdown.css"]
+  "markdown.styles": [".vscode/markdown.css"],
+  "[markdown]": {
+    "editor.formatOnSave": false
+  }
 }

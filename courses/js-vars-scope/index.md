@@ -4,13 +4,14 @@ The mental model tying this course together: every variable declaration is a bin
 
 ## Reading order
 
-Start with `variable-lifecycle.md` — it introduces the 3-stage model that everything else references. Then `execution-context.md` for the spec structures that make those stages concrete. Then `creation-execution.md` for the two-phase algorithm that fills those structures at runtime. Subsequent notes build on all three.
+Start with `variable-lifecycle.md` — it introduces the 3-stage model that everything else references. Then `execution-context.md` for the spec structures that make those stages concrete. Then `creation-execution.md` for the two-phase algorithm that fills those structures at runtime. `hoisting.md` reframes hoisting as a consequence of that algorithm — read after `creation-execution.md`. Subsequent notes build on all four.
 
 ## Subtopic map
 
 - [variable-lifecycle.md](variable-lifecycle.md) — the 3-stage model (declaration → initialization → assignment), how `var`/`let`/`const` differ at each stage, why the TDZ window exists
 - [execution-context.md](execution-context.md) — Execution Context structure, Realm Record, Environment Record type hierarchy, `[[OuterEnv]]` chain, LexicalEnvironment vs VariableEnvironment pointers, `[[VarNames]]`
 - [creation-execution.md](creation-execution.md) — the two-phase algorithm (creation setup pass + execution runtime pass), per-keyword rule during creation, nested create→execute pairs as the call stack, function declaration vs `var = fn expr` asymmetry
+- [hoisting.md](hoisting.md) — hoisting as an observable (not a mechanism), per-keyword reachability before the declarator, why the "code moves up" folk image fails for `let`/`const`/`class`, function-declaration precedence, `typeof` and TDZ
 
 ## Cross-cutting concepts
 
