@@ -34,7 +34,9 @@ Progress tracker for the course. Chunks grouped by theme.
 - [x] **Execution context internals** — EC types and phases, Realm Record (`[[Intrinsics]]`, `[[GlobalObject]]`, `[[GlobalEnv]]`), Environment Records, `[[VarNames]]`, lexical vs variable environment
       📊 solid — all correct; minor imprecision on Q2 (conflated EC pointer names with ER instances — draft ambiguity, fixed); "goes away" on Q3 correct in substance, precise mechanism is GC eligibility not instant deletion
       🔧 Refinements: - Said "LexicalEnvironment/VariableEnvironment are ERs" — they are pointers on the EC that point to ER instances; the draft diagram invited this, now fixed - Said `globalThis.x !== x` for the `let` case — more precisely, `globalThis.x` is `undefined` (property doesn't exist), not just a different value
-- [ ] **Creation & execution phases** — what happens in each phase, variable/function setup, call stack, function execution contexts, worked examples
+- [x] **Creation & execution phases** — what happens in each phase, variable/function setup, call stack, function execution contexts, worked examples
+      📊 solid — core model strong; per-keyword creation-phase rules, pointer routing (var→VarEnv, let→LexEnv), and fn-decl vs `var = fn-expr` asymmetry all landed
+      🔧 Refinements: - Said `typeof function(){}` is `"object"` — it's `"function"` (the one arbitrary `typeof` result that isn't derivable, alongside `typeof null === "object"`) - Minor typo substituting `x` for `z` when describing the function-declaration creation step (reasoning was correct)
 - [ ] **Hoisting mechanics** — hoisting as consequence of creation phase (not code movement), why `var` → `undefined`, `let`/`const` spec definitions per ECMAScript
 - [ ] **TDZ** — design rationale, what "temporal" means, identifying TDZ in practice, relationship to the creation phase model
 - [ ] **Quiz: execution model** — covers chunks 1–5
