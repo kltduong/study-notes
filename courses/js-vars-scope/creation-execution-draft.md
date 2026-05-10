@@ -185,7 +185,7 @@ Entering a block `{ ... }`:
 4. Block statements execute.
 5. On block exit, LexicalEnvironment reverts. The block ER becomes unreachable (unless captured by a closure).
 
-`var` declarations inside a block skip the block ER entirely — they register in the VariableEnvironment (the enclosing function or global ER). That's _why_ `var` is function-scoped, not block-scoped.
+`var` declarations inside a block still register in the VariableEnvironment (the enclosing function or global ER) — the block ER never receives them. That's _why_ `var` is function-scoped, not block-scoped.
 
 ```js
 function f() {
@@ -200,17 +200,42 @@ function f() {
 
 ## The full picture — one call stack snapshot
 
+Snapshot of the call stack at the moment execution is inside the `if` block of `inner()`:
+
+```js
+var a = 1;
+let b = 2;
+
+function outer(p) {
+  var x = 10;
+  let y = 20;
+
+  function inner() {
+    if (true) {
+      let z = 30; // ← execution is here
+    }
+  }
+
+  inner();
+}
+
+outer(42);
+```
+
 ```mermaid
 graph TD
-    GEC["Global EC<br/>creation: greet (fn), a (undefined),<br/>b (TDZ), c (TDZ), outer (fn)"]
-    OEC["Function EC: outer(42)<br/>creation: p=42, inner (fn),<br/>x (undefined), y (TDZ)"]
-    BEC["Block EC inside outer<br/>creation: (only let/const here)"]
+    GEC["Global EC<br/>a (var) = 1, b (let) = 2, outer (fn)"]
+    OEC["Function EC: outer(42)<br/>p = 42, x (var) = 10, y (let) = 20, inner (fn)"]
+    IEC["Function EC: inner()<br/>(no own bindings)"]
+    BEC["Block ER inside inner<br/>z (let) = 30"]
 
-    OEC -->|"[[OuterEnv]] chain"| GEC
-    BEC -->|"[[OuterEnv]] chain"| OEC
+    IEC -->|"[[OuterEnv]]"| OEC
+    OEC -->|"[[OuterEnv]]"| GEC
+    BEC -->|"[[OuterEnv]]"| IEC
 
     style GEC fill:#5a5,stroke:#fff,color:#fff
     style OEC fill:#46c,stroke:#fff,color:#fff
+    style IEC fill:#46c,stroke:#fff,color:#fff
     style BEC fill:#c64,stroke:#fff,color:#fff
 ```
 
