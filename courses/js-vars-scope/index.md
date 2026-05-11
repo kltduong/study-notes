@@ -12,6 +12,7 @@ Start with `variable-lifecycle.md` — it introduces the 3-stage model that ever
 - [execution-context.md](execution-context.md) — Execution Context structure, Realm Record, Environment Record type hierarchy, `[[OuterEnv]]` chain, LexicalEnvironment vs VariableEnvironment pointers, `[[VarNames]]`
 - [creation-execution.md](creation-execution.md) — the two-phase algorithm (creation setup pass + execution runtime pass), per-keyword rule during creation, nested create→execute pairs as the call stack, function declaration vs `var = fn expr` asymmetry
 - [hoisting.md](hoisting.md) — hoisting as an observable (not a mechanism), per-keyword reachability before the declarator, why the "code moves up" folk image fails for `let`/`const`/`class`, function-declaration precedence, `typeof` and TDZ
+- [tdz.md](tdz.md) — TDZ as a time window (not a source region), the one-flag/one-check mechanism, "temporal" meaning runtime not lexical, less obvious TDZ spots (default params, self-reference, class), design rationale, what TDZ pays for (block-shadowing + creation phase)
 
 ## Cross-cutting concepts
 
