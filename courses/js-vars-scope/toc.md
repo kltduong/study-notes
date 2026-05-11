@@ -45,9 +45,10 @@ Progress tracker for the course. Chunks grouped by theme.
       🔧 Refinements:
         - Said "inside the block, there is a new EC" — block entry creates a new Block ER and moves `LexicalEnvironment` to it; no new EC. ECs are only pushed on function calls (plus script/eval). Re-surfacing the EC-vs-ER distinction under pressure.
         - (Teaching-side correction) Q3 var-variant: teacher incorrectly said `var x` inside a block with outer `let x` would print `1` with "two separate bindings." Actual behavior: `SyntaxError` — `var` hoists to the same scope as the `let`, triggering the duplicate-declaration rule. Learner's instinct ("same binding") was pointing at the collision correctly.
-- [ ] **Quiz: execution model** — covers chunks 1–5
+- [x] **Quiz: execution model** — covers chunks 1–5
+      📊 solid — all five correct; lifecycle stages, pointer mechanics, chain resolution, TDZ temporal behavior, Global ER routing all landed. One refinement: initially described `var` resolution as "via VariableEnvironment" rather than chain-walk from LexicalEnvironment — corrected after discussion (VarEnv is creation-time routing, not runtime lookup entry point)
 - [ ] **Scope model** — global / function / module / block scope, Environment Record types, `var` vs `let`/`const` scope rules, global object attachment and why it's problematic
-- [ ] **Lexical scoping & shadowing** — scope chain resolution, nested scopes, shadowing rules, lexical vs dynamic scoping (with Bash contrast)
+- [ ] **Lexical scoping & shadowing** — scope chain resolution, nested scopes, shadowing rules, closures (ER survival via `[[OuterEnv]]`), lexical vs dynamic scoping (with Bash contrast)
 - [ ] **`var` quirks & historical patterns** — re-declaration, no block scope, IIFEs as pre-`let` workaround, `"use strict"`, when `var` is still appropriate
 - [ ] **`const` & immutability** — reassignment vs mutation, `Object.freeze`, shallow vs deep, use cases
 - [ ] **Quiz: scope & declarations** — covers chunks 6–9
