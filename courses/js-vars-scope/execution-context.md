@@ -255,6 +255,37 @@ Both pointers can (and do) point to the same ER — this is the default state at
 
 Note that `VariableEnvironment` doesn't always target a Function ER specifically — in the Global EC it points to the Global ER. The invariant is about scope level (function-or-global), not ER subtype.
 
+### One chain, two entry points
+
+`VariableEnvironment` is not a parallel lookup structure — it's always one of the ERs reachable by walking the `[[OuterEnv]]` chain from `LexicalEnvironment`. The two pointers are two entry points into the **same** chain:
+
+```mermaid
+graph TD
+    LexEnv["LexicalEnvironment"]
+    VarEnv["VariableEnvironment"]
+    Block["Block ER"]
+    Func["Function ER"]
+    Global["Global ER"]
+    Null["null"]
+
+    LexEnv -->|"points to"| Block
+    VarEnv -->|"points to"| Func
+    Block -->|"[[OuterEnv]]"| Func
+    Func -->|"[[OuterEnv]]"| Global
+    Global -->|"[[OuterEnv]]"| Null
+
+    style LexEnv fill:#c64,stroke:#fff,color:#fff
+    style VarEnv fill:#c64,stroke:#fff,color:#fff
+    style Block fill:#46c,stroke:#fff,color:#fff
+    style Func fill:#46c,stroke:#fff,color:#fff
+    style Global fill:#5a5,stroke:#fff,color:#fff
+    style Null fill:#555,stroke:#fff,color:#fff
+```
+
+`LexicalEnvironment` is a **moving cursor** — it slides to the innermost block ER as blocks open and reverts as they close. `VariableEnvironment` is a **stable anchor** — pinned at the function-level ER further down that same chain.
+
+The consequence for name resolution: all reads and writes during execution start from `LexicalEnvironment` and walk `[[OuterEnv]]`. `VariableEnvironment` is consulted only during the **creation phase** to know where to *install* `var` bindings. Once installed, those bindings are found by the normal chain walk — the engine doesn't use `VariableEnvironment` as a runtime lookup shortcut.
+
 ## `[[VarNames]]` and the `delete` behavior
 
 The Global ER maintains a `[[VarNames]]` list — all names created via `var` or `function` at global level.
