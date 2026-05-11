@@ -20,12 +20,21 @@ The combination produces four scope types. Not four arbitrary rules — four con
 
 ## The four scope types
 
-| Scope type      | Boundary that creates the ER                  | ER subtype                          | Keywords that land here                |
-| --------------- | --------------------------------------------- | ----------------------------------- | -------------------------------------- |
-| **Global**      | Script start                                  | Global ER (composite)               | `var`/`function` → ObjectRecord; `let`/`const`/`class` → DeclarativeRecord |
-| **Function**    | Function call                                 | Function ER (extends Declarative)   | All local declarations (`var`, `let`, `const`, params) |
-| **Block**       | `{ }`, `if`, `for`, `while`, `switch`, etc.   | Declarative ER                      | `let` / `const` / `class` / block-scoped `function` (strict) |
-| **Module**      | Module evaluation                             | Module ER (extends Declarative)     | All declarations — nothing touches `globalThis` |
+The two axes combined — only two of the four cells are occupied, because each keyword group uses exactly one pointer:
+
+| Axis 1: Keyword → Pointer \ Axis 2: Pointer aims at | **Pinned** (Function/Global ER) | **Tracking** (Innermost ER) |
+| --- | --- | --- |
+| **`var`/`function` → `VariableEnvironment`** | ✓ Function scope / Global scope | — |
+| **`let`/`const`/`class` → `LexicalEnvironment`** | — | ✓ Block scope / Module scope / Global scope (DeclarativeRecord) |
+
+The four named scope types are just labels for the ER instances that fall out of the occupied cells. Each row below is one such instance — with both axes made explicit:
+
+| Scope type | Boundary | Pointer used | ER subtype | Keywords |
+| --- | --- | --- | --- | --- |
+| **Global** | Script start | Both (routes internally) | Composite: `[[ObjectRecord]]` + `[[DeclarativeRecord]]` | `var`/`function` → ObjectRecord; `let`/`const`/`class` → DeclarativeRecord |
+| **Function** | Function call | `VariableEnvironment` (pinned here) | Function ER (extends Declarative) | All locals: `var`, `let`, `const`, params |
+| **Block** | `{ }`, `if`, `for`, `while`, `switch`, … | `LexicalEnvironment` (moved here) | Declarative ER | `let` / `const` / `class` / strict block `function` |
+| **Module** | Module evaluation | Both (but `VariableEnvironment` aims at Module ER, not Global) | Module ER (extends Declarative) | All declarations — nothing reaches `globalThis` |
 
 ### Global scope — the composite router
 
