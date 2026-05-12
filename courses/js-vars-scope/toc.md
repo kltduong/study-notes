@@ -47,7 +47,13 @@ Progress tracker for the course. Chunks grouped by theme.
         - (Teaching-side correction) Q3 var-variant: teacher incorrectly said `var x` inside a block with outer `let x` would print `1` with "two separate bindings." Actual behavior: `SyntaxError` — `var` hoists to the same scope as the `let`, triggering the duplicate-declaration rule. Learner's instinct ("same binding") was pointing at the collision correctly.
 - [x] **Quiz: execution model** — covers chunks 1–5
       📊 solid — all five correct; lifecycle stages, pointer mechanics, chain resolution, TDZ temporal behavior, Global ER routing all landed. One refinement: initially described `var` resolution as "via VariableEnvironment" rather than chain-walk from LexicalEnvironment — corrected after discussion (VarEnv is creation-time routing, not runtime lookup entry point)
-- [ ] **Scope model** — global / function / module / block scope, Environment Record types, `var` vs `let`/`const` scope rules, global object attachment and why it's problematic
+- [x] **Scope model** — global / function / module / block scope, Environment Record types, `var` vs `let`/`const` scope rules, global object attachment and why it's problematic
+      📊 solid — core derivation clean (two-axis model, pointer-pin vs pointer-move → scope rules fall out); module isolation landed; Q3 structural explanation precise
+      🔧 Refinements:
+        - Q1 initial prediction was `[30, 31, 32]` — double error: (a) assumed `i` reached `3` at loop exit (it stops at `2`), (b) imagined `x` still updating during L7 rather than frozen at `20` after loop exit. Corrected to `[20, 21, 22]` after tracing the chain.
+        - Conflated the function **object**'s `[[Environment]]` slot (set once at creation, L5) with the running EC's `[[OuterEnv]]` (copied from `[[Environment]]` when the function is called on L7). Same ER referenced at two lifecycle points — creation-time capture vs call-time chain. Resurfacing the "closures capture a reference, not a value" mechanism at spec-level precision.
+        - Said "var variable as 1 inside the whole function" when describing function scope — intent clear (single binding for the whole function) but wording slipped between "one" and "as 1".
+        - Left implicit that `let` binding unreachability after block exit is caused by `LexicalEnvironment` **reverting** (Block ER becomes unreachable → GC-eligible), not by the block itself "ending". Pointer revert is the mechanism; block scope is the observable consequence.
 - [ ] **Lexical scoping & shadowing** — scope chain resolution, nested scopes, shadowing rules, closures (ER survival via `[[OuterEnv]]`), lexical vs dynamic scoping (with Bash contrast)
 - [ ] **`var` quirks & historical patterns** — re-declaration, no block scope, IIFEs as pre-`let` workaround, `"use strict"`, when `var` is still appropriate
 - [ ] **`const` & immutability** — reassignment vs mutation, `Object.freeze`, shallow vs deep, use cases

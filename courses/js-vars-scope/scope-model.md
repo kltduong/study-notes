@@ -121,7 +121,23 @@ for (var i = 0; i < 3; i++) {
 // prints: 3, 3, 3
 ```
 
-One `i` in the Function ER, shared across all iterations. All closures capture the same binding — which holds `3` by the time they run. This per-iteration ER is the spec-level mechanism behind the classic "closure in a loop" problem and its `let` solution.
+One `i` in the Function ER, shared across all iterations. But the shared binding alone doesn't force `3, 3, 3` — *when* each read happens does. `setTimeout` queues the arrow; it doesn't fire until the call stack is empty, which is after the loop has exited and `i++` has run its final increment (loop exits with `i === 3`, not `2` — the check `3 < 3` is what ends it). Each queued arrow then reads `i` via `[[OuterEnv]]` at call time and sees `3`. Swap the `setTimeout(...)` for a bare `console.log(i)` and the reads move inline into the loop body → `0, 1, 2`. Same binding, different timing, different output.
+
+**Body-mutated variables — a subtler trap:**
+
+```js
+for (var i = 0; i < 3; i++) {
+  var x = i * 10;
+  setTimeout(() => console.log(x), 0);
+}
+// prints: 20, 20, 20  — not 30, 30, 30
+```
+
+`x` is also a single `var` binding in the Function ER, but its final value is `20`, not `30`. The difference: `x = i * 10` is a **body statement** — it only runs when the condition passes. When `i === 3`, the check `3 < 3` fails and the body is skipped entirely. So `x` freezes at the last successful iteration's write (`2 * 10 = 20`). The `for` loop's step order is `init → cond → body → update → cond → ...` — the update (`i++`) runs one more time than the body does.
+
+General rule: after a `for` loop, a body-mutated variable holds whatever the **last executed iteration** set it to, not whatever the loop's "exit state" suggests. `i` advances past the body because `i++` is in the update step; `x` doesn't because nothing writes to it outside the body.
+
+This per-iteration ER is the spec-level mechanism behind the classic "closure in a loop" problem and its `let` solution.
 
 ### Module scope — the isolation layer
 
