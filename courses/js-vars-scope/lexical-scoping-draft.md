@@ -20,31 +20,31 @@ greet("world"); // "Hello, world!"
 
 ```mermaid
 flowchart TB
-  subgraph GLOBAL_CREATION["Global EC — Creation Phase"]
-    A["Bind <code>greet</code> (TDZ)<br/>Bind <code>formatter</code> — not yet, inner scope"]
+  subgraph GLOBAL_CREATION["Global EC — Creation"]
+    A["Bind greet (TDZ)"]
   end
 
-  subgraph GLOBAL_EXEC["Global EC — Execution Phase"]
-    B["<b>Definition time for greet</b><br/>(expression evaluated → function object allocated)"]
+  subgraph GLOBAL_EXEC["Global EC — Execution"]
+    B["DEFINE greet<br/>(expression → object allocated)"]
     C["greet('world') encountered"]
   end
 
-  subgraph GREET_CALL["Call time for greet → new EC pushed"]
-    subgraph GREET_CREATION["greet EC — Creation Phase"]
-      D["Bind <code>name = 'world'</code><br/><code>formatter</code> hoisted as TDZ"]
+  subgraph GREET_CALL["Call time: greet → new EC"]
+    subgraph GREET_CREATION["greet EC — Creation"]
+      D["Bind name = 'world'<br/>Bind formatter (TDZ)"]
     end
-    subgraph GREET_EXEC["greet EC — Execution Phase"]
-      E["<b>Definition time for formatter</b><br/>(expression evaluated → function object allocated)"]
+    subgraph GREET_EXEC["greet EC — Execution"]
+      E["DEFINE formatter<br/>(expression → object allocated)"]
       F["formatter(name) encountered"]
     end
   end
 
-  subgraph FORMATTER_CALL["Call time for formatter → new EC pushed"]
-    subgraph FORMATTER_CREATION["formatter EC — Creation Phase"]
-      G["Bind <code>s = name</code>"]
+  subgraph FORMATTER_CALL["Call time: formatter → new EC"]
+    subgraph FORMATTER_CREATION["formatter EC — Creation"]
+      G["Bind s = name"]
     end
-    subgraph FORMATTER_EXEC["formatter EC — Execution Phase"]
-      H["Evaluate template literal<br/>→ return 'Hello, world!'"]
+    subgraph FORMATTER_EXEC["formatter EC — Execution"]
+      H["Evaluate template<br/>→ return 'Hello, world!'"]
     end
   end
 
@@ -68,11 +68,11 @@ flowchart TB
 
 **Reading the diagram:**
 
-- Blue nodes = definition time (function object allocated).
 - Orange nodes = creation phase of an EC (bindings set up, no values yet).
+- Blue nodes = definition time (function object allocated).
 - Green nodes = execution phase statements running.
 
-Now both `greet` and `formatter` are expressions — both get their blue "definition time" node inside a green "execution phase" zone. The creation phase (orange) only registers the *binding* (`greet` in TDZ) — the function object doesn't exist yet. This makes the three-way split visible at every level: creation phase ≠ definition time ≠ call time.
+Both `greet` and `formatter` are expressions — both get their blue "definition time" node inside a green "execution phase" zone. The creation phase (orange) only registers the *binding* (`greet` in TDZ) — the function object doesn't exist yet. This makes the three-way split visible at every level: creation phase ≠ definition time ≠ call time.
 
 At each event, *different* fields get set with *different* sources. Conflating them is the canonical "lexical vs dynamic" trap.
 
