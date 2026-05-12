@@ -236,11 +236,15 @@ All competence tracking lives in `toc.md`. After every understanding check, quiz
 
 Indented lines under the chunk entry. Tag upgrades append a new line so history is visible — the latest level drives pacing decisions. Refinements go in a `🔧 Refinements:` block on the same entry.
 
+Short refinements (1–2 items, each fitting on one line) can use an inline-dash form on the same line as the header. Longer or multi-sentence refinements use indented bullets on following lines — easier to scan than a wall of dashes.
+
 ```markdown
 - [x] `__proto__` vs `.prototype`
       📊 weak → shaky — confused accessor with internal slot
       📊 shaky → solid — nailed it on review sweep
-      🔧 Refinements: - Confused descriptor `{ value: 42 }` with the value itself (`42`) - Said "engine's internal slot" when the answer is `Dog.prototype` — a regular JS object
+      🔧 Refinements:
+        - Confused descriptor `{ value: 42 }` with the value itself (`42`)
+        - Said "engine's internal slot" when the answer is `Dog.prototype` — a regular JS object
 ```
 
 ### Refinements
@@ -291,7 +295,10 @@ Present questions **one at a time** — question, answer, feedback, next. In `to
 ### Content rules
 
 - Capture reasoning, motivation, and non-obvious details — not textbook definitions.
-- Include concrete examples, commands, and gotchas from the session.
+- Include concrete examples, commands, and gotchas from the session. Three roles for examples, all welcome:
+  - **Anchor** — a small real example that introduces a mechanism before abstracting (per "Concrete → general" in teaching approach).
+  - **Bug demo** — a minimal snippet showing the concrete failure of an alternative (per "Show the bug, not the label" below).
+  - **Worked synthesis** — a single annotated example that ties the pieces together after they've been explained (see "Worked example for synthesis" below).
 - Preserve the mental model that emerged.
 - Link related notes with relative links (same folder only).
 - Short TL;DR at the top of each note.
@@ -307,13 +314,14 @@ Present questions **one at a time** — question, answer, feedback, next. In `to
 - **Deepen, don't stack.** When a clarification expands an existing argument, weave it into the relevant section — don't add a parallel subsection. Multiple siblings each answering a variant of the same "why?" question → merge into one linear chain.
 - **If a prerequisite has its own chunk, one-line + forward link** — don't mini-explain it inline.
 - **Show the bug, not the label.** When explaining why a design choice beats an alternative, demonstrate the concrete failure (small example, real symptom). "Silent bugs" as a phrase is weaker than a three-line snippet showing `if (!user)` firing wrongly.
+- **Worked example for synthesis.** After the pieces of a mechanism have been explained individually, a single annotated example that traces multiple cases through the same mechanism cements the mental model. Inline comments trace the mechanism step-by-step (which pointer, which state, which transition) so the reader can single-step through. Place it _after_ the sections it consolidates, not before — it's a capstone, not an anchor. Keep to one per note; more means the individual sections aren't landing on their own. Annotate selectively — every line that introduces a new case, not every line.
 - **List only independent items.** When enumerating, check whether any item is a consequence of another in the list. If so, drop or fold it as a sub-point. N items implies N independent points — don't inflate with derivable ones.
 - **Asides in blockquotes.** Tangential content that's useful but sits outside the main derivation — terminology sidebars, meta-notes, historical context, formal-layer remarks — goes in a `> **Aside —** …` blockquote rather than its own heading. The note should read top-to-bottom without the asides and still land. Guardrails:
   - **Don't aside a prerequisite.** If the next section builds on the content, it's a step, not an aside.
   - **Don't stack asides.** Two in a row means the main thread is too thin — rework the flow instead.
   - **One role per blockquote prefix.** `> ⚠️` is reserved for critical-lens flags on source content; `> **Aside —**` is for tangents; `> 🔖 Later:` flags an explicit rabbit hole for future exploration. Don't mix.
 
-**Format:** Markdown with headings, fenced code blocks (with language tags), tables, and mermaid diagrams. **No ASCII/Unicode box-drawing art** — use mermaid instead (plain text in code blocks for pseudo-code/asm is fine). Mermaid node styling: dark fills with white text (e.g. `fill:#46c,stroke:#fff,color:#fff`) for dark-mode legibility. Avoid light pastel fills with dark text.
+**Format:** Markdown with headings, fenced code blocks (with language tags), tables, and mermaid diagrams. For flow and relationship diagrams, **use mermaid — not ASCII/Unicode box-drawing art.** Mermaid renders as graphs with arrows; box-drawing lines (`─ │ ┌ └`) can't express that. Exception: inside code blocks, box-drawing tree characters (`├── └──`) are fine for showing hierarchical _data-structure layouts_ (fields of a record, directory trees, object layouts) — mermaid is clunky for that shape. Plain text in code blocks for pseudo-code/asm is also fine. Mermaid node styling: dark fills with white text (e.g. `fill:#46c,stroke:#fff,color:#fff`) for dark-mode legibility. Avoid light pastel fills with dark text.
 
 **Tone:** Concise — notes are for future-self, not strangers. No filler. Match existing note style in the folder.
 
