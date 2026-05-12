@@ -1,4 +1,6 @@
-# Scope Model — Draft
+# Scope Model
+
+**TL;DR:** Every scope rule reduces to one question — which Environment Record (ER) does a binding land in? Two axes decide it: the declaration keyword (picks the EC pointer) × where that pointer is aimed (depends on the active scope boundary).
 
 ## The one question
 
@@ -14,6 +16,8 @@ Two axes decide it:
    - `VariableEnvironment` is pinned at the function-or-global ER. Never moves.
    - `LexicalEnvironment` tracks the innermost scope — moves on every block entry/exit.
 
+> **Aside —** "Aimed at" = which ER instance the pointer currently references. `LexicalEnvironment` changes its target on every block entry/exit. `VariableEnvironment` never changes its target after the function (or script) EC is created.
+
 The combination produces four scope types. Not four arbitrary rules — four consequences of pointer routing.
 
 ---
@@ -27,9 +31,106 @@ The combination produces four scope types. Not four arbitrary rules — four con
 | **Block** | `{ }`, `if`, `for`, `while`, `switch`, … | `LexicalEnvironment` (moved here) | Declarative ER | `let` / `const` / `class` / strict block `function` |
 | **Module** | Module evaluation | Both (but `VariableEnvironment` aims at Module ER, not Global) | Module ER (extends Declarative) | All declarations — nothing reaches `globalThis` |
 
+### Worked example — tracing every binding
+
+The snippet below puts all four scope types in one place. For each declaration, the trace answers: which pointer did the engine use, where was that pointer aimed, and which ER did the binding land in?
+
+```js
+// ─── Script context (not a module) ───────────────────────────────────────────
+// Active EC:  Global EC
+//   VariableEnvironment → Global ER  (pinned here for the script's lifetime)
+//   LexicalEnvironment  → Global ER  (starts here; moves on block entry)
+
+var globalVar = "gv";
+// Keyword: var → VariableEnvironment → Global ER → [[ObjectRecord]]
+// Result: globalThis.globalVar === "gv"
+
+let globalLet = "gl";
+// Keyword: let → LexicalEnvironment → Global ER → [[DeclarativeRecord]]
+// Result: reachable globally, but NOT a property on globalThis
+
+function outer(param) {
+  // ─── Function call: new Function EC created ─────────────────────────────
+  // Active EC:  outer's EC
+  //   VariableEnvironment → outer's Function ER  (pinned for this call)
+  //   LexicalEnvironment  → outer's Function ER  (starts here)
+
+  var funcVar = "fv";
+  // Keyword: var → VariableEnvironment → outer's Function ER
+  // Result: visible anywhere inside outer(), including inside nested blocks
+
+  let funcLet = "fl";
+  // Keyword: let → LexicalEnvironment → outer's Function ER
+  // (LexicalEnvironment still aims at the Function ER — no block entered yet)
+  // Result: same lifetime as funcVar here, but for a different reason:
+  //         funcLet lands in Function ER only because no block is active yet
+
+  // param lands in outer's Function ER alongside funcVar (same ER, same pointer)
+
+  if (true) {
+    // ─── Block entry: new Block ER pushed ───────────────────────────────
+    // LexicalEnvironment moves → new Block ER (child of outer's Function ER)
+    // VariableEnvironment stays → outer's Function ER (never moves)
+
+    var blockVar = "bv";
+    // Keyword: var → VariableEnvironment → outer's Function ER  (bypasses block)
+    // Result: same binding as if declared at the top of outer()
+
+    let blockLet = "bl";
+    // Keyword: let → LexicalEnvironment → Block ER
+    // Result: destroyed when the block exits; ReferenceError outside
+
+    const blockConst = "bc";
+    // Keyword: const → LexicalEnvironment → Block ER  (same as let)
+    // Result: same lifetime as blockLet; additionally immutable after init
+
+    function inner() {
+      // ─── Nested function call: new Function EC ────────────────────────
+      // Active EC:  inner's EC
+      //   VariableEnvironment → inner's Function ER  (fresh, pinned)
+      //   LexicalEnvironment  → inner's Function ER  (starts here)
+      // inner's Function ER [[OuterEnv]] → Block ER → outer's Function ER → Global ER
+
+      var innerVar = "iv";
+      // Keyword: var → VariableEnvironment → inner's Function ER
+      // Result: local to inner(); invisible to outer()
+
+      console.log(funcVar);   // resolves via [[OuterEnv]] chain: inner ER → Block ER → outer ER ✓
+      console.log(blockLet);  // resolves via [[OuterEnv]] chain: inner ER → Block ER ✓
+      console.log(globalVar); // resolves all the way up to Global ER's [[ObjectRecord]] ✓
+    }
+
+    inner();
+    // ─── Block exit ──────────────────────────────────────────────────────
+    // LexicalEnvironment reverts → outer's Function ER
+    // Block ER is discarded; blockLet and blockConst are gone
+  }
+
+  console.log(funcVar);  // ✓ — in outer's Function ER
+  console.log(blockVar); // ✓ — also in outer's Function ER (var bypassed the block)
+  // console.log(blockLet); // ✗ ReferenceError — Block ER is gone
+}
+
+outer("p");
+```
+
+**Pointer state at each scope boundary:**
+
+| Location in code | `VariableEnvironment` aims at | `LexicalEnvironment` aims at |
+|---|---|---|
+| Script top level | Global ER | Global ER |
+| Inside `outer()`, before `if` | outer's Function ER | outer's Function ER |
+| Inside `if` block | outer's Function ER | Block ER |
+| Inside `inner()` | inner's Function ER | inner's Function ER |
+| Back in `outer()`, after `if` | outer's Function ER | outer's Function ER (reverted) |
+
+The `VariableEnvironment` column never changes within a given function call. The `LexicalEnvironment` column is the one that moves.
+
+---
+
 ### Global scope — the composite router
 
-You already know this from [execution-context.md](execution-context.md). The Global ER is unique: it's a composite that routes declarations to two sub-ERs.
+See [execution-context.md](execution-context.md) for the full Global ER structure. The key point here: the Global ER is unique in that both pointers aim at the same ER, but the ER itself routes declarations internally to two sub-records based on keyword.
 
 ```
 Global ER
@@ -42,7 +143,6 @@ Global ER
 - `var x` / `function f(){}` → `[[ObjectRecord]]` → becomes a property on `globalThis`
 - `let y` / `const z` / `class C` → `[[DeclarativeRecord]]` → hidden, no `globalThis` property
 
-This is why:
 ```js
 var x = 1;
 let y = 2;
@@ -51,13 +151,7 @@ globalThis.x; // 1 — lives on the object
 globalThis.y; // undefined — not a property
 ```
 
-Both are "global scope" — both are reachable from anywhere in the script. But they live in different sub-components with different visibility to the object layer.
-
-**Why this matters practically:**
-
-1. **Accidental globals.** `var` at top level pollutes `globalThis`. Third-party scripts in the same page can collide. `let`/`const` don't have this problem.
-2. **`delete` behavior.** `var`-created properties are `configurable: false` — undeletable. Direct assignments (`globalThis.x = 1`) are `configurable: true` — deletable. The `[[VarNames]]` list tracks which is which.
-3. **Cross-frame access.** `globalThis.x` is accessible from other frames (same-origin). `let y` is not — it's in a hidden table with no object-property reflection.
+Both are "global scope" — both reachable from anywhere in the script. But they live in different sub-components with different visibility to the object layer.
 
 ### Function scope — the `var` container
 
@@ -69,10 +163,6 @@ Every function call creates a fresh Function ER. `VariableEnvironment` is pinned
 - Function parameters
 - `arguments` object
 - `function` declarations (in sloppy mode; strict mode + block → block-scoped)
-
-**What doesn't:**
-- `let` / `const` inside blocks — those go to the Block ER via `LexicalEnvironment`
-- `let` / `const` at function top level — technically also in the Function ER, because `LexicalEnvironment` starts there before any block is entered
 
 The key insight: `var` always "escapes" to the function boundary because `VariableEnvironment` never moves. It doesn't matter how many blocks deep the `var` sits — it routes through the pinned pointer.
 
@@ -118,7 +208,7 @@ for (let i = 0; i < 3; i++) {
 // prints: 0, 1, 2
 ```
 
-Each iteration gets a **fresh Block ER** with its own `i` binding, copied from the previous iteration's value. This is spec-mandated behavior for `for (let ...)` — the loop body's ER is recreated per iteration. It's why closures inside `for-let` loops capture the "current" value.
+Each iteration gets a **fresh Block ER** with its own `i` binding, copied from the previous iteration's value. This is spec-mandated behavior for `for (let ...)` — the loop body's ER is recreated per iteration.
 
 Contrast with `var`:
 ```js
@@ -128,9 +218,7 @@ for (var i = 0; i < 3; i++) {
 // prints: 3, 3, 3
 ```
 
-One `i` in the Function ER, shared across all iterations. All closures capture the same binding — which holds `3` by the time they run.
-
-This per-iteration ER is the spec-level mechanism behind the classic "closure in a loop" problem and its `let` solution.
+One `i` in the Function ER, shared across all iterations. All closures capture the same binding — which holds `3` by the time they run. This per-iteration ER is the spec-level mechanism behind the classic "closure in a loop" problem and its `let` solution.
 
 ### Module scope — the isolation layer
 
@@ -151,15 +239,11 @@ Module EC
 
 The Global ER is still reachable via the `[[OuterEnv]]` chain — so `console`, `setTimeout`, etc. resolve normally. But no module-level declaration creates a `globalThis` property.
 
-**Why this matters:** modules are the default isolation mechanism. Each module is its own scope island — `var` pollution can't leak between modules or onto the global object. This is one reason the ecosystem moved to modules.
-
-Additional Module ER feature: **import bindings are live links**, not copies. When the exporting module updates a binding, the importing module sees the new value. This is implemented as a special binding type in the Module ER that delegates reads to the source module's ER.
+**Import bindings are live links**, not copies. When the exporting module updates a binding, the importing module sees the new value — implemented as a special binding type in the Module ER that delegates reads to the source module's ER.
 
 ---
 
 ## Scope rules as pointer consequences
-
-Everything above reduces to this table:
 
 | Declaration | EC pointer used | Where that pointer aims | Consequence |
 |---|---|---|---|
@@ -255,10 +339,9 @@ The module adds one extra ER layer between your code and the Global ER. That lay
 
 ---
 
-## Compressed takeaway
+## Takeaway
 
-- **Two axes decide scope:** declaration keyword (picks the pointer) × scope boundary (where the pointer aims).
-- **Four scope types:** global, function, block, module — each is an ER instance created at a specific boundary.
+- **Two axes decide scope:** declaration keyword (picks the pointer) × where that pointer is aimed (the active scope boundary).
 - **`var` is function-scoped** because `VariableEnvironment` is pinned at the function ER and never moves.
 - **`let`/`const` are block-scoped** because `LexicalEnvironment` moves to each new Block ER.
 - **Global ER is a composite** — `var` routes to the Object ER (visible on `globalThis`), `let`/`const` route to the Declarative ER (hidden).
