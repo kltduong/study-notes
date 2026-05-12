@@ -20,15 +20,6 @@ The combination produces four scope types. Not four arbitrary rules — four con
 
 ## The four scope types
 
-The two axes combined — only two of the four cells are occupied, because each keyword group uses exactly one pointer:
-
-| Axis 1: Keyword → Pointer \ Axis 2: Pointer aims at | **Pinned** (Function/Global ER) | **Tracking** (Innermost ER) |
-| --- | --- | --- |
-| **`var`/`function` → `VariableEnvironment`** | ✓ Function scope / Global scope | — |
-| **`let`/`const`/`class` → `LexicalEnvironment`** | — | ✓ Block scope / Module scope / Global scope (DeclarativeRecord) |
-
-The four named scope types are just labels for the ER instances that fall out of the occupied cells. Each row below is one such instance — with both axes made explicit:
-
 | Scope type | Boundary | Pointer used | ER subtype | Keywords |
 | --- | --- | --- | --- | --- |
 | **Global** | Script start | Both (routes internally) | Composite: `[[ObjectRecord]]` + `[[DeclarativeRecord]]` | `var`/`function` → ObjectRecord; `let`/`const`/`class` → DeclarativeRecord |
@@ -74,6 +65,7 @@ Every function call creates a fresh Function ER. `VariableEnvironment` is pinned
 
 **What lands here:**
 - `var` declarations (anywhere in the function body — including inside blocks)
+- `let` / `const` / `class` at function top level (no enclosing block — `LexicalEnvironment` still aims at the Function ER here)
 - Function parameters
 - `arguments` object
 - `function` declarations (in sloppy mode; strict mode + block → block-scoped)
@@ -258,6 +250,8 @@ Module ER (Declarative subtype)
 ```
 
 The module adds one extra ER layer between your code and the Global ER. That layer is Declarative (hidden table), so nothing leaks to `globalThis`. The Global ER is still in the chain — you can still read `globalThis.setTimeout` — but you can't write to it via declarations.
+
+> **Aside — Node.js.** The script/module split above is browser-framing. In Node.js, CommonJS files (`.js` with `"type": "commonjs"`) are wrapped in a function by the module loader — `(function(exports, require, module, __filename, __dirname) { … })` — so your "top-level" code is actually inside a function call. `var x` lands in that wrapper's Function ER, not the global `[[ObjectRecord]]`, and `global.x` stays `undefined`. Node ES modules (`.mjs` or `"type": "module"`) use the Module ER topology above — same isolation as browser modules. The underlying spec concepts (Global ER, Module ER, ER chain) are engine-level and apply everywhere; the `<script>` entry point is browser-specific.
 
 ---
 
