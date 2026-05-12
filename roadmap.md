@@ -11,11 +11,12 @@ Last updated: 2026-05-08.
 | 1   | `js-vars-scope`            | in progress   | Finish closures + variable lifecycle                                                                                                                       |
 | 2   | `js-inheritance`           | in progress   | Finish chains, class syntax, composition (~30% remaining)                                                                                                  |
 | 3   | `js-functions-this`        | new           | Reference type, `this` determination (one rule + overrides), `call`/`apply`/`bind`, arrow functions, `new` protocol, class & `this`, patterns (~7 chunks)  |
-| 4   | DOM fundamentals           | new           | Tree, querying, mutation, event dispatch, delegation, attrs vs props, input, forms, custom events, observers, capstone with CRP-lite (~11 chunks)          |
-| 5   | TypeScript fundamentals    | new           | Structural typing, primitives/literals, unions/intersections, generics + inference, narrowing, common utility types, working with libraries (~9–10 chunks) |
-| 6   | CSS layout fundamentals    | new           | Box model, normal flow, positioning, stacking contexts, flexbox, grid, responsive, typography essentials (~8–10 chunks)                                    |
-| 7   | Browser rendering pipeline | new, optional | Parse → CSSOM → render tree → layout → paint → composite, layer promotion, Core Web Vitals, profiling (~6–8 chunks)                                        |
-| 8   | React fundamentals         | new           | Rendering model, components/props/state, derived state vs effects, lists/keys, forms, context, data fetching, composition (~10 chunks)                     |
+| 4   | `js-modules`               | new           | Why modules exist, ES module syntax, static linking, live bindings, module record lifecycle, circular deps, dynamic `import()`, Node dual-mode, browser loading, bundlers, top-level `await` (~13 chunks) |
+| 5   | DOM fundamentals           | new           | Tree, querying, mutation, event dispatch, delegation, attrs vs props, input, forms, custom events, observers, capstone with CRP-lite (~11 chunks)          |
+| 6   | TypeScript fundamentals    | new           | Structural typing, primitives/literals, unions/intersections, generics + inference, narrowing, common utility types, working with libraries (~9–10 chunks) |
+| 7   | CSS layout fundamentals    | new           | Box model, normal flow, positioning, stacking contexts, flexbox, grid, responsive, typography essentials (~8–10 chunks)                                    |
+| 8   | Browser rendering pipeline | new, optional | Parse → CSSOM → render tree → layout → paint → composite, layer promotion, Core Web Vitals, profiling (~6–8 chunks)                                        |
+| 9   | React fundamentals         | new           | Rendering model, components/props/state, derived state vs effects, lists/keys, forms, context, data fetching, composition (~10 chunks)                     |
 
 ## Parallel artifact (notes, not a course)
 
@@ -37,17 +38,18 @@ Last updated: 2026-05-08.
 
 - **1 → 2** — close open loops; preserve calibration data; promote `shaky` → `solid`.
 - **2 → 3** — `this` determination builds directly on EC/ER internals from #1; js-inheritance needs `this` in constructors/methods, so cover it first.
-- **3 → 4** — warm cache from `async-js`; substrate-before-abstractions matches formal-reasoning bias.
-- **4 → 5** — TS leverages reading comprehension on every later course; types land concretely on the DOM APIs just learned.
-- **5 → 6** — CSS is the biggest blind spot for backend-strong devs; closes the visible-UI gap.
-- **6 → 7** — CRP needs CSSOM literacy to make sense; safely skippable since DOM capstone gives the lite version.
-- **7 → 8** — React is the capstone; every prior pillar feeds into understanding why it works the way it does.
+- **3 → 4** — modules build on scope (ER types, lexical binding) and `this` (module scope has no global `this`); static linking is easier to reason about with the EC model in memory.
+- **4 → 5** — warm cache from `async-js`; substrate-before-abstractions matches formal-reasoning bias. DOM assumes script-vs-module distinction is already clear.
+- **5 → 6** — TS leverages reading comprehension on every later course; types land concretely on the DOM APIs just learned.
+- **6 → 7** — CSS is the biggest blind spot for backend-strong devs; closes the visible-UI gap.
+- **7 → 8** — CRP needs CSSOM literacy to make sense; safely skippable since DOM capstone gives the lite version.
+- **8 → 9** — React is the capstone; every prior pillar feeds into understanding why it works the way it does.
 
 ## Off-ramps
 
-- **Stop after #6** — ~2.5 months of work, reasonably literate, can review most UI work.
-- **Stop after #8 (skipping #7)** — full path minus engine depth.
-- **Complete through #8 including #7** — full fundamentals depth; ready to architect, not just review.
+- **Stop after #7** — ~2.5 months of work, reasonably literate, can review most UI work.
+- **Stop after #9 (skipping #8)** — full path minus engine depth.
+- **Complete through #9 including #8** — full fundamentals depth; ready to architect, not just review.
 
 ## Rough timeline
 
