@@ -274,20 +274,20 @@ When `console.log(mode)` executes inside `logMode` (in the teaser above), the en
 
 ```mermaid
 flowchart TB
-  subgraph CS["Call Stack"]
+  subgraph CS["Call Stack †"]
     direction TB
-    EC_LOG["logMode EC<br/>LexEnv → logMode ER<br/>VarEnv → logMode ER"]
-    EC_DEBUG["debugScope EC<br/>LexEnv → debugScope ER<br/>VarEnv → debugScope ER"]
-    EC_GLOBAL["Global EC<br/>LexEnv → Global ER<br/>VarEnv → Global ER"]
+    EC_LOG["logMode EC<br/>─────────────<br/>LexEnv → logMode ER<br/>VarEnv → logMode ER"]
+    EC_DEBUG["debugScope EC<br/>─────────────<br/>LexEnv → debugScope ER<br/>VarEnv → debugScope ER"]
+    EC_GLOBAL["Global EC<br/>─────────────<br/>LexEnv → Global ER<br/>VarEnv → Global ER"]
   end
 
-  subgraph SC["Scope Chain"]
+  subgraph SC["Scope Chain †"]
     direction TB
     ER_LOG["logMode ER<br/>{ } (no 'mode')"]
     ER_GLOBAL["Global ER<br/>{ mode: 'production' }"]
   end
 
-  subgraph X["Unreachable"]
+  subgraph UR["Unreachable †"]
     ER_DEBUG["debugScope ER<br/>{ mode: 'debug' }"]
   end
 
@@ -307,14 +307,15 @@ flowchart TB
   style ER_DEBUG fill:#833,stroke:#fff,color:#fff
 ```
 
-| Abbrev | Meaning |
-|---|---|
-| CS | Call Stack — all ECs alive when `console.log(mode)` runs |
-| SC | Scope Chain — the `[[OuterEnv]]` path resolution actually walks |
-| LexEnv | `LexicalEnvironment` — EC pointer; read entry point |
-| VarEnv | `VariableEnvironment` — EC pointer; write target for `var` |
-| ER | Environment Record — holds bindings |
-| Unreachable | debugScope's ER is alive on the stack but has no `[[OuterEnv]]` link from logMode's chain |
+**† Legend:**
+
+- **Call Stack** — all ECs alive when `console.log(mode)` runs inside `logMode`.
+- **Scope Chain** — the `[[OuterEnv]]` path resolution actually walks.
+- **Unreachable** — `debugScope`'s ER is on the call stack but has no link into logMode's scope chain.
+- Green EC = the active one (currently executing). Grey ECs = alive but not running.
+- Blue ERs = on the resolution path. Red ER = unreachable from that path.
+
+**Abbreviations:** LexEnv = `LexicalEnvironment`, VarEnv = `VariableEnvironment`, ER = Environment Record.
 
 **Resolution walk for `mode`:**
 
