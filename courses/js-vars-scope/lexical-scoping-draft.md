@@ -1,8 +1,8 @@
-# Lexical Scoping & Shadowing — Draft
+# 1. Lexical Scoping & Shadowing — Draft
 
 > Section order below is teaching order, not final-note order. Final note will reorganize around the mental model.
 
-## Plan (teaching order)
+## 1.1. Plan (teaching order)
 
 - [x] Capture: definition-time → call-time bridge
 - [x] Scope chain resolution (`ResolveBinding`, pointer roles)
@@ -10,9 +10,9 @@
 - [ ] Closures — ER survival via `[[Environment]]`
 - [ ] Lexical vs dynamic scoping — Bash contrast
 
-## Capture: definition time vs call time
+## 1.2. Capture: definition time vs call time
 
-### Two timelines, two events
+### 1.2.1. Two timelines, two events
 
 A function in JS has two distinct lifecycle moments where scope-related state gets written:
 
@@ -79,14 +79,14 @@ flowchart TB
 **Reading the diagram:**
 
 - Orange nodes = creation phase of an EC (bindings set up, no values yet).
-- Blue nodes = definition time (function object allocated).
+- Blue nodes = definition time (function object allocated). This happens during creation phase for declarations, execution phase for expressions/arrows.
 - Green nodes = execution phase running a statement (including hitting a call expression, which then triggers a new EC).
 
 Both `greet` and `formatter` are expressions — both get their blue "definition time" node inside a green "execution phase" zone. The creation phase (orange) only registers the *binding* (`greet` in TDZ) — the function object doesn't exist yet. This makes the three-way split visible at every level: creation phase ≠ definition time ≠ call time.
 
 At each event, *different* fields get set with *different* sources. Conflating them is the canonical "lexical vs dynamic" trap.
 
-### Definition time — the `[[Environment]]` slot
+### 1.2.2. Definition time — the `[[Environment]]` slot
 
 Every function object has an internal slot called `[[Environment]]`. When the function object is allocated, this slot is filled with **the value of the currently-active `LexicalEnvironment` pointer** — i.e. the ER instance that the active EC's `LexicalEnvironment` is aimed at *right now*.
 
@@ -103,7 +103,7 @@ That's the capture. One pointer copy. It happens *once*, when the function objec
 
 > **Aside —** It's a *reference* to the ER, not a snapshot of its bindings. Mutations to the ER (`mode = "test"` later) are visible through the captured pointer. This is the precise meaning of "closures capture references, not values."
 
-### Call time — the new EC's `[[OuterEnv]]`
+### 1.2.3. Call time — the new EC's `[[OuterEnv]]`
 
 When a function is called, the engine creates a fresh EC for the call. The new EC needs an `[[OuterEnv]]` to anchor the scope chain. Where does it get one?
 
@@ -131,7 +131,7 @@ debugScope();
 
 The caller's ER is **never consulted**. The call stack and the scope chain are two different data structures (we'll see them side-by-side in the resolution section below).
 
-### The bridge — the one diagram
+### 1.2.4. The bridge — the one diagram
 
 ```mermaid
 flowchart LR
@@ -152,7 +152,7 @@ flowchart LR
 
 The function object is the **persistence layer** between the two timelines. It carries the captured pointer through time so the call-time setup can use it.
 
-### Why this forces lexical scoping
+### 1.2.5. Why this forces lexical scoping
 
 JS is lexically scoped *because* the call-time rule is `newEC.[[OuterEnv]] ← function.[[Environment]]` instead of `newEC.[[OuterEnv]] ← caller.LexicalEnvironment`.
 
@@ -160,7 +160,7 @@ If the rule were the latter, JS would be **dynamically** scoped — every functi
 
 The choice of which pointer to copy at call time **is the choice of scoping discipline.** One assignment, one consequence — everything else falls out.
 
-### Capture-lifecycle trace through the teaser
+### 1.2.6. Capture-lifecycle trace through the teaser
 
 ```js
 let mode = "production";
@@ -190,7 +190,7 @@ The capture/setup story ends here: every EC on the stack has its pointers in pla
 
 ---
 
-## Scope chain resolution — the formal walk
+## 1.3. Scope chain resolution — the formal walk
 
 Now that every EC has its `[[OuterEnv]]` set, what does the engine *do* with it when it sees a name like `mode` in the source?
 
@@ -213,7 +213,7 @@ Three properties worth highlighting:
 2. **Entry point is `LexicalEnvironment`.** `VariableEnvironment` is never consulted at lookup time. Full pointer-role breakdown in the next subsection.
 3. **First match wins.** No "outer match would have given a more specific result" tiebreaker. Greedy, one-shot.
 
-### How `LexicalEnvironment` and `VariableEnvironment` fit in
+### 1.3.1. How `LexicalEnvironment` and `VariableEnvironment` fit in
 
 Both are **pointers on the EC**, not on the ER. They decide *which ER you enter the chain from* — the ER links (`[[OuterEnv]]`) are the chain itself.
 
@@ -250,36 +250,54 @@ function example() {
 }
 ```
 
-### Worked trace — resolving `mode` inside `logMode`
+### 1.3.2. Worked trace — resolving `mode` inside `logMode`
+```js
+// Recopy code for reference
+let mode = "production";
+
+function logMode() {          // logMode.[[Environment]] = Global ER (from earlier).
+  console.log(mode);
+}
+
+function debugScope() {
+  let mode = "debug";
+  logMode();                  // ◀── logMode() is called from here.
+}                             //     The active EC at this moment is debugScope's EC.
+                              //     But we don't look at debugScope's ER.
+                              //     We look at logMode.[[Environment]] → Global ER.
+                              //     ∴ logMode's new EC.[[OuterEnv]] = Global ER.
+
+debugScope();
+```
 
 When `console.log(mode)` executes inside `logMode` (in the teaser above), the engine resolves `mode` by walking the chain. The picture below shows the call stack and the scope chain *side by side* at the moment of the lookup — note that `debugScope`'s ER is alive on the call stack but has no link into logMode's scope chain.
 
 ```mermaid
 flowchart TB
-  subgraph CALL_STACK["Call Stack (alive at this moment)"]
+  subgraph CS["Call Stack"]
     direction TB
-    EC_LOG["logMode EC<br/>─────────────<br/>LexicalEnvironment → logMode ER<br/>VariableEnvironment → logMode ER"]
-    EC_DEBUG["debugScope EC<br/>─────────────<br/>LexicalEnvironment → debugScope ER<br/>VariableEnvironment → debugScope ER"]
-    EC_GLOBAL["Global EC<br/>─────────────<br/>LexicalEnvironment → Global ER<br/>VariableEnvironment → Global ER"]
+    EC_LOG["logMode EC<br/>LexEnv → logMode ER<br/>VarEnv → logMode ER"]
+    EC_DEBUG["debugScope EC<br/>LexEnv → debugScope ER<br/>VarEnv → debugScope ER"]
+    EC_GLOBAL["Global EC<br/>LexEnv → Global ER<br/>VarEnv → Global ER"]
   end
 
-  subgraph SCOPE_CHAIN["Scope Chain (name resolution path)"]
+  subgraph SC["Scope Chain"]
     direction TB
-    ER_LOG["logMode ER<br/>{ } (no 'mode' here)"]
-    ER_GLOBAL["Global ER<br/>{ mode: 'production',<br/>  logMode: fn,<br/>  debugScope: fn }"]
+    ER_LOG["logMode ER<br/>{ } (no 'mode')"]
+    ER_GLOBAL["Global ER<br/>{ mode: 'production' }"]
   end
 
-  subgraph UNREACHABLE["NOT on logMode's scope chain"]
+  subgraph X["Unreachable"]
     ER_DEBUG["debugScope ER<br/>{ mode: 'debug' }"]
   end
 
-  EC_LOG -->|"LexicalEnvironment"| ER_LOG
-  ER_LOG -->|"[[OuterEnv]]<br/>(from logMode.[[Environment]])"| ER_GLOBAL
+  EC_LOG -->|"LexEnv"| ER_LOG
+  ER_LOG -->|"[[OuterEnv]]"| ER_GLOBAL
 
-  EC_DEBUG -->|"LexicalEnvironment"| ER_DEBUG
+  EC_DEBUG -->|"LexEnv"| ER_DEBUG
   ER_DEBUG -->|"[[OuterEnv]]"| ER_GLOBAL
 
-  ER_LOG -.-x|"❌ no link"| ER_DEBUG
+  ER_LOG -.-x|"❌"| ER_DEBUG
 
   style EC_LOG fill:#494,stroke:#fff,color:#fff
   style EC_DEBUG fill:#555,stroke:#999,color:#ccc
@@ -289,6 +307,15 @@ flowchart TB
   style ER_DEBUG fill:#833,stroke:#fff,color:#fff
 ```
 
+| Abbrev | Meaning |
+|---|---|
+| CS | Call Stack — all ECs alive when `console.log(mode)` runs |
+| SC | Scope Chain — the `[[OuterEnv]]` path resolution actually walks |
+| LexEnv | `LexicalEnvironment` — EC pointer; read entry point |
+| VarEnv | `VariableEnvironment` — EC pointer; write target for `var` |
+| ER | Environment Record — holds bindings |
+| Unreachable | debugScope's ER is alive on the stack but has no `[[OuterEnv]]` link from logMode's chain |
+
 **Resolution walk for `mode`:**
 
 1. Start at the active EC's `LexicalEnvironment` → **logMode ER**. Look up `mode`. Miss (no binding).
@@ -296,7 +323,7 @@ flowchart TB
 
 `debugScope ER` (holding `mode = "debug"`) is alive on the call stack but has **zero links** into logMode's scope chain. The scope chain is built from `[[OuterEnv]]` pointers — which trace back to the *definition site*, not the *call site*. **Call stack and scope chain are different graphs** — they only overlap when the caller happens to be the definition site, and diverge whenever a function is passed somewhere and called elsewhere.
 
-### Why the chain ends at `null`
+### 1.3.3. Why the chain ends at `null`
 
 The `[[OuterEnv]]` of the Global ER (or Module ER chained to it) is `null` — there is no scope further out. A name not found by the time the walker reaches `null` is `ReferenceError: not defined`. Compare to the "undefined" case — these are spec-distinct failure modes:
 
@@ -305,7 +332,7 @@ The `[[OuterEnv]]` of the Global ER (or Module ER chained to it) is `null` — t
 
 ---
 
-## Shadowing — the first-match consequence
+## 1.4. Shadowing — the first-match consequence
 
 Shadowing isn't a separate rule. It's what `ResolveBinding`'s first-match-wins clause looks like when an inner ER has a binding with the same name as one in an outer ER.
 
@@ -332,7 +359,7 @@ Trace `console.log(x)` inside `inner`:
 
 The walker never looks at outer's `x` or global's `x`. They still exist, are still reachable from other code, are still consulted by name resolutions starting in *their own* scope — but they're invisible to this particular lookup because something closer matched first.
 
-### Shadowing requires a different ER
+### 1.4.1. Shadowing requires a different ER
 
 Same-name bindings in the *same* ER aren't shadowing — they're either an error or an overwrite, depending on keyword:
 
@@ -364,7 +391,7 @@ function f() {
 
 The deciding question is always *"which ER does each binding live in?"* — which is the same question chunk 6 reduced everything to. Shadowing is just two ERs in a parent-child chain, each holding their own copy of the name.
 
-### Cross-keyword shadowing trap
+### 1.4.2. Cross-keyword shadowing trap
 
 `var` at function level + `let` in an enclosing block don't shadow safely — `var` hoists to the Function ER, and if a `let` *with the same name* already exists in that same Function ER (declared elsewhere in the body), it's a SyntaxError. But a `var` inside a block can coexist with a `let` of the same name in an *outer* function only if they actually land in different ERs:
 
