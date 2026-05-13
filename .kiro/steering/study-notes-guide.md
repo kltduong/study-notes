@@ -324,6 +324,15 @@ Present questions **one at a time** — question, answer, feedback, next. In `to
 
 **Format:** Markdown with headings, fenced code blocks (with language tags), tables, and mermaid diagrams. For flow and relationship diagrams, **use mermaid — not ASCII/Unicode box-drawing art.** Mermaid renders as graphs with arrows; box-drawing lines (`─ │ ┌ └`) can't express that. Exception: inside code blocks, box-drawing tree characters (`├── └──`) are fine for showing hierarchical _data-structure layouts_ (fields of a record, directory trees, object layouts) — mermaid is clunky for that shape. Plain text in code blocks for pseudo-code/asm is also fine. Mermaid node styling: dark fills with white text (e.g. `fill:#46c,stroke:#fff,color:#fff`) for dark-mode legibility. Avoid light pastel fills with dark text.
 
+**Mermaid label clipping.** Subgraph titles and edge labels clip when they exceed the rendered box width — mermaid doesn't wrap text. To handle long explanations:
+
+- **Keep diagram labels short.** Use abbreviations or terse phrases in subgraph titles, node labels, and edge labels.
+- **Offload detail to a markdown legend below the diagram.** The legend is regular prose — no length constraints.
+- **Mark labels with `†`** in the diagram to signal "see legend below." Start the legend block with `**† Legend:**` so the dagger in the diagram points the reader to the matching dagger in the prose.
+- **Abbreviations line.** After the legend bullets, add a one-liner expanding any abbreviations used in node/edge labels (e.g. `**Abbreviations:** LexEnv = LexicalEnvironment, ER = Environment Record`).
+
+Principle: the diagram handles spatial relationships and compact labels; the prose handles explanation. The `†` bridges the two.
+
 **Tone:** Concise — notes are for future-self, not strangers. No filler. Match existing note style in the folder.
 
 ### Surgical edits
