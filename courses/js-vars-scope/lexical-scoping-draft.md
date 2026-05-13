@@ -2,6 +2,14 @@
 
 > Section order below is teaching order, not final-note order. Final note will reorganize around the mental model.
 
+## Plan (teaching order)
+
+- [x] Capture: definition-time → call-time bridge
+- [x] Scope chain resolution (`ResolveBinding`, pointer roles)
+- [x] Shadowing — first-match consequence
+- [ ] Closures — ER survival via `[[Environment]]`
+- [ ] Lexical vs dynamic scoping — Bash contrast
+
 ## Capture: definition time vs call time
 
 ### Two timelines, two events
@@ -121,7 +129,7 @@ function debugScope() {
 debugScope();
 ```
 
-The caller's ER is **never consulted**. The call stack and the scope chain are two different data structures.
+The caller's ER is **never consulted**. The call stack and the scope chain are two different data structures (we'll see them side-by-side in the resolution section below).
 
 ### The bridge — the one diagram
 
@@ -152,7 +160,7 @@ If the rule were the latter, JS would be **dynamically** scoped — every functi
 
 The choice of which pointer to copy at call time **is the choice of scoping discipline.** One assignment, one consequence — everything else falls out.
 
-### Traced through the teaser
+### Capture-lifecycle trace through the teaser
 
 ```js
 let mode = "production";
@@ -169,7 +177,7 @@ function debugScope() {
 debugScope();
 ```
 
-Step-by-step, with the two timelines made visible:
+Step-by-step (capture/setup events only — the actual `mode` resolution walk is detailed in the next section):
 
 | Moment | What happens | Resulting state |
 |---|---|---|
@@ -177,11 +185,74 @@ Step-by-step, with the two timelines made visible:
 | Execution phase: `debugScope()` call | New EC pushed. Its `[[OuterEnv]] ← debugScope.[[Environment]] = Global ER`. | debugScope EC: `LexicalEnvironment → debugScope ER`, `[[OuterEnv]] → Global ER` |
 | Inside `debugScope`: `let mode = "debug"` | New binding `mode = "debug"` in debugScope's ER. | debugScope ER: `{ mode: "debug" }` |
 | Inside `debugScope`: `logMode()` call | New EC pushed. Its `[[OuterEnv]] ← logMode.[[Environment]] = Global ER`. **Not** debugScope's ER. | logMode EC: `LexicalEnvironment → logMode ER`, `[[OuterEnv]] → Global ER` |
-| Inside `logMode`: `console.log(mode)` | Resolve `mode`. Walk `[[OuterEnv]]` chain: logMode ER (miss) → Global ER (hit: `"production"`). | Prints `"production"` |
 
-### Resolving `mode` inside `logMode` — the full pointer walk
+The capture/setup story ends here: every EC on the stack has its pointers in place. What happens when `console.log(mode)` actually runs is the resolution walk — covered next.
 
-When `console.log(mode)` executes inside `logMode`, the engine resolves `mode` by walking the Environment Record chain. Here's the complete picture — including where `LexicalEnvironment` and `VariableEnvironment` sit, and why `debugScope`'s ER is invisible:
+---
+
+## Scope chain resolution — the formal walk
+
+Now that every EC has its `[[OuterEnv]]` set, what does the engine *do* with it when it sees a name like `mode` in the source?
+
+It runs an algorithm called `ResolveBinding`. Spec-equivalent pseudocode:
+
+```
+ResolveBinding(name, env = activeEC.LexicalEnvironment):
+  if env has a binding for `name`:
+    return that binding
+  if env.[[OuterEnv]] is null:
+    throw ReferenceError(`${name} is not defined`)
+  return ResolveBinding(name, env.[[OuterEnv]])
+```
+
+In words: start at the **innermost ER** (whatever `LexicalEnvironment` currently aims at), check for the name, follow `[[OuterEnv]]` if not found, stop at the first hit or at `null`.
+
+Three properties worth highlighting:
+
+1. **Runtime, per reference.** Every `mode` in the source code runs `ResolveBinding` afresh. Bindings aren't "looked up once and cached" — though engines do optimize hot paths with inline caches, that's an engine optimization, not a spec guarantee.
+2. **Entry point is `LexicalEnvironment`.** `VariableEnvironment` is never consulted at lookup time. Full pointer-role breakdown in the next subsection.
+3. **First match wins.** No "outer match would have given a more specific result" tiebreaker. Greedy, one-shot.
+
+### How `LexicalEnvironment` and `VariableEnvironment` fit in
+
+Both are **pointers on the EC**, not on the ER. They decide *which ER you enter the chain from* — the ER links (`[[OuterEnv]]`) are the chain itself.
+
+| Pointer | Lives on | Role | Moves? |
+|---|---|---|---|
+| `LexicalEnvironment` | EC | **Read entry point.** Resolution starts here. | Yes — advances into block ERs, rewinds on block exit. |
+| `VariableEnvironment` | EC | **Write target for `var`/function decls.** | No — pinned to the function-level ER for the EC's lifetime. |
+
+Resolution never consults `VariableEnvironment`. The algorithm is: start at `currentEC.LexicalEnvironment`, walk `[[OuterEnv]]` until found. That's it.
+
+`VariableEnvironment` exists so the engine knows *where to place* a `var` binding during creation phase — it jumps directly to the function ER without walking the chain. A write-time shortcut, not a read-time participant.
+
+**Why `var` bindings are still reachable via normal resolution:** the function-level ER (what `VariableEnvironment` points at) is *always* an ancestor on the `[[OuterEnv]]` chain of any block ER inside that function. Block ERs are nested inside the function, so the chain is:
+
+```
+innermost block ER → [[OuterEnv]] → ... → function ER → [[OuterEnv]] → outer scope
+```
+
+Every block ER chains back up to the function ER. So `var` bindings placed there are found by the normal walk — no special read path needed.
+
+```js
+function example() {
+  var x = 1;         // placed in function ER (via VariableEnvironment)
+
+  if (true) {
+    // LexicalEnvironment advances → block ER
+    let z = 3;       // placed in block ER (via LexicalEnvironment)
+    console.log(x);  // resolve x: block ER (miss) → [[OuterEnv]] → function ER (hit: 1)
+    var w = 4;       // placed in function ER (via VariableEnvironment — skips block)
+  }
+  // LexicalEnvironment rewinds → function ER
+  console.log(w);    // 4 — w is in function ER, reachable
+  // console.log(z); // ReferenceError — block ER is unreachable (GC-eligible)
+}
+```
+
+### Worked trace — resolving `mode` inside `logMode`
+
+When `console.log(mode)` executes inside `logMode` (in the teaser above), the engine resolves `mode` by walking the chain. The picture below shows the call stack and the scope chain *side by side* at the moment of the lookup — note that `debugScope`'s ER is alive on the call stack but has no link into logMode's scope chain.
 
 ```mermaid
 flowchart TB
@@ -218,50 +289,103 @@ flowchart TB
   style ER_DEBUG fill:#833,stroke:#fff,color:#fff
 ```
 
-**Resolution algorithm for `mode`:**
+**Resolution walk for `mode`:**
 
-1. Start at the active EC's `LexicalEnvironment` → **logMode ER**. Look up `mode`. Miss (no such binding).
+1. Start at the active EC's `LexicalEnvironment` → **logMode ER**. Look up `mode`. Miss (no binding).
 2. Follow `[[OuterEnv]]` → **Global ER**. Look up `mode`. Hit: `"production"`. Done.
 
-`debugScope ER` (with `mode: "debug"`) is alive on the call stack but has **zero links** into logMode's scope chain. The scope chain is built from `[[OuterEnv]]` pointers — which trace back to *definition site*, not *call site*.
+`debugScope ER` (holding `mode = "debug"`) is alive on the call stack but has **zero links** into logMode's scope chain. The scope chain is built from `[[OuterEnv]]` pointers — which trace back to the *definition site*, not the *call site*. **Call stack and scope chain are different graphs** — they only overlap when the caller happens to be the definition site, and diverge whenever a function is passed somewhere and called elsewhere.
 
-### Where `LexicalEnvironment` and `VariableEnvironment` fit in resolution
+### Why the chain ends at `null`
 
-Both are **pointers on the EC**, not on the ER. They decide *which ER you enter the chain from* — the ER links (`[[OuterEnv]]`) are the chain itself.
+The `[[OuterEnv]]` of the Global ER (or Module ER chained to it) is `null` — there is no scope further out. A name not found by the time the walker reaches `null` is `ReferenceError: not defined`. Compare to the "undefined" case — these are spec-distinct failure modes:
 
-| Pointer | Lives on | Role | Moves? |
-|---|---|---|---|
-| `LexicalEnvironment` | EC | **Read entry point.** Resolution starts here. | Yes — advances into block ERs, rewinds on block exit. |
-| `VariableEnvironment` | EC | **Write target for `var`/function decls.** | No — pinned to the function-level ER for the EC's lifetime. |
+- **Binding doesn't exist** → walker reaches `null` → `ReferenceError`.
+- **Binding exists, value is `undefined`** → walker hits, returns binding holding `undefined` → no error, value is `undefined`.
 
-Resolution never consults `VariableEnvironment`. The algorithm is: start at `currentEC.LexicalEnvironment`, walk `[[OuterEnv]]` until found. That's it.
+---
 
-`VariableEnvironment` exists so the engine knows *where to place* a `var` binding during creation phase — it jumps directly to the function ER without walking the chain backwards. A write-time shortcut, not a read-time participant.
+## Shadowing — the first-match consequence
 
-**Why `var` bindings are still reachable via normal resolution:** the function-level ER (what `VariableEnvironment` points at) is *always* an ancestor on the `[[OuterEnv]]` chain of any block ER inside that function. Block ERs are nested inside the function, so the chain is:
-
-```
-innermost block ER → [[OuterEnv]] → ... → function ER → [[OuterEnv]] → outer scope
-```
-
-Every block ER chains back up to the function ER. So `var` bindings placed there are found by the normal walk — no special read path needed.
+Shadowing isn't a separate rule. It's what `ResolveBinding`'s first-match-wins clause looks like when an inner ER has a binding with the same name as one in an outer ER.
 
 ```js
-function example() {
-  var x = 1;         // placed in function ER (via VariableEnvironment)
+let x = "global";
 
-  if (true) {
-    // LexicalEnvironment advances → block ER
-    let z = 3;       // placed in block ER (via LexicalEnvironment)
-    console.log(x);  // resolve x: block ER (miss) → [[OuterEnv]] → function ER (hit: 1)
-    var w = 4;       // placed in function ER (via VariableEnvironment — skips block)
+function outer() {
+  let x = "outer";
+
+  function inner() {
+    let x = "inner";
+    console.log(x);     // ?
   }
-  // LexicalEnvironment rewinds → function ER
-  console.log(w);    // 4 — w is in function ER, reachable
-  // console.log(z); // ReferenceError — block ER is unreachable (GC-eligible)
+
+  inner();
+}
+
+outer();
+```
+
+Trace `console.log(x)` inside `inner`:
+
+1. `LexicalEnvironment` → inner's Function ER. Has `x = "inner"`. **Hit. Done.**
+
+The walker never looks at outer's `x` or global's `x`. They still exist, are still reachable from other code, are still consulted by name resolutions starting in *their own* scope — but they're invisible to this particular lookup because something closer matched first.
+
+### Shadowing requires a different ER
+
+Same-name bindings in the *same* ER aren't shadowing — they're either an error or an overwrite, depending on keyword:
+
+```js
+function f() {
+  let x = 1;
+  {                   // ◀── new Block ER pushed
+    let x = 2;        // OK — different ER. Shadowing.
+    console.log(x);   // 2
+  }                   // ◀── Block ER discarded
+  console.log(x);     // 1
 }
 ```
 
-The `mode = "debug"` binding sits in debugScope's ER. debugScope's ER is on the **call stack** (its EC is alive while logMode runs) but it's **not on logMode's scope chain** — because logMode's `[[OuterEnv]]` was set from `logMode.[[Environment]]`, which was the *Global ER snapshot* taken when logMode was defined.
+```js
+function f() {
+  let x = 1;
+  let x = 2;          // SyntaxError — same ER. let forbids redeclaration.
+}
+```
 
-The call stack and the scope chain are different graphs. They overlap when caller-defines-callee, but they diverge whenever a function is passed somewhere and called elsewhere.
+```js
+function f() {
+  var x = 1;
+  var x = 2;          // No error — same ER. var allows redeclaration.
+  console.log(x);     // 2
+}
+```
+
+The deciding question is always *"which ER does each binding live in?"* — which is the same question chunk 6 reduced everything to. Shadowing is just two ERs in a parent-child chain, each holding their own copy of the name.
+
+### Cross-keyword shadowing trap
+
+`var` at function level + `let` in an enclosing block don't shadow safely — `var` hoists to the Function ER, and if a `let` *with the same name* already exists in that same Function ER (declared elsewhere in the body), it's a SyntaxError. But a `var` inside a block can coexist with a `let` of the same name in an *outer* function only if they actually land in different ERs:
+
+```js
+function f() {
+  let x = 1;          // function-level let → Function ER
+  {
+    var x = 2;        // var hoists to Function ER → collides with the let
+                      // SyntaxError: Identifier 'x' has already been declared
+  }
+}
+```
+
+```js
+function f() {
+  {
+    let x = 1;        // Block ER
+  }
+  var x = 2;          // Function ER — different ER, no collision
+  console.log(x);     // 2
+}
+```
+
+The trap is that `var`-in-block *looks* like it should land in the block — visually it does, syntactically it doesn't. Always ask: which ER does it land in?
