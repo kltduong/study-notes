@@ -121,6 +121,7 @@ Write teaching content to a **temp `.md` file in the same topic folder** rather 
 - **After chunk confirmation:** write the final note (reorganized by mental model, not teaching order), then delete the draft.
 - **Chat messages** stay short — signposting, questions, feedback, understanding checks. Not full content dumps.
 - **Mode B:** append to or overwrite the same draft file as new sections are taught. One draft per chunk, not one per section.
+- **Top-of-draft plan checklist.** Required for Mode B, optional for Mode A. Open the draft with a `## Plan (teaching order)` checklist enumerating the chunk's sub-parts. Mark each `[x]` as that sub-part lands. Two purposes: the learner sees progress in the editor without asking; the teacher doesn't re-derive the sub-part list from conversation context each turn. Deleted along with the draft at chunk close (the final note doesn't carry it).
 
 ### Chunk opener (teaser-first)
 
