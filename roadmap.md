@@ -10,7 +10,7 @@ Last updated: 2026-05-08.
 | --- | -------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | `js-vars-scope`            | in progress   | Finish closures + variable lifecycle                                                                                                                       |
 | 2   | `js-inheritance`           | in progress   | Finish chains, class syntax, composition (~30% remaining)                                                                                                  |
-| 3   | `js-functions-this`        | new           | Reference type, `this` determination (one rule + overrides), `call`/`apply`/`bind`, arrow functions, `new` protocol, class & `this`, patterns (~7 chunks)  |
+| 3   | `js-values-fn-this`        | new           | Values & memory model (primitive vs object, slot vs heap reference, copy semantics, identity), Reference type, `this` determination (one rule + overrides), `call`/`apply`/`bind`, arrow functions, `new` protocol, class & `this`, patterns (~8 chunks) |
 | 4   | `js-modules`               | new           | Why modules exist, ES module syntax, static linking, live bindings, module record lifecycle, circular deps, dynamic `import()`, Node dual-mode, browser loading, bundlers, top-level `await` (~13 chunks) |
 | 5   | DOM fundamentals           | new           | Tree, querying, mutation, event dispatch, delegation, attrs vs props, input, forms, custom events, observers, capstone with CRP-lite (~11 chunks)          |
 | 6   | TypeScript fundamentals    | new           | Structural typing, primitives/literals, unions/intersections, generics + inference, narrowing, common utility types, working with libraries (~9–10 chunks) |
@@ -32,12 +32,12 @@ Last updated: 2026-05-08.
 
 - **Web workers** — only if in-browser AI inference / heavy client compute appears.
 - **Browser security model course** (CORS + cookies + CSP + iframe + `postMessage` + SRI) — only if a project demands; otherwise CORS lives in `notes/client-http/`.
-- **Functions deep-dive (`this`/bind/composition)** — promoted to main path as #3 (`js-functions-this`).
+- **Functions deep-dive (`this`/bind/composition)** — promoted to main path as #3 (`js-values-fn-this`).
 
 ## Order rationale
 
 - **1 → 2** — close open loops; preserve calibration data; promote `shaky` → `solid`.
-- **2 → 3** — `this` determination builds directly on EC/ER internals from #1; js-inheritance needs `this` in constructors/methods, so cover it first.
+- **2 → 3** — value semantics (primitive vs reference) are needed to understand what `this` *is* (a reference in a slot); `this` determination builds directly on EC/ER internals from #1; js-inheritance needs `this` in constructors/methods, so cover it first.
 - **3 → 4** — modules build on scope (ER types, lexical binding) and `this` (module scope has no global `this`); static linking is easier to reason about with the EC model in memory.
 - **4 → 5** — warm cache from `async-js`; substrate-before-abstractions matches formal-reasoning bias. DOM assumes script-vs-module distinction is already clear.
 - **5 → 6** — TS leverages reading comprehension on every later course; types land concretely on the DOM APIs just learned.
