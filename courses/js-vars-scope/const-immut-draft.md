@@ -5,9 +5,9 @@
 - [x] **Chunk opener** — six predictions that surface "const binds bindings, not values"
 - [x] **The axiom** — `const` is a *binding-level* constraint, not a *value-level* one
 - [x] **What `const` actually does** — spec mechanism (one-flag check on Set; first init only)
-- [ ] **Value-level immutability** — `Object.freeze`, shallow vs deep, primitive vs object distinction
-- [ ] **Practical use** — defaults, when `let` is needed, real-world conventions
-- [ ] **Understanding check** — 2–3 questions
+- [x] **Value-level immutability** — `Object.freeze`, shallow vs deep, primitive vs object distinction
+- [x] **Practical use** — defaults, when `let` is needed, real-world conventions
+- [x] **Understanding check** — 2–3 questions
 
 ---
 
@@ -36,6 +36,11 @@ Six predictions. Take the script as one unit (assume strict mode throughout, eve
 The "wow" question, save for after the predictions land:
 
 - (g) What is `const` actually constraining — the binding `arr`, the array object it points to, or both?
+
+> 📝 **Session record (chunk-opener predictions):**
+> - **Your answers:** (a) ✅ fine | (b) ✅ fine | (c) ✅ error (didn't name `TypeError`) | (d) ✅ fine | (e) ✅ error | (f) ✅ `1` (assuming L8 skipped) | (g) ✅ binding only
+> - **Tightenings:** (c) → `TypeError` specifically (runtime check; one parser exception is `const x;` which is `SyntaxError`). (e) → strict mode throws `TypeError`; sloppy mode silently no-ops — the silent-failure motivation behind strict mode itself.
+> - Full reveal table + axiom derivation in the section below — that's the expanded tightening for all six predictions plus (g).
 
 ---
 
@@ -293,3 +298,141 @@ user = { name: "Carol" };       // (d)
 ```
 
 Strict mode. For each line, predict: error (which type) or fine (and what changes)? Answer all four at once.
+
+> ✅ Locked: (a) TypeError — `name`'s descriptor `[[Writable]]: false`. (b) fine — `roles` slot is locked but the array object is a separate heap allocation, never frozen. (c) TypeError — `roles`'s descriptor `[[Writable]]: false`. (d) TypeError — `user`'s binding has `mutable: false`. Two distinct mechanisms (descriptor flag vs ER flag) firing on the same line family.
+
+---
+
+## Practical use — defaults, when `let` is needed, conventions
+
+The mechanism is one thing; how to *use* it day to day is another. The community has settled on a small set of rules that fall straight out of the model.
+
+### The default rule
+
+> **Use `const` everywhere. Reach for `let` only when you genuinely need to rebind. Never use `var`.**
+
+Three reasons this default works:
+
+1. **Reader signal.** When a maintainer scans `const foo = …`, they know the name will refer to the same value for the rest of the scope. With `let`, they have to scan the whole scope for reassignments. `const` gives a local guarantee that compresses the cognitive load of reading code.
+2. **Mistake-catcher.** Accidental rebinding is a real bug class — typos (`user = userData` instead of `user.id = userData.id`), refactors that left a stray assignment. `const` turns those into immediate `TypeError`s instead of silent state corruption.
+3. **No runtime cost.** `mutable: false` is one bit. There is zero performance argument for `let` over `const`.
+
+### When `let` is actually needed
+
+`let` is for cases where the *binding* needs to be reassigned. Concretely:
+
+| Pattern                  | Why `let`                                                                  |
+| ------------------------ | -------------------------------------------------------------------------- |
+| Loop counter             | `for (let i = 0; i < n; i++)` — `i++` is `i = i + 1`, a rebind             |
+| Accumulator (mutable)    | `let total = 0; for (...) total += x;`                                     |
+| Conditional assignment   | `let value; if (cond) value = a; else value = b;` (though ternary often beats this) |
+| Reassignment in branches | `let result = await tryA(); if (!result) result = await tryB();`           |
+
+Notice every case has an **explicit rebind** of the named slot. If you're just mutating an object (`config.foo = 5`), that's not a rebind — `const config = { … }` works.
+
+### When `Object.freeze` is worth it
+
+Frozen objects have a real runtime cost (every mutation hits the descriptor check), so the reach is selective:
+
+- **Module-level config / constants.** `const ROUTES = Object.freeze({ home: "/", about: "/about" })` — frozen once at module load, read constantly.
+- **Enum-like objects.** `const Status = Object.freeze({ PENDING: 0, ACTIVE: 1, DONE: 2 })` — semantic intent is "these never change."
+- **Defensive copies handed across module boundaries** — when you don't trust callers not to mutate.
+- **Test fixtures** — to catch tests that accidentally mutate shared state.
+
+When **not** to freeze:
+
+- Per-request data, working state, anything you'll modify next millisecond.
+- Frequently allocated objects (the freeze cost adds up).
+- Anywhere a downstream library expects to mutate the object you pass it.
+
+### What about `Object.freeze` deep?
+
+Most codebases don't deep-freeze. The shallow version + naming convention (`SCREAMING_SNAKE_CASE` for module-level constants) is enough signal. Reach for `deepFreeze` only when:
+
+- The object is genuinely meant to be a deep-immutable value (e.g. an enum-like with nested namespacing).
+- Tests need to enforce no-mutation across a complex shape.
+
+For real "immutable data structure" work, libraries like Immer or Immutable.js are usually a better answer than hand-rolled `deepFreeze` — they give structural sharing and lazy copies, while `freeze` just throws on writes.
+
+### Beyond `const`: the spectrum
+
+| Tool                             | Constrains                              | Use when                                           |
+| -------------------------------- | --------------------------------------- | -------------------------------------------------- |
+| `const`                          | Binding (no rebind)                     | Default for **all** local declarations             |
+| `Object.freeze` (shallow)        | One object's own props                  | Module config, enum-like objects                   |
+| `deepFreeze` (recursive)         | Object + everything reachable           | Test fixtures, deeply-nested constants             |
+| TypeScript `readonly` / `Readonly<T>` | **Compile-time** binding/prop guards | Catch mutation at typecheck time, zero runtime cost |
+| `Object.defineProperty(... { writable: false })` | Specific properties             | Granular per-property locking (rare in app code)   |
+| Immer / Immutable.js             | Structural-sharing immutable updates   | Complex state trees (Redux-style)                  |
+
+The progression: bigger lock → more guarantees → more cost. Start at `const` and move up only when there's a concrete reason.
+
+### Common anti-patterns
+
+- **`let` "just in case I need to reassign later."** YAGNI — change to `let` if and when. Default `const` is the louder signal.
+- **`const` + `Object.freeze` everywhere.** Over-freezing is a real cost (every property write hits the descriptor check). Reserve for objects with "constant" semantics.
+- **Treating `const` as "this value cannot change."** It's the binding-vs-value confusion. Internalize the axiom: binding only.
+- **`var` in modern code.** No legitimate use case once `let`/`const` exist (covered in [`var-quirks.md`](./var-quirks.md)).
+
+---
+
+## End-of-chunk understanding check
+
+3 questions, one at a time.
+
+**Q1.** Predict the output:
+
+```js
+"use strict";
+const COLORS = Object.freeze({
+  primary: "#46c",
+  shades: ["#46c", "#358", "#234"]
+});
+
+COLORS.primary = "#fff";       // L4
+COLORS.shades.push("#123");    // L5
+COLORS.shades[0] = "#fff";     // L6
+
+console.log(COLORS.primary);   // L8
+console.log(COLORS.shades);    // L9
+```
+
+What happens at each of L4, L5, L6? What prints at L8 and L9?
+
+> 📝 **Session record:**
+> - **Your answer:** L4 error. L5 fine. L6 fine. L8 (assuming L4 skipped): `"#46c"`. L9 (assuming L4 skipped): `["#fff", "#358", "#234"]`.
+> - **Tightening 1 (script-level halt):** Per-line mechanism right, but in strict mode L4's `TypeError` is uncaught — execution stops. L5/L6/L8/L9 are unreachable in the as-written script; the only output is the thrown error. Sloppy mode silently no-ops L4 and execution continues. Strict trades silent corruption for early death — same pattern, observable through *what runs after the failure*.
+> - **Tightening 2 (chained trace miss):** Under "assume L4 skipped," L9 should be `["#fff", "#358", "#234", "#123"]` — the L5 `push` appended `"#123"` *before* L6 overwrote index 0. Watch for trace-composition errors when stacking mutations on the same object.
+
+---
+
+**Q2.** True or false (and explain): "Using `const` for everything makes a program more memory-efficient, because the engine can avoid allocating a writable slot for the binding."
+
+> 📝 **Session record:**
+> - **Your answer:** False. `const` does not make a program more memory-efficient — only one setting field is changed compared to `let`.
+> - **Tightening (JIT aside):** Correct. The binding record exists either way; only the `mutable` flag differs (one bit). There *is* a small JIT-level upside — V8 and similar can sometimes specialize on knowing a `const` won't be reassigned (e.g., inlining a top-level `const PI = 3.14`) — but that's a speculative optimization, not a memory saving. The slot still exists, same shape.
+
+---
+
+**Q3.** Walk through this and predict each line — focus on *why*, not just the verdict:
+
+```js
+"use strict";
+const items = [];
+
+function addItem(x) {  // L4
+  items.push(x);       // L5
+}
+
+addItem("a");          // L7
+addItem("b");          // L8
+items = items.concat(["c"]);  // L9
+```
+
+For L5, L7, L8, L9 — what happens, and tied to which mechanism (binding constraint vs property descriptor vs neither)?
+
+> 📝 **Session record:**
+> - **Your answer:** `const items` sets `mutable: false` on the ER; binding can't change but the heap object setting is untouched. L5 fine, L7 fine, L8 fine, L9 error.
+> - **Tightening 1 (closure mechanism for L5):** The closure resolves `items` via `[[OuterEnv]]` walk (lexical scoping, [`lexical-scoping.md`](./lexical-scoping.md)). Reads the heap reference, then `Array.prototype.push` does an internal `[[Set]]` on the heap object. The ER slot is read, never written.
+> - **Tightening 2 (binding follows the binding for L7/L8):** The `mutable: false` flag travels with the *binding*, not the call site. There is one binding for `items` (in module/script scope); a rebind anywhere — inside or outside the function — would be blocked. Rebind vs mutate are spec-level different things regardless of *where* they happen.
+> - **Tightening 3 (precise op for L9):** `SetMutableBinding("items", newArr, true)` sees `mutable: false` → `TypeError: Assignment to constant variable.`
