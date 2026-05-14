@@ -15,6 +15,7 @@ Start with `variable-lifecycle.md` — it introduces the 3-stage model that ever
 - [tdz.md](tdz.md) — TDZ as a time window (not a source region), the one-flag/one-check mechanism, "temporal" meaning runtime not lexical, less obvious TDZ spots (default params, self-reference, class), design rationale, what TDZ pays for (block-shadowing + creation phase)
 - [scope-model.md](scope-model.md) — the four scope types (global, function, block, module) as ER instances, two-axis model (keyword × pointer behavior), global object attachment and why it's problematic, script vs module topology
 - [lexical-scoping.md](lexical-scoping.md) — the call-time pointer-copy axiom (`newEC.[[OuterEnv]] ← function.[[Environment]]`) that makes JS lexical, `ResolveBinding` walk, shadowing as first-match consequence, closures as ER survival via GC reachability, contrast with dynamic scoping (Bash)
+- [var-quirks.md](var-quirks.md) — `var` quirks (re-declaration as idempotent registration, implicit globals as failed `ResolveBinding`) and historical patterns (IIFE as scope primitive, `"use strict"`) all derived from one axiom: pre-ES6, the function was the only construct that creates a new scope
 
 ## Cross-cutting concepts
 

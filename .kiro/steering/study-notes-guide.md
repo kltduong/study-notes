@@ -115,10 +115,10 @@ Apply learner preferences from `learner-profile.md` to decide which elements to 
 Write teaching content to a **temp `.md` file in the same topic folder** rather than inline in chat. Mermaid diagrams and tables render properly in the editor's markdown preview but not in the chat panel.
 
 - **During teaching:** write to `<topic-folder>/<descriptive-name>-draft.md`. Mention the filename.
-- **After chunk confirmation:** write the final note (reorganized by mental model, not teaching order), then delete the draft.
+- **After chunk confirmation:** write the final note (reorganized by mental model, not teaching order). Keep the draft — it preserves the teaching flow (incremental build-up, teaser reveals, step-by-step reasoning) for later review.
 - **Chat messages** stay short — signposting, questions, feedback, understanding checks. Not full content dumps.
 - Append to or overwrite the same draft file as new sections are taught. One draft per chunk, not one per section.
-- **Top-of-draft plan checklist.** Open the draft with a `## Plan (teaching order)` checklist enumerating the chunk's sub-parts. Mark each `[x]` as that sub-part lands. Two purposes: the learner sees progress in the editor without asking; the teacher doesn't re-derive the sub-part list from conversation context each turn. Deleted along with the draft at chunk close (the final note doesn't carry it).
+- **Top-of-draft plan checklist.** Open the draft with a `## Plan (teaching order)` checklist enumerating the chunk's sub-parts. Mark each `[x]` as that sub-part lands. Two purposes: the learner sees progress in the editor without asking; the teacher doesn't re-derive the sub-part list from conversation context each turn. Stays in the draft (not carried to the final note) — useful context when reviewing the teaching path later.
 
 ### Chunk opener (teaser-first)
 

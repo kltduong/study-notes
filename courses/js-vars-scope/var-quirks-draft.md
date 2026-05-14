@@ -8,7 +8,7 @@
 - [x] **Re-declaration** — why `var x = 1; var x = 2` is legal; idempotent registration during creation phase
 - [x] **Implicit globals & `"use strict"`** — failed `ResolveBinding` + sloppy fallback vs strict `ReferenceError`
 - [x] **When `var` is still appropriate** — honest list: legacy code, top-level scripts, hoisted decls; mostly "almost never in new code"
-- [ ] **Understanding check** — 2–3 questions
+- [x] **Understanding check** — 2–3 questions
 
 ---
 
