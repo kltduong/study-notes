@@ -134,6 +134,8 @@ Before teaching each chunk:
 
 Snippet format: runnable (Node / browser console) when the concept surfaces in output. Mental-trace when it doesn't (e.g. execution-context internals). Default to runnable.
 
+**Snippet selection preference:** prefer snippets that use only prior knowledge to surface the gap the new concept fills — the user reasons confidently, hits a wall, and the new feature arrives as the answer to a felt need. Fall back to snippets that use the new feature directly when no natural "before" framing exists (e.g. explaining an engine-internal mechanism with no user-facing "without this" state).
+
 ### Interactive rhythm
 
 Teaching is a conversation, not a lecture.
