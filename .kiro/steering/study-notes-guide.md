@@ -108,10 +108,7 @@ Apply learner preferences from `learner-profile.md` to decide which elements to 
 
 ### Delivery mode per chunk
 
-- **Mode A — Full upfront, then discuss.** Present the entire chunk's content in one pass, then discuss and check understanding. Use for **structural/map chunks** — where the value is seeing the whole landscape at once (e.g. type hierarchies, component inventories, scope models).
-- **Mode B — Gradual build-up.** Teach in smaller pieces, pause for absorption or quick checks, build the next piece on top. Understanding check at the end. Use for **derivation/chain chunks** — where each step depends on the previous landing correctly (e.g. "why does TDZ exist?", creation/execution phase walkthrough).
-
-Judge per chunk which mode fits. Switch on user request.
+**Gradual build-up.** Teach in smaller pieces, pause for absorption or quick checks, build the next piece on top. Understanding check at the end. This applies to all chunks — even inventory/map content (e.g. "the 4 scope types") is introduced incrementally so comparisons emerge as items accumulate rather than requiring the reader to hold everything at once.
 
 ### Teaching content delivery
 
@@ -120,8 +117,8 @@ Write teaching content to a **temp `.md` file in the same topic folder** rather 
 - **During teaching:** write to `<topic-folder>/<descriptive-name>-draft.md`. Mention the filename.
 - **After chunk confirmation:** write the final note (reorganized by mental model, not teaching order), then delete the draft.
 - **Chat messages** stay short — signposting, questions, feedback, understanding checks. Not full content dumps.
-- **Mode B:** append to or overwrite the same draft file as new sections are taught. One draft per chunk, not one per section.
-- **Top-of-draft plan checklist.** Required for Mode B, optional for Mode A. Open the draft with a `## Plan (teaching order)` checklist enumerating the chunk's sub-parts. Mark each `[x]` as that sub-part lands. Two purposes: the learner sees progress in the editor without asking; the teacher doesn't re-derive the sub-part list from conversation context each turn. Deleted along with the draft at chunk close (the final note doesn't carry it).
+- Append to or overwrite the same draft file as new sections are taught. One draft per chunk, not one per section.
+- **Top-of-draft plan checklist.** Open the draft with a `## Plan (teaching order)` checklist enumerating the chunk's sub-parts. Mark each `[x]` as that sub-part lands. Two purposes: the learner sees progress in the editor without asking; the teacher doesn't re-derive the sub-part list from conversation context each turn. Deleted along with the draft at chunk close (the final note doesn't carry it).
 
 ### Chunk opener (teaser-first)
 
