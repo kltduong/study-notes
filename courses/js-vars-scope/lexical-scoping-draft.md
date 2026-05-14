@@ -1,32 +1,64 @@
-# 1. Lexical Scoping & Shadowing — Draft
+# 1. Lexical Scoping & Shadowing
 
-> Section order below is teaching order, not final-note order. Final note will reorganize around the mental model.
+**TL;DR** — JS is lexically scoped because at every call, the engine sets `newEC.[[OuterEnv]] ← thisFunction.[[Environment]]` — the function object's captured pointer — instead of `← caller.LexicalEnvironment`. That one assignment, plus the heap-allocated ER + reachability-based GC model from earlier chunks, derives every behavior in this note: the scope chain, shadowing, closures, and the contrast with dynamic scoping.
 
-## 1.1. Plan (teaching order)
+Terms used below: **EC** = Execution Context, **ER** = Environment Record, `LexicalEnvironment` / `VariableEnvironment` = pointers on the EC (covered in [execution-context.md](execution-context.md)), `[[Environment]]` = internal slot on every function object, `[[OuterEnv]]` = pointer on every ER linking to its enclosing ER.
 
-- [x] Capture: definition-time → call-time bridge
-- [x] Scope chain resolution (`ResolveBinding`, pointer roles)
-- [x] Shadowing — first-match consequence
-- [x] Closures — ER survival via `[[Environment]]`
-- [ ] Lexical vs dynamic scoping — Bash contrast
+---
 
-## 1.2. Capture: definition time vs call time
+## 1.1. The axiom
 
-### 1.2.1. Two timelines, two events
+> At call time, the engine sets `newEC.[[OuterEnv]] ← thisFunction.[[Environment]]`.
 
-A function in JS has two distinct lifecycle moments where scope-related state gets written:
+The function object's `[[Environment]]` slot was filled at **definition time** with whatever `LexicalEnvironment` was active *then*. So `[[OuterEnv]]` at call time traces back to the function's **source location**, not its **call site**.
 
-1. **Definition time** — the function object is allocated. Happens when the engine processes `function f() {}` (creation phase) or `function() {}`/`() => {}` (execution phase, when the expression is evaluated).
-2. **Call time** — every time the function is invoked, a fresh EC is pushed onto the call stack.
+If the rule were instead `newEC.[[OuterEnv]] ← caller.LexicalEnvironment`, JS would be **dynamically** scoped — same machinery, different anchor point, completely different language behavior. We'll see exactly that in Bash below.
+
+Everything in this note is downstream of this one pointer-copy choice.
+
+---
+
+## 1.2. The capture mechanism — definition time vs call time
+
+Two distinct lifecycle moments write scope-related state:
+
+1. **Definition time** — the function object is allocated. For `function f() {}`, this happens in the surrounding EC's creation phase. For `function() {}` / `() => {}`, it happens during the execution phase, when the expression is evaluated.
+2. **Call time** — every invocation pushes a fresh EC. That EC needs its `[[OuterEnv]]`.
+
+### 1.2.1. Definition time — the `[[Environment]]` slot
+
+Every function object has an internal slot `[[Environment]]`. At allocation, the slot is filled with **the value of the currently-active `LexicalEnvironment` pointer** — the ER the active EC is aimed at right now.
 
 ```js
-let greet = function (name) {
-  const formatter = (s) => `Hello, ${s}!`;
-  console.log(formatter(name));
-};
+let mode = "production";
 
-greet("world"); // "Hello, world!"
+function logMode() {          // ◀── function object allocated here.
+  console.log(mode);          //     Active EC: Global EC.
+}                             //     Active LexicalEnvironment → Global ER.
+                              //     ∴ logMode.[[Environment]] = Global ER.
 ```
+
+One pointer copy. Happens **once**, when the function object comes into existence. Never updates.
+
+> **Aside —** It's a *reference* to the ER, not a snapshot of its bindings. Later mutations through the ER (`mode = "test"`) are visible through the captured pointer. This is the precise meaning of "closures capture references, not values."
+
+### 1.2.2. Call time — the new EC's `[[OuterEnv]]`
+
+```js
+function debugScope() {
+  let mode = "debug";
+  logMode();                  // ◀── caller is debugScope, but we don't look here.
+}                             //     We look at logMode.[[Environment]] → Global ER.
+                              //     ∴ logMode's new EC.[[OuterEnv]] = Global ER.
+
+debugScope();                 // prints "production", not "debug"
+```
+
+The caller's ER is **never consulted**. The function object is the persistence layer between definition time and call time — it carries the captured pointer across time so call-time setup can use it.
+
+### 1.2.3. The three-way split — creation phase ≠ definition time ≠ call time
+
+The following diagram traces a nested call (`greet` → `formatter`) to show where each event fires. Both are expressions — their "definition time" (blue) happens inside an execution phase (green), not during creation phase (orange).
 
 ```mermaid
 flowchart TB
@@ -78,60 +110,13 @@ flowchart TB
 
 **Reading the diagram:**
 
-- Orange nodes = creation phase of an EC (bindings set up, no values yet).
-- Blue nodes = definition time (function object allocated). This happens during creation phase for declarations, execution phase for expressions/arrows.
-- Green nodes = execution phase running a statement (including hitting a call expression, which then triggers a new EC).
-
-Both `greet` and `formatter` are expressions — both get their blue "definition time" node inside a green "execution phase" zone. The creation phase (orange) only registers the *binding* (`greet` in TDZ) — the function object doesn't exist yet. This makes the three-way split visible at every level: creation phase ≠ definition time ≠ call time.
+- Orange = creation phase (bindings registered, no values yet).
+- Blue = definition time (function object allocated). For expressions/arrows this happens *during* execution phase.
+- Green = execution phase running a statement (including hitting a call, which triggers a new EC).
 
 At each event, *different* fields get set with *different* sources. Conflating them is the canonical "lexical vs dynamic" trap.
 
-### 1.2.2. Definition time — the `[[Environment]]` slot
-
-Every function object has an internal slot called `[[Environment]]`. When the function object is allocated, this slot is filled with **the value of the currently-active `LexicalEnvironment` pointer** — i.e. the ER instance that the active EC's `LexicalEnvironment` is aimed at *right now*.
-
-```js
-let mode = "production";
-
-function logMode() {          // ◀── function object allocated here.
-  console.log(mode);          //     Active EC: Global EC.
-}                             //     Active LexicalEnvironment → Global ER.
-                              //     ∴ logMode.[[Environment]] = Global ER.
-```
-
-That's the capture. One pointer copy. It happens *once*, when the function object comes into existence, and never updates.
-
-> **Aside —** It's a *reference* to the ER, not a snapshot of its bindings. Mutations to the ER (`mode = "test"` later) are visible through the captured pointer. This is the precise meaning of "closures capture references, not values."
-
-### 1.2.3. Call time — the new EC's `[[OuterEnv]]`
-
-When a function is called, the engine creates a fresh EC for the call. The new EC needs an `[[OuterEnv]]` to anchor the scope chain. Where does it get one?
-
-**The rule:** `newEC.[[OuterEnv]] ← thisFunction.[[Environment]]`.
-
-The new EC copies its `[[OuterEnv]]` from the *function object's* `[[Environment]]` slot — which was set at definition time, possibly long ago, in a possibly-unrelated part of the program.
-
-```js
-let mode = "production";
-
-function logMode() {          // logMode.[[Environment]] = Global ER (from earlier).
-  console.log(mode);
-}
-
-function debugScope() {
-  let mode = "debug";
-  logMode();                  // ◀── logMode() is called from here.
-}                             //     The active EC at this moment is debugScope's EC.
-                              //     But we don't look at debugScope's ER.
-                              //     We look at logMode.[[Environment]] → Global ER.
-                              //     ∴ logMode's new EC.[[OuterEnv]] = Global ER.
-
-debugScope();
-```
-
-The caller's ER is **never consulted**. The call stack and the scope chain are two different data structures (we'll see them side-by-side in the resolution section below).
-
-### 1.2.4. The bridge — the one diagram
+### 1.2.4. The bridge — one diagram
 
 ```mermaid
 flowchart LR
@@ -150,17 +135,9 @@ flowchart LR
   style D fill:#494,stroke:#fff,color:#fff
 ```
 
-The function object is the **persistence layer** between the two timelines. It carries the captured pointer through time so the call-time setup can use it.
+### 1.2.5. Capture-lifecycle trace
 
-### 1.2.5. Why this forces lexical scoping
-
-JS is lexically scoped *because* the call-time rule is `newEC.[[OuterEnv]] ← function.[[Environment]]` instead of `newEC.[[OuterEnv]] ← caller.LexicalEnvironment`.
-
-If the rule were the latter, JS would be **dynamically** scoped — every function would look up names in whatever scope was active at the call site, and the result of `logMode()` would depend on *who called it*, not where it was written. (We'll see what that alternative actually looks like in Bash later in this chunk.)
-
-The choice of which pointer to copy at call time **is the choice of scoping discipline.** One assignment, one consequence — everything else falls out.
-
-### 1.2.6. Capture-lifecycle trace through the teaser
+Step-by-step trace through the teaser (capture/setup events only — the actual `mode` resolution walk is in the Resolution section):
 
 ```js
 let mode = "production";
@@ -177,8 +154,6 @@ function debugScope() {
 debugScope();
 ```
 
-Step-by-step (capture/setup events only — the actual `mode` resolution walk is detailed in the next section):
-
 | Moment | What happens | Resulting state |
 |---|---|---|
 | Creation phase of script | `logMode` and `debugScope` function objects allocated. Active `LexicalEnvironment` → Global ER. | `logMode.[[Environment]] = Global ER`<br/>`debugScope.[[Environment]] = Global ER` |
@@ -190,11 +165,9 @@ The capture/setup story ends here: every EC on the stack has its pointers in pla
 
 ---
 
-## 1.3. Scope chain resolution — the formal walk
+## 1.3. Resolution — `ResolveBinding`
 
-Now that every EC has its `[[OuterEnv]]` set, what does the engine *do* with it when it sees a name like `mode` in the source?
-
-It runs an algorithm called `ResolveBinding`. Spec-equivalent pseudocode:
+Every name reference in source code runs an algorithm called `ResolveBinding`:
 
 ```
 ResolveBinding(name, env = activeEC.LexicalEnvironment):
@@ -205,34 +178,22 @@ ResolveBinding(name, env = activeEC.LexicalEnvironment):
   return ResolveBinding(name, env.[[OuterEnv]])
 ```
 
-In words: start at the **innermost ER** (whatever `LexicalEnvironment` currently aims at), check for the name, follow `[[OuterEnv]]` if not found, stop at the first hit or at `null`.
+Three properties:
 
-Three properties worth highlighting:
+1. **Per-reference at runtime.** Every `mode` in the source runs the walk afresh. Engines optimize hot paths with inline caches, but that's optimization, not spec.
+2. **Entry point is `LexicalEnvironment`.** `VariableEnvironment` is never consulted at lookup time.
+3. **First match wins.** Greedy, one-shot — no "outer would have been more specific" tiebreaker.
 
-1. **Runtime, per reference.** Every `mode` in the source code runs `ResolveBinding` afresh. Bindings aren't "looked up once and cached" — though engines do optimize hot paths with inline caches, that's an engine optimization, not a spec guarantee.
-2. **Entry point is `LexicalEnvironment`.** `VariableEnvironment` is never consulted at lookup time. Full pointer-role breakdown in the next subsection.
-3. **First match wins.** No "outer match would have given a more specific result" tiebreaker. Greedy, one-shot.
+### 1.3.1. Pointer roles — `LexicalEnvironment` vs `VariableEnvironment`
 
-### 1.3.1. How `LexicalEnvironment` and `VariableEnvironment` fit in
-
-Both are **pointers on the EC**, not on the ER. They decide *which ER you enter the chain from* — the ER links (`[[OuterEnv]]`) are the chain itself.
+Both are pointers on the EC, not on the ER. They decide *which ER you enter the chain from* — the ER `[[OuterEnv]]` links *are* the chain.
 
 | Pointer | Lives on | Role | Moves? |
 |---|---|---|---|
 | `LexicalEnvironment` | EC | **Read entry point.** Resolution starts here. | Yes — advances into block ERs, rewinds on block exit. |
-| `VariableEnvironment` | EC | **Write target for `var`/function decls.** | No — pinned to the function-level ER for the EC's lifetime. |
+| `VariableEnvironment` | EC | **Write target for `var` / function declarations.** | No — pinned to the function-level ER for the EC's lifetime. |
 
-Resolution never consults `VariableEnvironment`. The algorithm is: start at `currentEC.LexicalEnvironment`, walk `[[OuterEnv]]` until found. That's it.
-
-`VariableEnvironment` exists so the engine knows *where to place* a `var` binding during creation phase — it jumps directly to the function ER without walking the chain. A write-time shortcut, not a read-time participant.
-
-**Why `var` bindings are still reachable via normal resolution:** the function-level ER (what `VariableEnvironment` points at) is *always* an ancestor on the `[[OuterEnv]]` chain of any block ER inside that function. Block ERs are nested inside the function, so the chain is:
-
-```
-innermost block ER → [[OuterEnv]] → ... → function ER → [[OuterEnv]] → outer scope
-```
-
-Every block ER chains back up to the function ER. So `var` bindings placed there are found by the normal walk — no special read path needed.
+`VariableEnvironment` is a write-time shortcut: during creation phase, `var` bindings need to land in the function-level ER without walking the chain to find it. At lookup time, the function-level ER is *already* reachable from any nested block ER via the normal `[[OuterEnv]]` walk — no special read path needed.
 
 ```js
 function example() {
@@ -246,31 +207,28 @@ function example() {
   }
   // LexicalEnvironment rewinds → function ER
   console.log(w);    // 4 — w is in function ER, reachable
-  // console.log(z); // ReferenceError — block ER is unreachable (GC-eligible)
+  // console.log(z); // ReferenceError — block ER is unreachable
 }
 ```
 
-### 1.3.2. Worked trace — resolving `mode` inside `logMode`
+### 1.3.2. Worked example — call stack ≠ scope chain
+
 ```js
-// Recopy code for reference
 let mode = "production";
 
-function logMode() {          // logMode.[[Environment]] = Global ER (from earlier).
+function logMode() {              // logMode.[[Environment]] = Global ER
   console.log(mode);
 }
 
 function debugScope() {
   let mode = "debug";
-  logMode();                  // ◀── logMode() is called from here.
-}                             //     The active EC at this moment is debugScope's EC.
-                              //     But we don't look at debugScope's ER.
-                              //     We look at logMode.[[Environment]] → Global ER.
-                              //     ∴ logMode's new EC.[[OuterEnv]] = Global ER.
+  logMode();                      // called here, but its [[OuterEnv]] traces to Global ER
+}
 
 debugScope();
 ```
 
-When `console.log(mode)` executes inside `logMode` (in the teaser above), the engine resolves `mode` by walking the chain. The picture below shows the call stack and the scope chain *side by side* at the moment of the lookup — note that `debugScope`'s ER is alive on the call stack but has no link into logMode's scope chain.
+At the moment `console.log(mode)` runs inside `logMode`:
 
 ```mermaid
 flowchart TB
@@ -309,33 +267,35 @@ flowchart TB
 
 **† Legend:**
 
-- **Call Stack** — all ECs alive when `console.log(mode)` runs inside `logMode`.
+- **Call Stack** — all ECs alive when `console.log(mode)` runs.
 - **Scope Chain** — the `[[OuterEnv]]` path resolution actually walks.
 - **Unreachable** — `debugScope`'s ER is on the call stack but has no link into logMode's scope chain.
-- Green EC = the active one (currently executing). Grey ECs = alive but not running.
-- Blue ERs = on the resolution path. Red ER = unreachable from that path.
+- Green EC = active (currently executing). Grey ECs = alive but not running.
+- Blue ERs = on resolution path. Red ER = unreachable from that path.
 
 **Abbreviations:** LexEnv = `LexicalEnvironment`, VarEnv = `VariableEnvironment`, ER = Environment Record.
 
-**Resolution walk for `mode`:**
+Resolution walk for `mode`:
 
-1. Start at the active EC's `LexicalEnvironment` → **logMode ER**. Look up `mode`. Miss (no binding).
-2. Follow `[[OuterEnv]]` → **Global ER**. Look up `mode`. Hit: `"production"`. Done.
+1. `LexicalEnvironment` → **logMode ER**. No binding. Miss.
+2. `[[OuterEnv]]` → **Global ER**. Hit: `"production"`. Done.
 
-`debugScope ER` (holding `mode = "debug"`) is alive on the call stack but has **zero links** into logMode's scope chain. The scope chain is built from `[[OuterEnv]]` pointers — which trace back to the *definition site*, not the *call site*. **Call stack and scope chain are different graphs** — they only overlap when the caller happens to be the definition site, and diverge whenever a function is passed somewhere and called elsewhere.
+`debugScope ER` (with `mode = "debug"`) is alive on the call stack but has **zero links** into logMode's scope chain. The two structures only coincide when the caller happens to *be* the definition site — they diverge whenever a function is passed somewhere and called elsewhere. **The scope chain is built from `[[OuterEnv]]`, which traces to the definition site, not the call site.**
 
-### 1.3.3. Why the chain ends at `null`
+### 1.3.3. `ReferenceError` vs `undefined`
 
-The `[[OuterEnv]]` of the Global ER (or Module ER chained to it) is `null` — there is no scope further out. A name not found by the time the walker reaches `null` is `ReferenceError: not defined`. Compare to the "undefined" case — these are spec-distinct failure modes:
+Two spec-distinct failure modes when reading a name:
 
-- **Binding doesn't exist** → walker reaches `null` → `ReferenceError`.
-- **Binding exists, value is `undefined`** → walker hits, returns binding holding `undefined` → no error, value is `undefined`.
+- **Binding doesn't exist** → walker reaches `null`, throws `ReferenceError: not defined`.
+- **Binding exists, value is `undefined`** → walker hits the binding, returns it. No error; the value just *is* `undefined`.
+
+The `[[OuterEnv]]` of the Global ER (or Module ER chained to it) is `null` — there's no scope further out.
 
 ---
 
-## 1.4. Shadowing — the first-match consequence
+## 1.4. Shadowing — first-match consequence
 
-Shadowing isn't a separate rule. It's what `ResolveBinding`'s first-match-wins clause looks like when an inner ER has a binding with the same name as one in an outer ER.
+Shadowing isn't a separate rule. It's what `ResolveBinding`'s first-match-wins clause looks like when an inner ER holds a binding with the same name as one in an outer ER.
 
 ```js
 let x = "global";
@@ -345,24 +305,18 @@ function outer() {
 
   function inner() {
     let x = "inner";
-    console.log(x);     // ?
+    console.log(x);     // "inner"
   }
 
   inner();
 }
-
-outer();
 ```
 
-Trace `console.log(x)` inside `inner`:
-
-1. `LexicalEnvironment` → inner's Function ER. Has `x = "inner"`. **Hit. Done.**
-
-The walker never looks at outer's `x` or global's `x`. They still exist, are still reachable from other code, are still consulted by name resolutions starting in *their own* scope — but they're invisible to this particular lookup because something closer matched first.
+Trace: `LexicalEnvironment` → inner's Function ER. Has `x`. **Hit. Done.** The walker never even looks at outer's or global's `x`.
 
 ### 1.4.1. Shadowing requires a different ER
 
-**Shadowing:** an inner binding with the same name making the outer one unreachable from that scope. It requires the two bindings to live in *different* ERs — same-name bindings in the *same* ER aren't shadowing, they're either an error or an overwrite depending on keyword:
+Two same-name bindings only shadow if they live in *different* ERs. Same-ER cases aren't shadowing — they're either errors or overwrites depending on keyword:
 
 ```js
 function f() {
@@ -390,11 +344,11 @@ function f() {
 }
 ```
 
-The deciding question is always *"which ER does each binding live in?"* — which is the same question chunk 6 reduced everything to. Shadowing is just two ERs in a parent-child chain, each holding their own copy of the name.
+The deciding question is always *"which ER does each binding live in?"* — the same question chunk 6 reduced everything to.
 
-### 1.4.2. Cross-keyword shadowing trap
+### 1.4.2. Cross-keyword trap — `let` + nested-block `var`
 
-`let` at function level + `var` inside a nested block don't coexist safely — `var` hoists to the Function ER, colliding with the `let` that already lives there. That's a SyntaxError. The reverse (`var` at function level + `let` in a nested block) is fine because they land in different ERs. The deciding factor is whether both bindings end up in the *same* ER:
+`var` hoists to the Function ER regardless of where it appears in source. If the function level already has a `let` with the same name, the `var` collides in the *same* ER — SyntaxError, even though the `var` is visually inside a nested block.
 
 ```js
 function f() {
@@ -406,28 +360,29 @@ function f() {
 }
 ```
 
+The reverse is fine — they land in different ERs:
+
 ```js
 function f() {
   {
     let x = 1;        // Block ER
   }
   var x = 2;          // Function ER — different ER, no collision
-  console.log(x);     // 2
 }
 ```
 
-The trap is that `var`-in-block *looks* like it should land in the block — visually it does, syntactically it doesn't. Always ask: which ER does it land in?
+The trap: `var`-in-block *looks* block-scoped, isn't. Always ask: which ER does it land in?
 
 ---
 
-## 1.5. Closures — captured ERs that outlive their creator
+## 1.5. Closures — ER survival via `[[Environment]]`
 
-You've already seen the structural setup. A closure is the *consequence* of two facts you already have, applied to the situation where the function escapes its creating call:
+A closure is the **consequence** of two facts already in place:
 
-1. A function object's `[[Environment]]` slot points to whatever ER was active at definition time. Set once, never updates.
-2. The reachability rule of GC: as long as an object is reachable, every field it holds is reachable. Function object reachable → captured ER reachable → that ER's `[[OuterEnv]]` reachable → the whole chain stays alive.
+1. `[[Environment]]` captures the active ER at definition time. Set once, never updates.
+2. Reachability-based GC: any field of a reachable object is reachable. Function object reachable → captured ER reachable → that ER's `[[OuterEnv]]` reachable → the whole chain stays alive.
 
-Combine them: a function object pins the entire captured scope chain. The capture isn't special; the GC consequence is.
+The function object pins its entire captured scope chain. The capture isn't special; the GC consequence is.
 
 ### 1.5.1. The classic counter
 
@@ -449,16 +404,16 @@ console.log(c1()); // 3
 
 Step by step:
 
-1. `makeCounter()` is called. Fresh Function ER for that call, with `count = 0`. The active EC's `LexicalEnvironment` pointer now aims at this ER.
-2. Inner function expression evaluated. Function object allocated; its `[[Environment]]` slot is filled with the value of the currently-active `LexicalEnvironment` pointer — i.e. `makeCounter`'s Function ER (the ER the active EC is aimed at right now).
+1. `makeCounter()` is called. Fresh Function ER for that call, with `count = 0`. The active EC's `LexicalEnvironment` pointer aims at this ER.
+2. Inner function expression evaluated. Function object allocated; its `[[Environment]]` slot is filled with the currently-active `LexicalEnvironment` — i.e. `makeCounter`'s Function ER.
 3. Inner function returned. `c1` holds it.
 4. `makeCounter()`'s EC pops from the call stack. **The Function ER does NOT get GC'd** — `c1.[[Environment]]` still references it.
 5. `c1()` pushes a new EC. Its `LexicalEnvironment.[[OuterEnv]]` is set from `c1.[[Environment]]` — which points to `makeCounter`'s Function ER (captured at definition time, not call time). Body resolves `count` via the chain, increments, returns.
 6. Next `c1()` walks the *same* ER again — sees the updated `count = 1`, increments to `2`. The binding mutates; the ER stays put.
 
-The noteworthy fact isn't the output (1, 2, 3) — that's just incrementing. It's that the Function ER survived after `makeCounter()` returned and its EC popped. Capture keeps the ER reachable (via `[[Environment]]`); GC simply respects that reachability and doesn't reclaim it. Nothing about closures is bolted on top of the EC model — heap-allocated ERs + normal GC rules are enough.
+The noteworthy fact isn't the output (1, 2, 3) — that's just incrementing. It's that `makeCounter`'s Function ER **survives after `makeCounter()` returns and its EC pops** from the stack. Capture keeps the ER reachable (via `[[Environment]]`); GC simply respects that reachability and doesn't reclaim it. Nothing about closures is bolted on top of the EC model — heap-allocated ERs + normal GC rules are sufficient.
 
-### 1.5.2. Each closure has its own captured ER
+### 1.5.2. Each call captures a fresh ER
 
 ```js
 const c1 = makeCounter();
@@ -468,7 +423,7 @@ c1(); c1(); c1();  // 1, 2, 3
 c2();              // 1 — independent of c1
 ```
 
-Each *call* to `makeCounter()` produces a fresh Function ER (every function call always does). Each returned inner function captures its own ER. `c1` and `c2` walk different ERs with different `count` bindings.
+Every call to `makeCounter()` allocates a fresh Function ER. Each returned inner function captures its own ER. Independent state, no sharing.
 
 ### 1.5.3. Captures references, not values
 
@@ -488,41 +443,29 @@ mode = "debug";
 console.log(read()); // "debug"
 ```
 
-`read.[[Environment]] = Global ER`. Each call walks to Global ER and reads `mode` *afresh* — there's no snapshot. So mutations to the captured ER's bindings are visible.
+`read.[[Environment]] = Global ER`. Each call walks to Global ER and reads `mode` *afresh*. The captured thing is the ER *reference*; `ResolveBinding` reads through it every time. No snapshot.
 
-This is the precise meaning of "closures capture references, not values": what's captured is the *ER reference*, and `ResolveBinding` reads through it at call time.
+> **Aside —** Python's closure rules differ: it closes over names by reference but treats *assignment* in the inner function as creating a new local — hence the `nonlocal` keyword to escape that default. JS has no such complication: one binding in one ER, every reference reads/writes it.
 
-> **Aside —** Python's closure rules differ here: Python closes over names by reference but treats *assignment* in the inner function as creating a new local — hence the `nonlocal` keyword to escape that default. JS has no such complication: one binding in one ER, every reference reads/writes it.
-
-### 1.5.4. Connection to `for (let ...)` (chunk 6 recap)
-
-The closure-in-loop bug:
+### 1.5.4. Connection to `for (let ...)` per-iteration ER
 
 ```js
 for (var i = 0; i < 3; i++) {
   setTimeout(() => console.log(i), 0);
 }
-// 3, 3, 3
-```
+// 3, 3, 3 — one `i` in the surrounding scope; all three arrows capture the same ER.
 
-`var i` lives in *one* ER (the surrounding function or global). All three arrows capture the *same* ER. By the time setTimeout fires them, `i === 3` (loop exit). Three reads of the same binding → `3, 3, 3`.
-
-The `let` fix:
-
-```js
 for (let i = 0; i < 3; i++) {
   setTimeout(() => console.log(i), 0);
 }
-// 0, 1, 2
+// 0, 1, 2 — for (let ...) spec-mandates a fresh Block ER per iteration; each arrow captures its own.
 ```
 
-`for (let ...)` spec-mandates a *fresh Block ER per iteration*, each with its own `i` bound to that iteration's value. Each arrow's `[[Environment]]` captures the iteration's own Block ER. Three ERs, three `i`s, three reads.
+Same closure mechanism in both cases. The difference is purely scope-model topology — how many ERs got allocated. The closure rule (`[[Environment]]` pins the ER) is unchanged.
 
-**Same closure mechanism in both cases.** The difference is purely the scope-model topology — how many ERs got allocated. Closure and scope-model interact, but the closure rule (`[[Environment]]` pins ER) is unchanged.
+### 1.5.5. Closures can leak
 
-### 1.5.5. GC implication — closures can leak
-
-A closure pins its *entire* captured chain. If something heavy lives in the captured ER, it stays alive as long as the closure does.
+A closure pins its *entire* captured chain. Heavy data in the captured ER stays alive as long as the closure does, even if the closure body never reads it.
 
 ```js
 function attachHandler() {
@@ -534,38 +477,37 @@ function attachHandler() {
 }
 ```
 
-The handler's `[[Environment]] = attachHandler's Function ER`, which holds `bigData`. Even though the handler body never reads `bigData`, the ER reference keeps it alive as long as the listener is registered. The spec model is "whole ER is reachable" — engines do some escape-analysis optimizations, but you can't *rely* on them.
+The handler's `[[Environment]] = attachHandler`'s Function ER, which holds `bigData`. The ER reference keeps `bigData` alive as long as the listener is registered. Spec model is "whole ER is reachable" — engines do some escape-analysis optimizations, but you can't *rely* on them.
 
-Mitigation: keep the captured scope small (factor heavy data into a sibling scope the closure doesn't capture; or null out references after use).
+Mitigation: keep captured scopes small (factor heavy data into a sibling scope the closure doesn't capture; or null out references after use).
 
 ### 1.5.6. The big picture
 
-Closures aren't a third concept added to JS — they're what falls out when you combine:
+Closures aren't a third concept added to JS. They fall out of:
 
-- **Lexical capture** (the `[[Environment]]` rule from the Capture section)
+- **Lexical capture** (the `[[Environment]]` rule above)
 - **First-class functions** (functions can be returned, stored, passed)
 - **Reachability-based GC** (the runtime invariant of any GC'd language)
 
-Take any one of those three away and closures disappear. Bash has first-class strings but no captured environment → no closures. C has functions but no GC and no environment-capture → no closures. JS has all three → closures are free.
+Remove any one and closures disappear. Bash has first-class strings but no captured environment → no closures. C has functions but no GC and no environment-capture → no closures. JS has all three → closures are free.
 
 ---
 
 ## 1.6. Lexical vs dynamic scoping — the formal contrast
 
-So far this chunk has built up *one* discipline: lexical. The other formal option is dynamic. Both are coherent — they just answer "where does a function find its free variables?" differently.
+Both disciplines are coherent — they just answer "where does a function find its free variables?" differently.
 
 | | Lexical scoping | Dynamic scoping |
 |---|---|---|
 | Lookup uses | The scope active at **definition time** | The scope active at **call time** |
 | Spec mechanism (JS-style) | `newEC.[[OuterEnv]] ← function.[[Environment]]` | `newEC.[[OuterEnv]] ← caller.LexicalEnvironment` |
 | Determined by | Source location of the function | The call stack at runtime |
-| Static analysis | Possible | Not possible (depends on who calls whom) |
+| Static analysis | Possible | Not possible — depends on who calls whom |
 
-JS, Python, Java, C#, Rust, Haskell, Scheme, modern Common Lisp — all lexical. Bash, awk, Perl-with-`local`, original Lisp, Emacs Lisp (default) — dynamic.
+Lexical: JS, Python, Java, C#, Rust, Haskell, Scheme, modern Common Lisp.
+Dynamic: Bash, awk, Perl-with-`local`, original Lisp, Emacs Lisp (default).
 
 ### 1.6.1. Bash — same structure, opposite answer
-
-Take the original JS teaser and translate it to Bash:
 
 ```bash
 #!/bin/bash
@@ -580,14 +522,10 @@ debug_scope() {
   log_mode
 }
 
-debug_scope
+debug_scope            # prints: debug
 ```
 
-Output: `debug`.
-
-The structure is identical to the JS teaser. The output differs because Bash resolves `$mode` *at the call site*: when `log_mode` runs, the active call is `debug_scope`, whose `local mode="debug"` is in scope. The shell has no per-function "captured environment" — just one stack of variable scopes, walked top-down at each lookup.
-
-Side-by-side trace at the moment `log_mode` reads `mode`:
+Structurally identical to the JS teaser above. Output differs because Bash resolves `$mode` *at the call site* — when `log_mode` runs, the active call is `debug_scope`, whose `local mode="debug"` is in scope. No per-function captured environment; just a stack of scopes walked at each lookup.
 
 | | JS (lexical) | Bash (dynamic) |
 |---|---|---|
@@ -596,29 +534,37 @@ Side-by-side trace at the moment `log_mode` reads `mode`:
 | First hit | Global ER's `mode = "production"` | debug_scope's `local mode = "debug"` |
 | Result | `production` | `debug` |
 
-Same source structure. Opposite answer. The deciding factor: *which pointer the runtime uses to walk*.
+Same source structure. Opposite answer. The deciding factor: which pointer the runtime walks.
 
 ### 1.6.2. Why every modern general-purpose language picked lexical
 
-Four downstream benefits that all come from the same root — *a function's free-variable resolution can be determined from the source alone*:
+All four downstream benefits trace to one root — *a function's free-variable resolution can be determined from the source alone*:
 
-1. **Static analysis.** Linters, type checkers, "go to definition," dead-code elimination — all require knowing which binding a name refers to without running the program. Dynamic scoping makes this impossible: the same `foo` in `log_mode` can refer to a thousand different bindings depending on who calls it.
-2. **Optimization.** With lexical scoping, the engine can analyze the capture set of every function at compile time. Variables that aren't captured can live on the stack (no heap allocation). Captured variables can be hoisted into a flat closure record. Inline caches can specialize on the resolved binding's location. Dynamic scoping forces every lookup to do a full runtime walk.
-3. **Modularity / encapsulation.** A lexically-scoped function's behavior depends only on its own source + what its enclosing scopes provide. You can refactor a caller without worrying about silently rebinding the callee's free variables. With dynamic scoping, every function is implicitly parameterized by *everyone's* locals.
-4. **Refactor safety.** Renaming a local in your own function can't accidentally shadow a name that some callee was relying on. In dynamic scoping, `local result=...` in your function can silently change the behavior of every nested call.
+1. **Static analysis.** Linters, type checkers, "go to definition," dead-code elimination — all require knowing which binding a name refers to without running the program.
+2. **Optimization.** With lexical scoping, the engine can analyze every function's capture set at compile time. Non-captured variables live on the stack; captured ones can be packed into flat closure records; inline caches specialize on resolved binding locations. Dynamic scoping forces a full runtime walk at every lookup.
+3. **Encapsulation.** A lexically-scoped function depends only on its own source + what its enclosing scopes provide. Callers can refactor freely without silently rebinding the callee's free variables. With dynamic scoping, every function is implicitly parameterized by *everyone's* locals — a library function's behavior can change because some caller five frames up renamed a local.
+4. **Refactor safety.** Renaming a local in your own function can't accidentally shadow a name a callee was relying on.
 
-The cost of dynamic scoping is: a function's behavior is no longer a property of the function. It's a property of the function plus its entire call context. That breaks composition.
+The cost of dynamic scoping: a function's behavior is no longer a property of the function — it's a property of the function plus its entire call context. That breaks composition.
 
 ### 1.6.3. Niche corners where dynamic survives
 
-- **Shell scripting** (Bash, etc.). The "env-var override" idiom (`HTTPS_PROXY=… my_cmd`) is dynamic scoping at the process level — convenient for ad-hoc configuration.
-- **Emacs Lisp** uses dynamic scoping by default for historical reasons (Common Lisp later introduced lexical via `let`, keeping `defvar` dynamic).
-- **JS `this`** is dynamically bound for regular functions — it's set at call time based on how the function is invoked, *not* where it's defined. This is JS's one major dynamic-scoping concession, and it's the source of an outsized share of JS gotchas. Arrow functions opted *out* (they don't get their own `this` — `this` resolves lexically up the chain).
+- **Shell scripting.** The "env-var override" idiom (`HTTPS_PROXY=… my_cmd`) is dynamic scoping at the process level — convenient for ad-hoc configuration.
+- **Emacs Lisp** defaults to dynamic for historical reasons.
+- **JS `this`.** Dynamically bound for regular functions — set at call time based on invocation pattern, not source location. JS's one major dynamic-scoping concession, and the source of an outsized share of JS gotchas. Arrow functions opted *out* — they don't get their own `this`; it resolves lexically up the chain.
 - **JS `with`** (banned in strict mode) inserts an Object ER into the chain at runtime — a localized form of dynamic scoping. Strict mode bans it precisely because it breaks static analysis.
-- **React Context** has a dynamic-scoping flavor (a value is determined by the calling render tree, not by where the consumer is defined) — but it's an opt-in, narrow channel, not the default lookup discipline.
+- **React Context** has a dynamic-scoping flavor: a value is determined by the calling render tree, not by where the consumer is defined. But it's an opt-in, narrow channel — not the default lookup discipline.
 
-### 1.6.4. The compact mental model for chunk 7
+---
+
+## 1.7. Mental model recap
 
 > JS is lexically scoped because at call time the runtime uses `newEC.[[OuterEnv]] ← function.[[Environment]]` — not `← caller.LexicalEnvironment`.
 
-That single pointer-copy rule generates everything in this chunk: capture, the scope chain, shadowing, closures, the GC-survival behavior, and the comparison with Bash. Take it as the chunk's axiom — the rest is derivation.
+That single pointer-copy rule generates everything in this note: definition-time capture, the scope chain, shadowing, closures, GC-survival behavior, and the contrast with Bash. Take it as the chunk's axiom — the rest is derivation.
+
+Related notes:
+
+- [scope-model.md](scope-model.md) — the four scope types as ER instances, and the pointer-pin vs pointer-move distinction `var`/`let` exploit. This note builds directly on that one.
+- [execution-context.md](execution-context.md) — the EC structure (`LexicalEnvironment` / `VariableEnvironment` pointers, `[[OuterEnv]]` chain) underlying everything here.
+- [creation-execution.md](creation-execution.md) — when function objects are allocated (and thus when `[[Environment]]` is set).

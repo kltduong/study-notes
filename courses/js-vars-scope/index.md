@@ -14,6 +14,7 @@ Start with `variable-lifecycle.md` — it introduces the 3-stage model that ever
 - [hoisting.md](hoisting.md) — hoisting as an observable (not a mechanism), per-keyword reachability before the declarator, why the "code moves up" folk image fails for `let`/`const`/`class`, function-declaration precedence, `typeof` and TDZ
 - [tdz.md](tdz.md) — TDZ as a time window (not a source region), the one-flag/one-check mechanism, "temporal" meaning runtime not lexical, less obvious TDZ spots (default params, self-reference, class), design rationale, what TDZ pays for (block-shadowing + creation phase)
 - [scope-model.md](scope-model.md) — the four scope types (global, function, block, module) as ER instances, two-axis model (keyword × pointer behavior), global object attachment and why it's problematic, script vs module topology
+- [lexical-scoping.md](lexical-scoping.md) — the call-time pointer-copy axiom (`newEC.[[OuterEnv]] ← function.[[Environment]]`) that makes JS lexical, `ResolveBinding` walk, shadowing as first-match consequence, closures as ER survival via GC reachability, contrast with dynamic scoping (Bash)
 
 ## Cross-cutting concepts
 
