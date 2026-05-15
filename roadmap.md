@@ -2,7 +2,7 @@
 
 Goal: whole-system literacy (frontend included) for a backend-strong dev. Reviewing and architecting UI work alongside AI/devs, not specializing.
 
-Last updated: 2026-05-08.
+Last updated: 2026-05-14.
 
 ## Path
 
@@ -16,7 +16,7 @@ Last updated: 2026-05-08.
 | 6   | TypeScript fundamentals    | new           | Structural typing, primitives/literals, unions/intersections, generics + inference, narrowing, common utility types, working with libraries (~9–10 chunks) |
 | 7   | CSS layout fundamentals    | new           | Box model, normal flow, positioning, stacking contexts, flexbox, grid, responsive, typography essentials (~8–10 chunks)                                    |
 | 8   | Browser rendering pipeline | new, optional | Parse → CSSOM → render tree → layout → paint → composite, layer promotion, Core Web Vitals, profiling (~6–8 chunks)                                        |
-| 9   | React fundamentals         | new           | Rendering model, components/props/state, derived state vs effects, lists/keys, forms, context, data fetching, composition (~10 chunks)                     |
+| 9   | Datastar fundamentals      | new           | Hypermedia-driven reactivity, signals & `data-*` attributes, SSE-based backend push, expressions & events, morphing, forms & CRUD, composition with fragments (~8–10 chunks) |
 
 ## Parallel artifact (notes, not a course)
 
@@ -33,6 +33,7 @@ Last updated: 2026-05-08.
 - **Web workers** — only if in-browser AI inference / heavy client compute appears.
 - **Browser security model course** (CORS + cookies + CSP + iframe + `postMessage` + SRI) — only if a project demands; otherwise CORS lives in `notes/client-http/`.
 - **Functions deep-dive (`this`/bind/composition)** — promoted to main path as #3 (`js-values-fn-this`).
+- **React fundamentals** — promote to main path only if a project mandates it (client / employer / OSS integration), or if a UI-interactive carve-out appears that Datastar doesn't fit. Estimate: 1–2 week focused sprint, not a full course, given the fundamentals base from #1–#7. Vue not on the table — pivot only if a specific project demands it.
 
 ## Order rationale
 
@@ -43,12 +44,12 @@ Last updated: 2026-05-08.
 - **5 → 6** — TS leverages reading comprehension on every later course; types land concretely on the DOM APIs just learned.
 - **6 → 7** — CSS is the biggest blind spot for backend-strong devs; closes the visible-UI gap.
 - **7 → 8** — CRP needs CSSOM literacy to make sense; safely skippable since DOM capstone gives the lite version.
-- **8 → 9** — React is the capstone; every prior pillar feeds into understanding why it works the way it does.
+- **8 → 9** — Datastar is the capstone; DOM events, SSE (from `notes/client-http/`), and CSS layout all feed directly into understanding hypermedia-driven reactivity without a virtual DOM layer in between.
 
 ## Off-ramps
 
 - **Stop after #7** — ~2.5 months of work, reasonably literate, can review most UI work.
-- **Stop after #9 (skipping #8)** — full path minus engine depth.
+- **Stop after #9 (skipping #8)** — full path minus engine depth; hypermedia-driven UI covered.
 - **Complete through #9 including #8** — full fundamentals depth; ready to architect, not just review.
 
 ## Rough timeline
