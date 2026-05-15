@@ -45,6 +45,6 @@ Progress tracker for the course. Chunks grouped by theme.
       🔧 Refinements: - Q1: Correct conclusion on `Object.create(null)` + `__proto__` but reasoning skipped _why_ the accessor wasn't found — key point is the accessor lives on `Object.prototype` and the chain doesn't reach it - Q3: Confused property descriptor `{ value: 42 }` with the value itself (`42`) when `defineProperty` shadows `__proto__` - Q4: Said `bark` lives in "engine's internal slot" — it lives on `Dog.prototype`, a regular JS object; the _link_ is engine-internal, the _target_ is not
 - [ ] **Building prototype chains** — `new` keyword approach (pre-2011), `Object.create` (ES5), `Object.setPrototypeOf` (ES6), classes + `extends`, 3-level chains with constructors and classes, `call()` for inheritance, duplication problems (Section 7: "Course project overview" through "You've beaten prototypes")
 - [ ] **OOP & class vs prototype** — What OOP means, class-based vs prototype-based inheritance, Java comparison, classes vs prototypes tradeoffs (Section 8)
+- [ ] **Class pitfalls & edges** — class fields vs prototype, super mechanics, static chain, private fields, where "just sugar" breaks down
 - [ ] **Composition** — Intro, converting prototypal model to composition, inheritance vs composition tradeoffs, when to use which (Section 9)
 - [ ] **Final test**
-- [ ] **Outro & next steps**
