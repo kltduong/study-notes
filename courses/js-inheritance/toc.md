@@ -43,8 +43,56 @@ Progress tracker for the course. Chunks grouped by theme.
 - [x] **Advanced prototypes quiz**
       📊 solid — core mechanics strong; chain walk, shadowing, class fields vs prototype methods all correct
       🔧 Refinements: - Q1: Correct conclusion on `Object.create(null)` + `__proto__` but reasoning skipped _why_ the accessor wasn't found — key point is the accessor lives on `Object.prototype` and the chain doesn't reach it - Q3: Confused property descriptor `{ value: 42 }` with the value itself (`42`) when `defineProperty` shadows `__proto__` - Q4: Said `bark` lives in "engine's internal slot" — it lives on `Dog.prototype`, a regular JS object; the _link_ is engine-internal, the _target_ is not
-- [ ] **Building prototype chains** — `new` keyword approach (pre-2011), `Object.create` (ES5), `Object.setPrototypeOf` (ES6), classes + `extends`, 3-level chains with constructors and classes, `call()` for inheritance, duplication problems (Section 7: "Course project overview" through "You've beaten prototypes")
+- [x] **Building prototype chains** — `new` keyword approach (pre-2011), `Object.create` (ES5), `Object.setPrototypeOf` (ES6), classes + `extends`, 3-level chains with constructors and classes, `call()` for inheritance, duplication problems (Section 7: "Course project overview" through "You've beaten prototypes")
+      📊 solid — all three understanding-check questions correct; cleanly traced static-method dispatch, super.method() dynamic dispatch, and two-layer bug isolation
+      🔧 Refinements:
+        - Q2 dispatch trace: initially said "class C's hi runs" when the chain walk from `c` actually resolves to B.hi (C doesn't define `hi`). Conclusion was right ('B.hi!'), mechanism phrasing skipped which class's body actually executes. Pattern: right-conclusion-imprecise-mechanism — same family as the async-js refinements.
+        - Q2 follow-up on derived-constructor `this` before `super`: initially modeled the rule as conditional ("fails only when `this` use depends on parent setup"). Actual rule is unconditional — any read of `this` before `super(...)` throws ReferenceError because the binding is uninitialized, regardless of what the read is for.
+- [ ] **Class deep dive** — `this` & `super` in class methods (unified dispatch rule), `super(...)` in derived constructors (uninitialized-`this` mechanic), static method dispatch + constructor-side chain, polymorphism payoff, class fields vs prototype methods, private fields (`#field`), where "just sugar" leaks (no-`new` enforcement, TDZ, class expressions), extending built-ins. (See `## Seeds` below for stashed framing.)
 - [ ] **OOP & class vs prototype** — What OOP means, class-based vs prototype-based inheritance, Java comparison, classes vs prototypes tradeoffs (Section 8)
-- [ ] **Class pitfalls & edges** — class fields vs prototype, super mechanics, static chain, private fields, where "just sugar" breaks down
 - [ ] **Composition** — Intro, converting prototypal model to composition, inheritance vs composition tradeoffs, when to use which (Section 9)
 - [ ] **Final test**
+
+## Seeds (transient — delete each entry when its chunk's final note is saved)
+
+### Class deep dive — `this` / `super` framing
+
+Surfaced during the building-chains chunk (Q2 follow-up). Flow into the chunk's draft when taught; remove this seed afterward.
+
+**Two-case dispatch rule:**
+
+- **Case 1 — `expr.method(args)`:** `this` is the value of `expr` (left of dot, at call time). The chain walk decides _which function_ runs; the receiver decides _what `this` is_. The two are independent. Already explained for prototype methods in [`prototype-deep-dive.md`](prototype-deep-dive.md#custom-prototypes-and-this-binding) — final note should brief-recap + forward-link, not re-derive.
+- **Case 2 — `super.method(args)` inside a method:** `super` is a syntactic form, not an object. Two effects:
+  1. **Lookup**: start walking from `[[HomeObject]].[[Prototype]]` — where `HomeObject` is the prototype object that holds the enclosing method's definition. Inside `C.prototype.greet`, `super.greet` looks up `greet` starting from `B.prototype` (because `C.prototype.[[Prototype]] = B.prototype`).
+  2. **`this` binding**: preserved, not rebound. The parent method runs with the same `this` as the caller.
+
+  Desugars roughly to `Reflect.get(Object.getPrototypeOf(homeObject), 'method').call(this, ...args)`.
+
+**Worked synthesis example:**
+
+```js
+class A { hi() { return 'A.hi'; } greet() { return this.hi() + '!'; } }
+class B extends A { hi() { return 'B.hi'; } }
+class C extends B { greet() { return 'C says ' + super.greet(); } }
+
+new C().greet();   // 'C says B.hi!'
+```
+
+Trace: `c.greet()` → C.greet runs with `this = c`. `super.greet()` looks up from B.prototype (no greet) → walks to A.prototype (found); runs with `this = c` (preserved). A.greet calls `this.hi()` — chain walk from c: C.prototype (no hi) → B.prototype (B.hi). Result: 'C says B.hi!'. `this` was `c` at every level; the executing body changed (C.greet → A.greet → B.hi), `this` never rebound.
+
+**Mental shortcut:**
+
+- Receiver-based dispatch: `obj.method()` → `this = obj`. Always (plus `.call`/`.apply`/`.bind` overrides).
+- `super.method()` → `this` unchanged. The keyword is a **lookup redirect**, not a `this` redirect.
+
+**Polymorphism payoff:** inherited body's `this.method()` resolves to the most-derived override because `this` stays the original receiver — never rebinds across the chain. This is what makes inheritance _useful_ rather than just _structural_.
+
+**Other topics for this chunk (to develop when taught):**
+
+- `super(...)` in derived constructor — uninitialized-`this` mechanic, TDZ-style ReferenceError (touched in building-chains; full mechanics here).
+- Static method dispatch on the constructor-side chain (`Dog → Animal`). `this` inside static method = the class it was called on.
+- `super.staticMethod()` in static methods — same lookup-redirect mechanism, applied to the constructor chain.
+- Class fields vs prototype methods — deepen the `=` rule from [`instantiation.md`](instantiation.md) for inheritance implications.
+- Private fields (`#field`) — class-only syntax, spec-enforced encapsulation (not convention).
+- Where "just sugar" leaks — no-`new` enforcement (TypeError), TDZ-binding (class declarations not hoisted like functions), class expressions, `new.target`.
+- Extending built-ins (`class Foo extends Array`, Error, Map) — Symbol.species and quirks.

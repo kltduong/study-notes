@@ -324,6 +324,8 @@ The **second** line is the subtle one. `class extends` wires _two_ chains:
 
 ### What `super(name)` does
 
+> 🔖 Later: full `this`/`super` dispatch semantics (super.method() lookup, this preservation, static dispatch, the polymorphism payoff) live in the upcoming **Class deep dive** chunk. Here we treat `super(name)` only as the constructor-side counterpart to `Animal.call(this, name)`.
+
 `super(...)` inside a derived-class constructor invokes the parent constructor _and_ implicitly initializes `this`. Two rules fall out of the spec:
 
 - **You must call `super()` before using `this`.** In a derived class, `this` is not bound until `super(...)` returns. Reading `this` before that throws `ReferenceError`. This is enforced — unlike the pre-class form where you could (incorrectly) write `this.breed = breed` _before_ `Animal.call(this, name)` and silently overwrite.
