@@ -5,7 +5,7 @@
 - [x] 1. Frame: multi-level inheritance, four wiring mechanisms (same outcome, different ergonomics)
 - [x] 2. Teaser — pre-2011 `Dog.prototype = new Animal()`: what's wrong?
 - [x] 3. Pre-2011 wiring + the two problems it reveals (resource waste, `.constructor` confusion)
-- [ ] 4. `Object.create(Animal.prototype)` — ES5 fix, what changes vs pre-2011
+- [x] 4. `Object.create(Animal.prototype)` — ES5 fix, what changes vs pre-2011
 - [ ] 5. `Object.setPrototypeOf` — ES6, why rarely used despite being symmetrical
 - [ ] 6. `call()` — running parent constructor inside child for instance props
 - [ ] 7. `class extends` — what it desugars to; `super()` requirement
@@ -34,8 +34,6 @@ const rex = new Dog('Shepherd');
 // rex.[[Prototype]]             → Dog.prototype
 // Dog.prototype.[[Prototype]]   → Object.prototype
 // Object.prototype.[[Prototype]]→ null
-
-
 ```
 
 A **multi-level chain** just inserts another link in the middle:
@@ -75,6 +73,13 @@ Dog.prototype.bark = function () { return `${this.name} barks`; };
 const rex = new Dog('Rex', 'labrador');
 rex.eat();                // 'Rex eats'   ✓ chain works
 rex.constructor.name;     // 'Animal'     ✗ lies
+
+// rex ──▶ Dog.prototype ──▶ Animal.prototype ──▶ Object.prototype ──▶ null
+
+// rex.[[Prototype]]             → Dog.prototype (which IS an Animal instance)
+// Dog.prototype.[[Prototype]]   → Animal.prototype
+// Animal.prototype.[[Prototype]]→ Object.prototype
+// Object.prototype.[[Prototype]]→ null
 ```
 
 The wiring _functionally works_ — `eat` is reachable, the chain is correct. But two things are wrong with **how** we built it.
@@ -108,3 +113,55 @@ Dog.prototype.constructor = Dog;   // patch the lie
 ```
 
 …which is exactly the kind of fragile boilerplate the ES5 fix removes.
+
+### Root cause (unified view)
+
+Both problems share one origin: **pre-2011 JS had no API for "just give me an object whose `[[Prototype]]` is X."** `new Constructor()` was the closest, but it bundles three things:
+
+1. Allocate a new object linked to `Constructor.prototype`. ◀── all we wanted
+2. Run `Constructor` with `this` bound to that object. ◀── caused Problem A
+3. Return that new object (forcing us to **assign** it, overwriting Dog.prototype). ◀── caused Problem B
+
+The ES5 fix isolates step 1.
+
+---
+
+## 4. `Object.create(Animal.prototype)` — the ES5 fix
+
+`Object.create(proto)` does **exactly one thing**: allocate a fresh empty object whose `[[Prototype]]` is `proto`. No constructor runs. No instance state.
+
+```js
+function Animal(name) { this.name = name; }
+Animal.prototype.eat = function () { return `${this.name} eats`; };
+
+function Dog(name, breed) {
+  this.name = name;
+  this.breed = breed;
+}
+
+Dog.prototype = Object.create(Animal.prototype);   // ◀── pure link, nothing else
+Dog.prototype.constructor = Dog;                   // ◀── re-pin (we still overwrote)
+Dog.prototype.bark = function () { return `${this.name} barks`; };
+
+const rex = new Dog('Rex', 'labrador');
+rex.eat();                // 'Rex eats'    ✓
+rex.constructor.name;     // 'Dog'         ✓ once we re-pin
+```
+
+### What changed vs pre-2011
+
+| Issue                          | `new Animal()`                              | `Object.create(Animal.prototype)`            |
+| ------------------------------ | ------------------------------------------- | -------------------------------------------- |
+| Runs Animal constructor?       | Yes — pollutes Dog.prototype                | **No**                                       |
+| `name: undefined` own prop?    | Yes (from `this.name = name`)               | **No** — Dog.prototype starts empty          |
+| Dog.prototype's `[[Prototype]]`| `Animal.prototype` (via the `new` step 1)   | **`Animal.prototype`** (directly, no detour) |
+| Need to re-pin `.constructor`? | Yes (still overwritten)                     | Yes (still overwritten)                      |
+
+Problem A is gone. Problem B is **untouched** — we still overwrite `Dog.prototype`, so `.constructor` still needs re-pinning manually. The root cause is the same: `Dog.prototype = …` discards the original object (and its `constructor: Dog` property). To eliminate Problem B, we'd need to keep the original `Dog.prototype` object and only change _its_ `[[Prototype]]`. That's the niche `setPrototypeOf` fills (next).
+
+### The shape of `Object.create` (preview)
+
+`Object.create` is more than a chain-wiring tool — it's the general "make an object with this prototype" primitive. You've seen it as part of [instantiation patterns](instantiation.md) (the Prototypal pattern). Here we're applying the same primitive at a different layer: not to create _instances_, but to create the _prototype object_ that future instances will link to.
+
+> **Aside —** `Object.create` also accepts a second argument: a property-descriptors map (`{ name: { value: 'Rex', writable: true, … } }`). Rarely used inline for chain-building. Mentioned for completeness.
+
