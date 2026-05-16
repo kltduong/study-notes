@@ -13,7 +13,7 @@
 
 ---
 
-## 1. Unified dispatch rule
+## Unified dispatch rule
 
 ### Teaser
 
@@ -38,30 +38,23 @@ Try to be precise about both: `c.greet()` → ? body, `this` = ?; `super.greet()
 
 ### The axiom
 
-A method can be called in two forms:
-
-- **Normal call:** `expr.method(args)` — e.g. `d.speak()`
-- **Super call:** `super.method(args)` — e.g. `super.speak()` inside a method body
-
-Both forms resolve **two independent questions**:
+A method call resolves **two independent questions**:
 
 1. **Which function body runs?** — determined by a prototype-chain walk.
-2. **What is `this` inside it?** — always the receiver (the object left of the dot).
-
-These two questions are fully orthogonal — knowing one tells you nothing about the other. The only thing that differs between the two call forms is **where the chain walk starts** for question 1. Question 2's answer is always the same regardless of call form: the receiver, unchanged.
+2. **What is `this` inside that body?** — always the receiver (the object left of the dot at the original call site).
 
 #### Question 1: which function body runs?
 
-Both call forms find the function the same way — walk a `[[Prototype]]` chain until the property is found. They differ only in **where the walk begins**:
+`expr.method()` (normal) and `super.method()` both resolve the function the same way — walk a `[[Prototype]]` chain until the property is found. The only difference is where the walk starts:
 
-| Call form | Walk starts at | Example |
+| Call form | Walk starts at | Determined when |
 |---|---|---|
-| `expr.method()` | `expr` itself (the receiver) | `d.speak()` → starts at `d`, walks up |
-| `super.method()` | one level above where the calling method is written | inside `Dog.prototype.speak`: starts at `Animal.prototype` |
+| `expr.method()` | `expr` itself (the receiver) | call time (dynamic) |
+| `super.method()` | `Object.getPrototypeOf(HomeObject)` — one level above where the calling method is *defined* | definition time (static) |
 
 **Normal dispatch** is receiver-based — already derived in [`prototype-deep-dive.md`](prototype-deep-dive.md#custom-prototypes-and-this-binding); not re-derived here.
 
-**Super dispatch** shifts the starting point. `super` is not an object — it's a lookup instruction meaning "skip my level." Concretely: start the walk at `Object.getPrototypeOf(HomeObject)`, where `HomeObject` is the object the calling method was *defined on*. This start point is fixed at definition time (static).
+**Super dispatch** shifts the starting point. `super` is not an object you can store or pass — it's a **lookup instruction** meaning "skip my level." Concretely: start the walk at `Object.getPrototypeOf(HomeObject)`, where `HomeObject` is the object the calling method was *defined on* (the prototype object it was installed into). This start point is baked in at definition time — it never changes regardless of how the method is later called.
 
 ```
 super.X  ≈  Object.getPrototypeOf(HomeObject)[X]
@@ -72,27 +65,63 @@ super.X  ≈  Object.getPrototypeOf(HomeObject)[X]
 
 #### Question 2: what is `this`?
 
-Always the receiver. `super` does not change it — the parent method runs with the same `this` the caller had.
+Always the receiver. `super` does not rebind `this` — the parent method runs with the same `this` the caller had. This is what makes inheritance useful: a parent method can reference `this.prop` and get the child instance's data.
 
 ```js
 d.speak()          // this = d
   → super.speak() // this = still d (Animal.prototype.speak sees d)
 ```
 
-Putting both together:
+#### The full desugaring
+
+Putting Q1 and Q2 together into one pseudo-expression:
 
 ```
 super.X(args)  ≈  Object.getPrototypeOf(HomeObject)[X].call(this, ...args)
                               ▲                                 ▲
-                       Q1: where to find            Q2: receiver,
-                       the function (static)        unchanged (dynamic)
+                       Q1: where to find the             Q2: receiver,
+                       function body (static)            unchanged (dynamic)
 ```
+
+Two inputs, two different lifetimes: the lookup target is frozen at definition time; `this` flows in at call time. This separation is the entire mechanism — everything else (polymorphism, constructor chaining, the proof below) falls out of it.
 
 #### `[[HomeObject]]` — what anchors `super`
 
-`[[HomeObject]]` is an internal slot on the **function object itself**, set once when the method is defined with method syntax in a class or object-literal body. It records *which object this method was written into* — that's the reference point `super` uses to know where "my level" is.
+`[[HomeObject]]` is an internal slot on the **function object itself**, set once when the method is defined with **method syntax** inside a class body or object literal. It records *which object this method was installed into* — that's the reference point `super` uses to compute "one level above me."
 
-It travels with the function. Detaching the method (`const f = c.greet`) breaks `this` (no longer called on a receiver) but not `super`'s start point (still anchored to the original HomeObject). The two fail independently because they're sourced from different times: `this` from call time, `super`'s start point from definition time.
+Key properties:
+
+- **Set once, never changes.** Moving the function to another object doesn't update `[[HomeObject]]`.
+- **Only method syntax gets it.** `{ greet() {} }` → has `[[HomeObject]]`. `{ greet: function() {} }` → does not. Arrow functions → do not. This is why `super` is only legal inside method-syntax definitions.
+- **Travels with the function.** Detaching a method (`const f = c.greet`) breaks `this` (no receiver at call site) but `super` inside `f` still resolves from the original `[[HomeObject]]`.
+
+The two failure modes are independent because they're sourced from different times:
+
+| Concern | Determined at | Breaks when |
+|---|---|---|
+| `this` | call time | no receiver (detached call, bare invocation) |
+| `super`'s start point | definition time | never breaks once set (but absent if not method syntax) |
+
+##### Demo — detach breaks `this`, not `super`
+
+```js
+class A {
+  id() { return 'A'; }
+}
+class B extends A {
+  id() { return 'B(super=' + super.id() + ')'; }  // [[HomeObject]] = B.prototype
+}
+
+const b = new B();
+b.id();              // "B(super=A)" — this=b, super starts at A.prototype ✓
+
+const detached = b.id;
+detached();          // TypeError or "B(super=A)" with undefined `this`
+                     // super.id() still resolves A.id — HomeObject unchanged
+                     // but `this` is undefined (strict mode) — no receiver
+```
+
+`super` didn't break — it still found `A.id`. What broke is `this`: no object left of the dot means no receiver. Two independent failure axes.
 
 ### Why it *must* be HomeObject-based (not receiver-based)
 
