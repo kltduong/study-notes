@@ -126,7 +126,7 @@ Before teaching each chunk:
 
 1. **Teaser snippet** — a short piece of code that embodies the chunk's core idea. Present with no explanation: _"What do you think happens here, and why?"_
 2. **User predicts** — they reason through it, likely getting something wrong or partially right.
-3. **The reveal** — explain what actually happens and _why_, using their prediction as the foil. Motivation, first principles, and the "wow" moment go here.
+3. **The reveal** — explain what actually happens and _why_, using their prediction as the foil. Motivation, first principles, and the "wow" moment go here. After the prediction — right or wrong — go straight to the reveal. Do NOT run the wrong-answer narrowing-follow-up loop here; that loop (Interactive rhythm) is only for end-of-chunk checks on already-taught concepts. A teaser probes an untaught gap; you can't self-correct toward an untaught rule.
 4. **Then start the chunk** — the hook is in memory; teaching builds on it.
 
 Snippet format: runnable (Node / browser console) when the concept surfaces in output. Mental-trace when it doesn't (e.g. execution-context internals). Default to runnable.
