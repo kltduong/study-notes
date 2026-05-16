@@ -110,6 +110,13 @@ Apply learner preferences from `learner-profile.md` to decide which elements to 
 
 **Gradual build-up.** Teach in smaller pieces, pause for absorption or quick checks, build the next piece on top. Understanding check at the end. This applies to all chunks — even inventory/map content (e.g. "the 4 scope types") is introduced incrementally so comparisons emerge as items accumulate rather than requiring the reader to hold everything at once.
 
+**Sub-part check.** After teaching each sub-part, ask 1 focused question targeting that sub-part's core mechanism. Catches misunderstandings before the next sub-part builds on them. Rules:
+
+- 1 question only — lighter than the end-of-chunk check.
+- No competence tagging — that rolls up at chunk end.
+- Apply the same feedback approach (narrowing follow-up on wrong answers).
+- Skip if the sub-part is trivially small or the user already demonstrated understanding during teaching.
+
 ### Teaching content delivery
 
 Write teaching content to a **temp `.md` file in the same topic folder** rather than inline in chat. Mermaid diagrams and tables render properly in the editor's markdown preview but not in the chat panel.
@@ -153,6 +160,8 @@ Teaching is a conversation, not a lecture.
 **Pacing signal:** All correct → move on. Struggled → slow down, revisit the weak spot with a different angle.
 
 **Multiple topics:** Ask whether to teach in sequence or focus on connections (compare/contrast, how one builds on the other). Don't silently interleave.
+
+**Study-strategy proposals:** When new content is introduced, proactively propose a concrete study strategy for checking/reinforcing it (retrieval practice, mechanism-separate scoring, interleaving, faded worked examples), tailored to the learner profile — esp. recurring refinement patterns. Treat each as an experiment; flag winners as candidates to fold into this doc, with user approval. Don't stash such rules in memory.
 
 ## Discussion Workflow
 
