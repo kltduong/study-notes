@@ -126,6 +126,7 @@ Write teaching content to a **temp `.md` file in the same topic folder** rather 
 - **Chat messages** stay short — signposting, questions, feedback, understanding checks. Not full content dumps.
 - Append to or overwrite the same draft file as new sections are taught. One draft per chunk, not one per section.
 - **Top-of-draft plan checklist.** Open the draft with a `## Plan (teaching order)` checklist enumerating the chunk's sub-parts. Mark each `[x]` as that sub-part lands. Two purposes: the learner sees progress in the editor without asking; the teacher doesn't re-derive the sub-part list from conversation context each turn. Stays in the draft (not carried to the final note) — useful context when reviewing the teaching path later.
+- **Self-contained drafts.** The draft must be readable standalone — include all motivating code examples (including the teaser snippet and its reveal) directly in the draft text, not only in chat. Chat is ephemeral; the draft is the durable teaching-path record.
 
 ### Chunk opener (teaser-first)
 
