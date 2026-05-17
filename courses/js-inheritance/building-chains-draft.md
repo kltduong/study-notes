@@ -496,8 +496,3 @@ The four mechanisms differ only in (a) the API used to wire those links and (b) 
 ## 10. Understanding check
 
 (To be delivered one question at a time after section 9 is read.)
-
-
-
-
-

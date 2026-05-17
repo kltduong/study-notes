@@ -4,7 +4,7 @@
 
 - [x] 1. **Unified dispatch rule** — `this` from receiver (recap + forward link); `super.method()` as lookup-redirect with `this` preserved. Worked synthesis: A/B/C cascade.
 - [x] 2. **Polymorphism payoff** — inherited body's `this.method()` resolves to most-derived override because `this` never rebinds.
-- [x] 3. **`super(...)` in derived constructors** — full uninitialized-`this` mechanics, unconditional ReferenceError.
+- [x] 3. **`super(...)` in derived constructors** — allocation delegation axiom (base vs derived), uninitialized-`this` mechanism, two failure modes as consequences, contrast with `.call()` form.
 - [x] 4. **Static dispatch + constructor-side chain** — `this` inside static = class on left of dot; `super.staticMethod()` on constructor chain.
 - [ ] 5. **Class fields vs prototype methods (inheritance lens)** — brief recap; inheritance implications.
 - [ ] 6. **Private fields (`#field`)** — class-only syntax, spec-enforced encapsulation.
@@ -62,6 +62,50 @@ super.X  ≈  Object.getPrototypeOf(HomeObject)[X]
                  "one above where I'm written"
                  fixed at definition time
 ```
+
+**Concrete example — what is `HomeObject` for a given method?**
+
+```js
+class Animal {
+  speak() { return `[Animal] ${this.name}`; }
+}
+
+class Dog extends Animal {
+  speak() {
+    // HomeObject for this method = Dog.prototype
+    // (because `speak` was defined/installed on Dog.prototype)
+    //
+    // super.speak() means:
+    //   Object.getPrototypeOf(Dog.prototype).speak.call(this)
+    //   = Animal.prototype.speak.call(this)
+    return super.speak() + ' woof';
+  }
+}
+
+const d = new Dog();
+d.name = 'Rex';
+d.speak(); // "[Animal] Rex woof"
+```
+
+`HomeObject` is the object the method was **installed into** — not the instance, not the class constructor. In a `class` body, methods get installed on `ClassName.prototype`, so `Dog`'s `speak` has `HomeObject = Dog.prototype`. The `super.speak()` lookup starts one level above that: `Object.getPrototypeOf(Dog.prototype)` = `Animal.prototype`.
+
+This is a **static, definition-time binding** stored in the method's internal `[[HomeObject]]` slot the moment the class is evaluated. Reassigning, borrowing, or `.call()`-ing the method with a different receiver doesn't change where `super` resolves:
+
+```js
+const borrowed = Dog.prototype.speak;
+const cat = { name: 'Whiskers' };
+borrowed.call(cat);
+// super.speak() still resolves against Animal.prototype
+// (HomeObject is still Dog.prototype, regardless of receiver)
+// → "[Animal] Whiskers woof"
+```
+
+For **static methods**, the same rule applies — but static methods live on the constructor itself, so `HomeObject` is the constructor function:
+
+| Method kind | Installed on | `HomeObject` | `super` resolves against |
+|---|---|---|---|
+| Instance method | `Child.prototype` | `Child.prototype` | `Parent.prototype` |
+| Static method | `Child` (constructor) | `Child` | `Parent` (constructor) |
 
 #### 1.2.2.2. Question 2: what is `this`?
 
@@ -199,91 +243,226 @@ The flip side — if `sound` were a **class field** (`sound = () => 'woof'`) rat
 
 ## 1.4. `super(...)` in derived constructors
 
-Touched in [`building-chains.md`](building-chains.md) as the constructor-side counterpart to `Animal.call(this, name)`. The full mechanic: **`super()`'s job is to bring the instance into existence and bind `this` to it** — not merely to "let you use `this`."
+### 1.4.1. Teaser
 
-### 1.4.1. The two-failure model
+```js
+class Base {
+  constructor() { console.log('Base, this =', this); }
+}
 
-A base (non-derived) constructor: `new` allocates the instance *before* the body runs, so `this` is bound from line 1.
+class Mid extends Base {
+  constructor() {
+    console.log('Mid, this =', this);  // L1
+    super();                            // L2
+  }
+}
 
-A derived constructor: the instance is allocated by running *up* the `super()` chain. Until `super()` returns, the `this` *binding* is **uninitialized** — a TDZ-like state for the `this` binding specifically (not `this === undefined`; the binding itself is unusable). This produces **two** distinct ReferenceErrors:
+new Mid();
+```
+
+**Predict:** What does L1 print? What does L2 do?
+
+### 1.4.2. The allocation delegation axiom
+
+With `new` on a **base** class, the engine does what you already know:
+
+1. Allocate a fresh object (linked to `Base.prototype`)
+2. Bind `this` to it
+3. Run the constructor body
+4. Return `this`
+
+With a **derived** class (`extends` something), step 1 changes fundamentally: **the derived constructor does not allocate.** It *delegates* allocation upward to the base.
+
+The structural reason: the base class might be **exotic** (`Array`, `Error`, `Map`, `Promise`, `RegExp`). These aren't plain objects — they have internal slots (`[[ArrayBufferData]]`, magic `length` behavior, `[[MapData]]`, stack capture) that can only be set up at allocation time. A plain `Object.create(Derived.prototype)` wouldn't have those internals. Only the base's own allocation logic knows what *kind* of object to produce.
+
+If the engine allocated a plain object in the derived constructor and then ran the base constructor on it, the base couldn't retroactively make it exotic — the object's "kind" is fixed at allocation time. So allocation **must** happen inside the base.
+
+For plain user classes (`class A {}`) this distinction is invisible — a plain object is fine either way. But the language can't have two different `new` semantics depending on whether your ancestor chain eventually hits an exotic. One uniform rule: **derived doesn't allocate, base does.**
+
+### 1.4.3. The uninitialized-`this` mechanism
+
+When you call `new Mid()`:
+
+1. Engine enters `Mid`'s constructor body — but **does not allocate an object yet**. The `this` binding exists in the environment record but is marked **uninitialized** (same TDZ mechanism as a `let` before its declaration).
+2. `super()` calls `Base`'s constructor, which *does* allocate (because `Base` is not derived). That fresh object comes back.
+3. Only *now* does the engine initialize `this` in `Mid`'s environment to that returned object.
+4. After `super()` returns, `this` is live — you can read/write it freely.
+
+The `ReferenceError` at L1 isn't a style rule — it's the same TDZ mechanism as accessing a `let` before its declaration. The binding literally has no value yet because **the object doesn't exist yet**.
+
+### 1.4.4. Two failure modes (consequences of the axiom)
+
+Both are the same underlying cause (uninitialized `this`) surfacing in different ways:
 
 | Failure | Trigger | Why |
 |---|---|---|
-| Early use | read *or write* `this` before `super()` returns | binding not yet initialized |
-| Missing instance | derived constructor finishes without `super()` having run | no instance was ever created → nothing to return |
+| `this` before `super()` | Any read/write of `this` before `super(...)` completes | Object hasn't been allocated yet — nothing to bind |
+| Missing `super()` entirely | Derived constructor returns without calling `super()` | Object never gets allocated, `new` can't return `this` → `ReferenceError` on implicit return |
 
 ```js
-class Base { constructor() { this.tag = 'base'; } }
-
-class Derived extends Base {
-  constructor() { this.x = 1; super(); }   // ReferenceError at `this.x` — early use
+class Broken extends Base {
+  constructor() {
+    // no super() call at all
+    this.x = 1;  // ReferenceError — this is uninitialized
+  }
 }
-
-class D extends Base {
-  constructor() { return; }                // ReferenceError — finished, no super(), no instance
-}                                           // (body never even mentions `this`)
-
-class Plain { constructor() { this.x = 1; } }   // fine — base ctor, `new` pre-made the instance
+// Even avoiding `this` doesn't help:
+class AlsoBroken extends Base {
+  constructor() {
+    return;  // implicit return of `this` — but this is uninitialized → ReferenceError
+  }
+}
 ```
 
-### 1.4.2. Why the rule is unconditional
+The rule is **unconditional** — the engine doesn't analyze whether your `this` usage logically depends on parent setup. Any access before `super()` throws, period.
 
-The engine is **not** analyzing "does this `this` use depend on parent setup?" Before `super()` there is *no instance in existence at all* — so every path that needs a bound `this` fails identically: `this.x = 1`, `console.log(this)`, `const y = this`, and even an empty `return;` (which implicitly yields `this`). `super()` is the conduit: it runs the parent constructor, which (at the base-most level) allocates the object using **`new.target.prototype`** for the `[[Prototype]]` link — so `new Derived()` still produces a `Derived` instance even though allocation physically happens inside `Base`. Allocated at the bottom of the chain, shaped by `new.target` at the top, threaded back down through each `super()`.
+### 1.4.5. Contrast with `.call()` form
 
-> **Aside —** escape hatch: a derived constructor *may* skip `super()` if it explicitly `return`s its own object (`return { custom: true }`). An explicit object return value means there's no missing-instance error. Niche — listed only so the model is complete: the invariant is "a derived constructor must yield an object," normally satisfied by `super()` creating `this`.
-
-### 1.4.3. Resolving the building-chains refinement
-
-The earlier refinement modeled this as conditional ("fails only when the `this` use depends on parent setup"). It is unconditional, and now the *why* is structural: `super()` doesn't grant permission to touch `this` — it **creates the thing `this` names**. No creation → nothing to touch, nothing to return. Conditionality never enters.
-
-## 1.5. Static dispatch + the constructor-side chain
-
-The sub-part 1 axiom **does not change** for static methods. Same two coordinates (which-function / what-`this`), same `super` = lookup-redirect. The *only* substitution: the relevant chain is the **constructor-side** chain, and `[[HomeObject]]` for a static method is the **constructor function itself**, not `.prototype`.
-
-Recall from [`building-chains.md`](building-chains.md) that `class Dog extends Animal` wires *two* chains:
-
-- Instance side: `Dog.prototype.[[Prototype]] = Animal.prototype` — for `dog.method()`.
-- Constructor side: `Dog.[[Prototype]] = Animal` — for `Dog.staticMethod()`.
-
-### 1.5.1. `this` in a static method = the class it was called on
-
-A static method is just a property on the constructor function object. Calling it is `Constructor.method()` — ordinary receiver-based dispatch (Q2), where the "receiver" is the constructor left of the dot.
+In the pre-class pattern, `this` is always initialized — `new` allocates immediately and hands it to the constructor:
 
 ```js
-class Animal {
-  static create(name) { return new this(name); }   // this = the class called on
-  constructor(name) { this.name = name; }
+function Mid() {
+  console.log(this);         // ✓ — object already exists (allocated by `new Mid()`)
+  Base.call(this);           // just runs Base's body on an already-existing object
 }
-class Dog extends Animal {
-  constructor(name) { super(name); this.kind = 'dog'; }
-}
-
-Animal.create('x').constructor.name;   // 'Animal' — this = Animal, new Animal(...)
-Dog.create('y').constructor.name;      // 'Dog'    — this = Dog,    new Dog(...)
 ```
 
-`create` is defined only on `Animal`. `Dog.create('y')` resolves it via the **constructor-side** chain (`Dog.[[Prototype]] = Animal`), and `this` is `Dog` (left of the dot). `new this(name)` therefore constructs a `Dog`. This is polymorphism (sub-part 2) on the constructor chain: the inherited static method "constructs down into" the subclass because `this` is the receiver, unchanged. (Already demoed in `building-chains.md`; the *mechanism* is identical to instance-side polymorphism — only the chain differs.)
+No TDZ, no enforcement. You *can* use `this` before `.call()` — the engine won't stop you. But if `Base` sets properties you depend on, you'll read `undefined`. Silent corruption instead of a loud error. The class form turns that silent bug into a structural impossibility.
 
-### 1.5.2. `super.staticMethod()` — same redirect, constructor `[[HomeObject]]`
-
-Inside a **static** method, `super` refers to the parent **constructor**, not the parent prototype. The lookup-redirect rule from sub-part 1 is unchanged; only the `[[HomeObject]]` substitution differs:
-
-| Method kind | `[[HomeObject]]` | `super.X` looks up from |
+| Concern | `.call()` form | `class` form |
 |---|---|---|
-| Instance method | `C.prototype` | `Object.getPrototypeOf(C.prototype)` = parent's `.prototype` |
-| **Static method** | `C` (the constructor fn) | `Object.getPrototypeOf(C)` = **parent constructor** |
+| Allocation | `new` allocates immediately in derived | Delegated to base via `super()` |
+| `this` before parent runs | Allowed (silent bugs) | `ReferenceError` (loud) |
+| Exotic base support | Impossible (plain object already allocated) | Works (base allocates the right kind) |
+
+### 1.4.6. The escape hatch — explicit return
+
+One way to bypass the axiom: return an explicit object from the derived constructor.
+
+```js
+class Weird extends Base {
+  constructor() {
+    return { custom: true };  // ✓ — no super() needed, no ReferenceError
+  }
+}
+new Weird();  // { custom: true } — not linked to Weird.prototype!
+```
+
+If you return a non-primitive, `new` uses *that* instead of `this`. Since `this` is never accessed, the TDZ never triggers. But the returned object isn't wired to the prototype chain — `new Weird() instanceof Weird` is `false`. This is a deliberate escape hatch for factory patterns, not normal inheritance usage.
+
+## 1.5. Static dispatch + constructor-side chain
+
+### 1.5.1. Teaser
 
 ```js
 class Animal {
-  static describe() { return 'an animal'; }
-}
-class Dog extends Animal {
-  static describe() { return super.describe() + ' that barks'; }  // [[HomeObject]] = Dog
+  static create(name) { return new this(name); }
+  static describe() { return `I am ${this.name}`; }
 }
 
-Dog.describe();   // 'an animal that barks'
+class Dog extends Animal {
+  static describe() { return super.describe() + ' (dog edition)'; }
+}
+
+Dog.create('Rex');      // L1
+Dog.describe();         // L2
+Animal.describe();      // L3
 ```
 
-Trace: `Dog.describe()` → dynamic walk from `Dog` finds `Dog.describe`, `this = Dog`. `super.describe()` → static start from `Object.getPrototypeOf(Dog)` = `Animal` → `Animal.describe` found, `this` preserved (`Dog`). Identical shape to the A/B/C cascade in sub-part 1 — substitute "constructor" for "prototype" and nothing else moves.
+**Predict:** For each line — what is `this`, where does the method body come from, and what's the result?
 
-The unifying statement for the whole chunk so far: **one dispatch rule, two chains.** Instance methods walk the `.prototype` chain; static methods walk the constructor chain; `super` is a definition-time lookup-redirect on whichever chain the method's `[[HomeObject]]` sits on; `this` is always the call-time receiver, preserved across `super`.
+### 1.5.2. The constructor-side chain
+
+`class Dog extends Animal` wires **two** chains simultaneously:
+
+- **Instance side:** `Dog.prototype.[[Prototype]] = Animal.prototype`
+- **Constructor side:** `Dog.[[Prototype]] = Animal`
+
+The constructor-side chain makes static methods inheritable. Static members live on the constructor function object itself (not on `.prototype`), so they need their own chain to be reachable from subclasses.
+
+```mermaid
+flowchart LR
+    subgraph instance_side ["Instance side"]
+      DP["Dog.prototype"]
+      AP["Animal.prototype"]
+      OP["Object.prototype"]
+    end
+    subgraph constructor_side ["Constructor side"]
+      D["Dog"]
+      A["Animal"]
+      FP["Function.prototype"]
+    end
+    DP --"[[Prototype]]"--> AP
+    AP --"[[Prototype]]"--> OP
+    D --"[[Prototype]]"--> A
+    A --"[[Prototype]]"--> FP
+
+    style DP fill:#46c,stroke:#fff,color:#fff
+    style AP fill:#46c,stroke:#fff,color:#fff
+    style OP fill:#46c,stroke:#fff,color:#fff
+    style D fill:#c64,stroke:#fff,color:#fff
+    style A fill:#c64,stroke:#fff,color:#fff
+    style FP fill:#c64,stroke:#fff,color:#fff
+```
+
+### 1.5.3. Same unified dispatch rule, different objects
+
+The dispatch axiom (Q1: where's the body? Q2: what's `this`?) applies identically on both sides. The only difference is *which objects* form the chain:
+
+| Side | Chain links | `this` is | `super` starts from |
+|---|---|---|---|
+| Instance | `instance → Child.prototype → Parent.prototype → …` | the instance | `getPrototypeOf(HomeObject)` where HomeObject is a `.prototype` object |
+| Constructor (static) | `Child → Parent → Function.prototype → …` | the constructor left of the dot | `getPrototypeOf(HomeObject)` where HomeObject is a constructor function |
+
+There's no separate "static inheritance" mechanism — it's the same chain walk on a different set of objects.
+
+### 1.5.4. Trace of the teaser
+
+**L1 — `Dog.create('Rex')`:**
+- `create` not own on `Dog` → chain-walk to `Dog.[[Prototype]]` = `Animal` → found `Animal.create`
+- `this = Dog` (left of dot)
+- Inside: `new this(name)` → `new Dog('Rex')` → constructs a `Dog` instance
+- Polymorphic factory: parent's method builds the right subclass without naming it
+
+**L2 — `Dog.describe()`:**
+- `describe` own on `Dog` → body = `Dog.describe`, `this = Dog`
+- `super.describe()`: `Dog.describe`'s `[[HomeObject]]` = `Dog`, so start at `getPrototypeOf(Dog)` = `Animal` → found `Animal.describe`
+- Runs `Animal.describe` with `this = Dog` (preserved) → `this.name` = `"Dog"`
+- Result: `"I am Dog (dog edition)"`
+
+**L3 — `Animal.describe()`:**
+- `describe` own on `Animal` → body = `Animal.describe`, `this = Animal`
+- `this.name` = `"Animal"`
+- Result: `"I am Animal"`
+
+### 1.5.5. Pre-class form — the missing chain
+
+In the constructor-function form, `Dog.[[Prototype]]` defaults to `Function.prototype` — **not** `Animal`:
+
+```js
+function Animal(name) { this.name = name; }
+Animal.create = function(name) { return new this(name); };
+
+function Dog(name, breed) {
+  Animal.call(this, name);
+  this.breed = breed;
+}
+Object.setPrototypeOf(Dog.prototype, Animal.prototype);  // instance side only
+
+Object.getPrototypeOf(Dog) === Function.prototype;  // true — not Animal!
+Dog.create('Rex');  // TypeError: Dog.create is not a function
+```
+
+`setPrototypeOf(Dog.prototype, Animal.prototype)` only wires the instance side. The constructor-side chain requires a **separate** manual step:
+
+```js
+Object.setPrototypeOf(Dog, Animal);  // ← extra line for static inheritance
+Dog.create('Rex');                    // now works
+```
+
+| Form | Instance chain | Constructor chain |
+|---|---|---|
+| `class Dog extends Animal` | ✓ automatic | ✓ automatic |
+| `function` + `setPrototypeOf(Dog.prototype, ...)` | ✓ manual | ✗ missing (need separate `setPrototypeOf(Dog, Animal)`) |
+
+This is why static inheritance was rare in the pre-class era — it required an extra step most people forgot. `class extends` made it invisible and correct by default.
