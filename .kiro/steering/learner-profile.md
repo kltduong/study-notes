@@ -25,18 +25,16 @@ Only folders under `courses/` with a workflow-produced `toc.md` feed the compete
 
 ## Learning Preferences
 
-- **First principles over cookbook.** Wants _why_ before _what_. Definitional/procedural content alone lands poorly — derive behavior from fundamentals.
-- **Axiom-and-derivation teaching.** Analogy the learner uses: Newton's three laws → all of classical mechanics. At the start of each topic/chunk, name the small set (2–4) of invariants the rest follows from. Teach by derivation — show how behavior falls out of the axioms — rather than cataloging rules. A compact axiom set the learner can reconstruct from is the target.
-- **Flag genuinely arbitrary things.** Not every behavior derives from a principle. Historical accidents (`typeof null === "object"`), committee compromises (ES6 class syntax), legacy tradeoffs — call these out as "arbitrary, memorize" rather than inventing a false derivation. The skill is knowing which category something falls into.
-- **Cross-language comparison as explanation tool.** Python is a natural reference point — the learner thinks in it. When a JS design choice becomes clearer by contrast with Python (or another familiar language), reach for the comparison. Especially useful for "why didn't JS just do X?" questions.
-- **Formal/abstract structure when it exists.** If a behavior maps to a known mathematical or logical structure (quantifiers, algebraic identities, folds, type relationships), surface it explicitly. The formal framing is a _separate layer of understanding_ — not a substitute for the mechanism, but a complement that reveals why the design is the only coherent choice. Derive behavior from the abstraction, don't just label it.
-- **Mental model orientation.** Compact takeaways that survive months later beat exhaustive reference coverage.
-- **Concrete → general.** Anchor the mechanism in a real example before abstracting.
-- **Mechanism-level precision.** "Close but not quite" is unacceptable — give the precise version even when the conclusion was right. Refinement tracking exists for this.
+What this learner responds to — use these to decide emphasis and framing within the teaching approach defined in `study-notes-guide.md`.
+
+- **Axiom-and-derivation style.** Analogy: Newton's three laws → all of classical mechanics. Name the small invariant set (2–4) up front, then derive behavior from it. A compact axiom set the learner can reconstruct from is the target.
+- **Flag genuinely arbitrary things.** Historical accidents, committee compromises, legacy tradeoffs — call these out as "arbitrary, memorize" rather than inventing a false derivation.
+- **Cross-language comparison.** Python is the natural reference point. Reach for it when a JS design choice becomes clearer by contrast.
+- **Formal/abstract structure.** Surface mathematical or logical structure when it exists (quantifiers, algebraic identities, folds). Derive behavior from the abstraction — don't just label it after the fact.
+- **Mechanism-level precision.** "Close but not quite" is unacceptable — give the precise version even when the conclusion was right.
 - **Comparison tables** land well; mermaid diagrams also welcome.
-- **History/evolution** only when load-bearing (what it replaced and why). Skip pure chronology.
 - **Rabbit holes flagged, not interleaved.** Sidenote / "for later" blocks work well.
-- **Pace:** moderate on scheduling and mechanics; lighter on review of known material. Comfortable going deep when the _why_ requires it.
+- **Pace:** lighter on review of known material; comfortable going deep when the _why_ requires it.
 
 ## Topic Competence (Global)
 
@@ -67,15 +65,6 @@ Recurring imprecisions pulled from `🔧 Refinements` across `courses/*/toc.md`.
 - **Right conclusion, wrong mechanism.** Predicts the correct outcome via a timing/coincidence argument rather than the structural one (e.g. non-interleaving of click handlers "because clicks are slower").
 - **Problem-category compression.** Merges related-but-distinct problems into fewer buckets (callback hell: inversion of control / composition / scattered errors → compressed to "nesting + readability").
 - **Suspension model imprecision.** Describes `await` as "keeping a reference to a callback" rather than "suspends execution context and registers the continuation as a `.then()` handler on the awaited promise."
-
-## Session Calibration Defaults
-
-Default assumptions — shorten or skip the two calibration questions unless the topic falls outside the profile:
-
-- **Starting point:** "knows basics, fuzzy on [specific subtopic]" — rarely "never touched it."
-- **Goal:** clean mental model + implementation fluency. Deep mastery is welcome where relevant but not the default ask.
-- **Arc:** motivation → first principles → concrete example → generalize → gotchas → connections. Skip history unless it explains a surviving design choice.
-- **Confirm, don't re-ask.** State the assumed calibration in one line, invite correction, proceed if uncorrected.
 
 ## Maintenance
 
