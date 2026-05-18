@@ -31,7 +31,9 @@ Progress tracker for the course.
 
 - [x] **Values & memory model** — primitive vs object (two categories), slot holds value directly vs holds a heap reference, copy semantics (assignment/passing copy the slot), identity (`===` compares slot content), implications for mutation and aliasing
       📊 solid
-- [ ] **The Reference type** — spec-level Reference Record, base/name/strict fields, how member expressions produce References, how plain identifiers produce References with ER base
+- [x] **The Reference type** — spec-level Reference Record, base/name/strict fields, how member expressions produce References, how plain identifiers produce References with ER base
+      📊 solid
+      🔧 Refinements: — Said "ReferenceError" twice when the failure is property access on `undefined` (TypeError). ReferenceError is for unresolvable identifiers only.
 - [ ] **`this` determination** — the single rule: extract base from Reference at call site → `[[ThisValue]]`; ER base → `undefined`; strict vs sloppy coercion to `globalThis`
 - [ ] **Explicit overrides: `call`, `apply`, `bind`** — `Function.prototype.call/apply` supply `this` directly; `bind` returns a BoundFunction exotic object with fixed `[[BoundThis]]`; partial application
 - [ ] **Quiz: values, Reference & `this` basics** — covers chunks 1–4
