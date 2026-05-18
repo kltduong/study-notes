@@ -65,18 +65,32 @@ The Reference carries an *address* (base + name), not the value itself. `GetValu
 
 ### 1.4.1. How a Reference is born
 
-Every expression that names something produces a Reference Record the same way:
+Every **lvalue expression** produces a Reference Record. An lvalue is an expression that designates a *storage location* — you can put it on the left side of `=` because it refers to a place, not just a computed result. In JS, exactly two syntactic forms are lvalues:
+
+- **Identifiers:** `fn`, `x`, `console` — name a binding (a slot in an Environment Record).
+- **Member expressions:** `obj.greet`, `arr[0]` — name a property (a slot on an object).
+
+Contrast with expressions that only compute values (rvalues): `2 + 3`, `fn()`, `(0, obj.greet)`. These produce a result but don't designate a location — there's no "where does this live?" to answer.
+
+When the engine evaluates an lvalue, it builds a Reference Record:
 
 > **Find where the name lives → `[[Base]]`.**
 > **The name itself → `[[ReferencedName]]`.**
 > **Current strictness → `[[Strict]]`.**
 
-The engine records the *address* — it does **not** look up the value yet. The `[[Base]]` is determined based on where the name lives:
+The engine records the *address* (base + name) — it does **not** look up the value yet. Think of it like writing down "the `greet` slot on `obj`" rather than reading what's actually in that slot. `[[Base]]` captures *which container* holds the name — the object or ER that owns the slot. JS has exactly two name-resolution mechanisms, and the syntax tells you which one runs:
 
-| Expression type      | Example     | Where the name lives     | `[[Base]]` becomes         |
-| -------------------- | ----------- | ------------------------ | -------------------------- |
-| Member expression    | `obj.greet` | On an object             | The object (`obj`)         |
-| Plain identifier     | `fn`        | In an Environment Record | The ER where `fn` was found |
+- **Bare name** (`fn`) → **identifier resolution.** The engine walks the scope chain (ER → outer ER → ... → global ER) looking for a binding with that name. The ER where it's found becomes `[[Base]]`.
+- **Dot/bracket** (`obj.greet`, `obj["x"]`) → **property lookup.** The engine takes the already-resolved object on the left and searches its property table (+ prototype chain) for the key. That object becomes `[[Base]]`.
+
+There's no third mechanism. Every name in JS is resolved by one of these two paths, and the syntax determines which. The Reference Record simply records which path was taken and what container it landed on:
+
+| Expression type      | Example     | Resolution mechanism | `[[Base]]` becomes         |
+| -------------------- | ----------- | -------------------- | -------------------------- |
+| Plain identifier     | `fn`        | Identifier resolution | The ER where `fn` was found |
+| Member expression    | `obj.greet` | Property lookup      | The object (`obj`)         |
+
+In `obj.greet`, both mechanisms fire in sequence: identifier resolution finds `obj` in an ER (producing one Reference), then `GetValue` extracts the object, then property lookup finds `"greet"` on that object (producing a *new* Reference with the object as base). The Reference that reaches the call operator is always from the **final** resolution step.
 
 ### 1.4.2. The `this`-determination rule
 
