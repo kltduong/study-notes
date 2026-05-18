@@ -3,7 +3,7 @@
 ## Plan (teaching order)
 
 - [x] Sub-part 1: The single rule formalized — EvaluateCall reads `[[Base]]`, passes it as thisValue to the new Function EC
-- [ ] Sub-part 2: Where `[[ThisValue]]` lands — the Function ER slot, accessible via `this` keyword
+- [x] Sub-part 2: Where `[[ThisValue]]` lands — the Function ER slot, accessible via `this` keyword
 - [ ] Sub-part 3: Strict vs sloppy coercion — the OrdinaryCallBindThis step
 - [ ] Sub-part 4: Complete decision tree — all normal-call cases derived from one rule
 
@@ -139,3 +139,66 @@ standalone();  // undefined
 The function was found via identifier resolution — the ER where `standalone` lives becomes `[[Base]]`. ER base → `undefined`. No magic, no special "default binding rule" — just the Reference base being an ER.
 
 
+
+---
+
+## Sub-part 2: Where `[[ThisValue]]` lands
+
+Sub-part 1 answered *how* `thisValue` is determined (Reference base rule). This sub-part answers: where does that value go, and how does the `this` keyword read it?
+
+### The path: call site → Function ER slot → `this` keyword
+
+You know from js-vars-scope that every function call creates a new Execution Context with a new Function Environment Record. That ER has a `[[ThisValue]]` internal slot — and that's exactly where the determined `thisValue` is stored.
+
+```mermaid
+flowchart LR
+    A["Call operator\ndetermines thisValue\n(Reference base rule)"] --> B["New Function EC\ncreated for this call"]
+    B --> C["Function ER\n[[ThisValue]] ← thisValue"]
+    C --> D["this keyword\nreads [[ThisValue]]"]
+
+    style A fill:#46c,stroke:#fff,color:#fff
+    style B fill:#46c,stroke:#fff,color:#fff
+    style C fill:#2a2,stroke:#fff,color:#fff
+    style D fill:#2a2,stroke:#fff,color:#fff
+```
+
+The `this` keyword doesn't do a lookup or chain walk. It's a direct slot read:
+
+```
+ResolveThisBinding():
+    env = current Function ER
+    return env.[[ThisValue]]
+```
+
+### `this` is per-call, not per-function
+
+Because `[[ThisValue]]` lives in the ER (created fresh per call), the same function object gets different `this` values across different calls:
+
+```js
+"use strict";
+function show() { return this; }
+
+const a = { show };
+const b = { show };
+
+a.show();  // Ref { base: a } → this = a     → new ER₁, [[ThisValue]] = a
+b.show();  // Ref { base: b } → this = b     → new ER₂, [[ThisValue]] = b
+show();    // Ref { base: scriptER } → this = undefined → new ER₃, [[ThisValue]] = undefined
+```
+
+Three calls, three ECs, three ER slots, three different `this` values. The function object `show` is identical in all three — it doesn't carry `this`. The call site determines it; the ER stores it.
+
+### Why this matters: `this` is not a property of the function
+
+This is the structural reason "method extraction loses `this`." The function object has no `[[ThisValue]]` — that slot belongs to the *ER created at call time*. When you copy a function reference into a different binding and call it from there, a new ER is created with a new `[[ThisValue]]` determined by the *new* call site's Reference base. The old call site's `this` is gone — it lived in a different ER that no longer exists.
+
+```js
+"use strict";
+const obj = { name: "obj", show() { return this; } };
+
+const fn = obj.show;  // copy function reference into fn's slot
+fn();                 // new call → new ER → [[ThisValue]] = undefined (ER base)
+obj.show();           // new call → new ER → [[ThisValue]] = obj (object base)
+```
+
+Each `()` creates its own ER with its own `[[ThisValue]]`. There's no "memory" of previous calls.
