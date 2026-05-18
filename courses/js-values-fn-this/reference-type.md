@@ -184,3 +184,10 @@ The critical path for `this` to work: the expression **must** be a Reference-pro
 The Reference type exists so the call operator can answer "what object was this method accessed on?" without the function object carrying that information. The function is a reusable value — it doesn't know or care where it lives. The Reference is the ephemeral context that connects a specific access path to a specific call.
 
 This is why `this` is determined **at the call site, not at definition time** (for regular functions). The same function object can have different `this` values depending on the expression that precedes `()` — because different expressions produce different References (or no Reference at all).
+
+## Quick reference
+
+- **Why Reference Records exist** — the function object doesn't carry "where I was accessed from." The Reference preserves that context so the call operator can set `this`.
+- **When created** — every identifier (`fn`) or member expression (`obj.greet`) evaluation produces one. Nothing else does.
+- **When consumed (GetValue)** — any operation that needs the value: assignment, `return`, operators, arguments, comma, conditional. Grouping `()` is the sole exception (passes through).
+- **How `this` is determined** — call operator reads `[[Base]]`: object → `this` = that object; ER → `this` = `undefined`; no Reference at all → `this` = `undefined`.
