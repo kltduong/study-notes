@@ -146,15 +146,27 @@ The function was found via identifier resolution — the ER where `standalone` l
 
 Sub-part 1 answered *how* `thisValue` is determined (Reference base rule). This sub-part answers: where does that value go, and how does the `this` keyword read it?
 
+### Terminology: `thisValue` vs `[[ThisValue]]` vs `this`
+
+Three names, three layers — all resolve to the same underlying value for a given call, but exist at different moments:
+
+| Term | What it is | Layer |
+|------|-----------|-------|
+| `thisValue` | Temporary value computed by EvaluateCall — the result of reading `[[Base]]` from the Reference. A local variable in the spec algorithm, not stored anywhere yet. | Call-site evaluation (transient) |
+| `[[ThisValue]]` | Internal slot on the Function Environment Record. `thisValue` is written here when the new EC is created. Persists for the lifetime of that call's ER. | Storage (per-call ER slot) |
+| `this` | Source-code keyword. Evaluating it runs `ResolveThisBinding()`, which reads `[[ThisValue]]` from the current Function ER. The read interface. | Source-level access (read-only) |
+
+The pipeline: call site produces `thisValue` → stored into `ER.[[ThisValue]]` → `this` keyword reads it back. The draft uses them precisely in this sense throughout.
+
 ### The path: call site → Function ER slot → `this` keyword
 
 You know from js-vars-scope that every function call creates a new Execution Context with a new Function Environment Record. That ER has a `[[ThisValue]]` internal slot — and that's exactly where the determined `thisValue` is stored.
 
 ```mermaid
 flowchart LR
-    A["Call operator\ndetermines thisValue\n(Reference base rule)"] --> B["New Function EC\ncreated for this call"]
-    B --> C["Function ER\n[[ThisValue]] ← thisValue"]
-    C --> D["this keyword\nreads [[ThisValue]]"]
+    A["Call operator<br/>determines thisValue<br/>(Reference base rule)"] --> B["New Function EC<br/>created for this call"]
+    B --> C["Function ER<br/>[[ThisValue]] ← thisValue"]
+    C --> D["this keyword<br/>reads [[ThisValue]]"]
 
     style A fill:#46c,stroke:#fff,color:#fff
     style B fill:#46c,stroke:#fff,color:#fff
@@ -181,9 +193,9 @@ function show() { return this; }
 const a = { show };
 const b = { show };
 
-a.show();  // Ref { base: a } → this = a     → new ER₁, [[ThisValue]] = a
-b.show();  // Ref { base: b } → this = b     → new ER₂, [[ThisValue]] = b
-show();    // Ref { base: scriptER } → this = undefined → new ER₃, [[ThisValue]] = undefined
+a.show();  // Ref { base: a } → this = a     → new ER1, [[ThisValue]] = a
+b.show();  // Ref { base: b } → this = b     → new ER2, [[ThisValue]] = b
+show();    // Ref { base: scriptER } → this = undefined → new ER3, [[ThisValue]] = undefined
 ```
 
 Three calls, three ECs, three ER slots, three different `this` values. The function object `show` is identical in all three — it doesn't carry `this`. The call site determines it; the ER stores it.
