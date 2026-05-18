@@ -145,7 +145,7 @@ Snippet format: runnable (Node / browser console) when the concept surfaces in o
 
 Teaching is a conversation, not a lecture.
 
-**End-of-chunk understanding check.** After finishing each chunk, present 2–3 short questions. Deliver one at a time — question, wait for answer, give feedback, next. After all answers, update the competence tag in `toc.md` (course-guided only).
+**End-of-chunk understanding check.** Do **not** automatically present the check after finishing a chunk. Wait for the user to trigger it (e.g. _"check me"_, _"questions"_, _"quiz me"_). When triggered: 2–3 short questions, delivered one at a time — question, wait for answer, give feedback, next. After all answers, update the competence tag in `toc.md` (course-guided only).
 
 **Question design:**
 
@@ -179,7 +179,7 @@ If a `courses/<topic>/` exists on the same subject, the discussion is extending 
 2. **Create `toc.md`** in `courses/<topic>/`. Parse the outline into logical chunks (group related lessons), write one checkbox entry per chunk with a brief scope note. Add quiz and test entries per the placement rules in "Quizzes and Tests".
 3. **Calibrate** and persist to `toc.md → ## Calibration`.
 4. **Teach chunk by chunk in course order**, but teach freely — restructure, reorder within a chunk, add missing context. Don't narrate slides.
-5. **Chunk gate.** After the understanding check and competence update:
+5. **Chunk gate.** After teaching is complete (and after the understanding check if the user triggered one):
    - Ask: _"Anything you want to dig deeper into on this chunk — follow-ups, edge cases, deeper dives? Or ready to move on?"_
    - Wait for explicit confirmation.
    - Only then: save the note automatically (don't ask whether to save), update the `toc.md` checkbox, proceed to the next chunk.
@@ -312,6 +312,7 @@ Present questions **one at a time** — question, answer, feedback, next. In `to
 - Preserve the mental model that emerged.
 - Link related notes with relative links (same folder only).
 - Short TL;DR at the top of each note.
+- **Quick reference section at the end.** Close each note with a `## Quick reference` section — a tight bullet list (3–6 items) summarizing the note's key mechanisms in one line each. Format: `- **Label** — one-sentence takeaway.` Purpose: future-self skims this first on revisit without re-reading the full note.
 
 ### Style rules
 
