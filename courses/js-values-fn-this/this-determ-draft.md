@@ -4,8 +4,8 @@
 
 - [x] Sub-part 1: The single rule formalized — EvaluateCall reads `[[Base]]`, passes it as thisValue to the new Function EC
 - [x] Sub-part 2: Where `[[ThisValue]]` lands — the Function ER slot, accessible via `this` keyword
-- [ ] Sub-part 3: Strict vs sloppy coercion — the OrdinaryCallBindThis step
-- [ ] Sub-part 4: Complete decision tree — all normal-call cases derived from one rule
+- [x] Sub-part 3: Strict vs sloppy coercion — the OrdinaryCallBindThis step
+- [x] Sub-part 4: Complete decision tree — all normal-call cases derived from one rule
 
 ---
 
@@ -214,3 +214,268 @@ obj.show();           // new call → new ER → [[ThisValue]] = obj (object bas
 ```
 
 Each `()` creates its own ER with its own `[[ThisValue]]`. There's no "memory" of previous calls.
+
+---
+
+## Sub-part 3: Strict vs sloppy coercion — OrdinaryCallBindThis
+
+Sub-parts 1–2 gave the full pipeline: call site → `thisValue` → `ER.[[ThisValue]]` → `this` keyword. But there's one more step between "call site computes `thisValue`" and "ER stores it" — a coercion step that only fires in sloppy mode.
+
+### Teaser
+
+```js
+function sloppy() { return this; }
+
+function strict() { "use strict"; return this; }
+
+console.log(sloppy());  // L1
+console.log(strict());  // L2
+```
+
+Both are plain calls. Identifier resolution → ER base → `thisValue = undefined`. Same rule, same result. Yet L1 returns `globalThis` and L2 returns `undefined`.
+
+### The missing step: OrdinaryCallBindThis
+
+The pipeline from sub-part 2 was slightly simplified. The full sequence when a function is called:
+
+```
+1. Call site: thisValue = Reference base rule        (sub-part 1)
+2. New EC created
+3. OrdinaryCallBindThis(func, thisValue)             ← THIS STEP
+4. ER.[[ThisValue]] = result of step 3               (sub-part 2)
+5. this keyword reads ER.[[ThisValue]]               (sub-part 2)
+```
+
+Step 3 is where strict/sloppy diverges. The algorithm:
+
+```
+OrdinaryCallBindThis(F, thisValue):
+    if F.[[ThisMode]] is "strict":
+        actualThis = thisValue                    // pass through unchanged
+    else:  // sloppy
+        if thisValue is undefined or null:
+            actualThis = globalThis               // coerce to global object
+        else:
+            actualThis = ToObject(thisValue)      // wrap primitives
+    Store actualThis in the new ER's [[ThisValue]]
+```
+
+### What `[[ThisMode]]` is
+
+Every function object has a `[[ThisMode]]` internal slot, set at function creation time:
+
+| Function type | `[[ThisMode]]` | Set when |
+|---|---|---|
+| Strict-mode function | `"strict"` | Function is created inside strict code |
+| Sloppy-mode function | `"global"` | Function is created in non-strict code |
+| Arrow function | `"lexical"` | Always (arrows skip OrdinaryCallBindThis entirely) |
+
+This is a property of the *function object* — not the call site, not the Reference. It's baked in at creation time and never changes.
+
+### The coercion rules in sloppy mode
+
+When `[[ThisMode]]` is `"global"` (sloppy), OrdinaryCallBindThis does two things:
+
+1. **`undefined` / `null` → `globalThis`** — this is why `sloppy()` returns the global object instead of `undefined`. The engine "helpfully" replaces the missing `this` with the global object.
+
+2. **Primitive → wrapped object** — if `thisValue` is a primitive (number, string, boolean, symbol, bigint), it gets wrapped via `ToObject`:
+
+```js
+function sloppy() { return this; }
+
+sloppy.call(42);       // Number {42} — wrapped
+sloppy.call("hi");     // String {"hi"} — wrapped
+sloppy.call(true);     // Boolean {true} — wrapped
+```
+
+In strict mode, neither coercion happens — `undefined` stays `undefined`, primitives stay primitives:
+
+```js
+function strict() { "use strict"; return this; }
+
+strict.call(42);       // 42 — raw primitive
+strict.call(null);     // null — no coercion
+strict.call(undefined);// undefined — no coercion
+```
+
+### Why this exists (historical accident)
+
+This is genuinely arbitrary — a legacy design choice from ES1 (1997), not derivable from any principle. The original reasoning: "methods should always have an object as `this`" — so the engine auto-wraps. But this creates bugs:
+
+```js
+function addProp() { this.tagged = true; }
+
+addProp();  // sloppy: this = globalThis → silently pollutes the global object
+            // strict: this = undefined → TypeError (the correct failure)
+```
+
+Strict mode (ES5) fixed this by removing the coercion. The function gets exactly what the call site determined — no "helpful" patching.
+
+> **Aside —** This is one of the strongest arguments for always using strict mode (or modules/classes, which are strict by default). The sloppy coercion masks bugs by silently substituting `globalThis` where `undefined` would correctly throw.
+
+### The complete pipeline (revised)
+
+```mermaid
+flowchart LR
+    A["Call site<br/>thisValue = Ref base rule"] --> B["OrdinaryCallBindThis<br/>coerce if sloppy"]
+    B --> C["ER.[[ThisValue]]<br/>= final value"]
+    C --> D["this keyword<br/>reads slot"]
+
+    style A fill:#46c,stroke:#fff,color:#fff
+    style B fill:#c42,stroke:#fff,color:#fff
+    style C fill:#2a2,stroke:#fff,color:#fff
+    style D fill:#2a2,stroke:#fff,color:#fff
+```
+
+**† Legend:**
+- Blue: determination (sub-part 1)
+- Red: coercion step (sub-part 3) — only mutates the value in sloppy mode
+- Green: storage and read (sub-part 2)
+
+### Summary: what strict mode changes (and doesn't)
+
+| Aspect | Strict | Sloppy |
+|--------|--------|--------|
+| Reference base rule | Same | Same |
+| ER base → `thisValue = undefined` | Same | Same |
+| OrdinaryCallBindThis coercion | **No** — pass through | **Yes** — `undefined`/`null` → `globalThis`, primitives → wrapped |
+| Where the check lives | `F.[[ThisMode]]` on the function object | Same |
+
+The call-site rule is identical. The only difference is whether the result gets patched before storage. Strict mode is the "honest" path — what the call site determined is what you get.
+
+---
+
+## Sub-part 4: Complete decision tree — all normal-call cases derived from one rule
+
+Sub-parts 1–3 gave you the mechanism. This sub-part is the payoff: a single decision tree that covers every normal-call pattern you'll encounter. No new concepts — just the one rule applied systematically.
+
+### Teaser
+
+```js
+"use strict";
+
+const obj = {
+  x: 1,
+  getX() { return this.x; }
+};
+
+const cases = [
+  () => obj.getX(),                    // A
+  () => (0, obj.getX)(),               // B
+  () => { const f = obj.getX; return f(); },  // C
+  () => (obj.getX)(),                  // D
+];
+
+cases.forEach((fn, i) => {
+  try { console.log(String.fromCharCode(65+i) + ":", fn()); }
+  catch(e) { console.log(String.fromCharCode(65+i) + ": TypeError"); }
+});
+```
+
+Results: A → `1`, B → TypeError, C → TypeError, D → `1`.
+
+- **A:** `obj.getX` → `Ref { base: obj }` → call operator sees object base → `this = obj`
+- **B:** Comma operator evaluates `obj.getX` → `Ref { base: obj }` → calls GetValue → plain function value. Call operator sees a non-Reference → `this = undefined`
+- **C:** Assignment `const f = obj.getX` calls GetValue on the Reference → stores plain function in `f`. `f()` → identifier resolution → `Ref { base: ER }` → `this = undefined`
+- **D:** Grouping `(obj.getX)` does **not** call GetValue — spec explicitly says it returns the operand as-is. Call operator still sees `Ref { base: obj }` → `this = obj`
+
+### The decision tree
+
+Every normal call (no `call`/`apply`/`bind`, no `new`, no arrow) reduces to one question:
+
+```
+What does the call operator see as `ref`?
+│
+├─ ref is a Reference Record
+│   ├─ [[Base]] is an object  → thisValue = that object
+│   └─ [[Base]] is an ER      → thisValue = undefined
+│
+└─ ref is NOT a Reference     → thisValue = undefined
+    (plain value — GetValue was already called by something)
+```
+
+Then OrdinaryCallBindThis applies (strict: pass-through; sloppy: coerce `undefined`→`globalThis`).
+
+### What produces each case
+
+| `ref` state | How you get there | Example |
+|---|---|---|
+| Reference with object base | Member expression directly before `()` | `obj.method()`, `arr[0]()`, `obj["m"]()` |
+| Reference with ER base | Identifier directly before `()` | `fn()`, `myFunc()`, `imported()` |
+| Not a Reference (plain value) | Any operation that calls GetValue before `()` reaches the result | `(0, obj.m)()`, `(f = obj.m)()`, `fn()` after `const fn = obj.m` |
+
+### Operations that consume (GetValue) a Reference
+
+These are the "Reference killers" — they extract the value and discard the Reference wrapper:
+
+- **Assignment** (`=`, `+=`, destructuring) — RHS is GetValue'd before storing
+- **Argument passing** — each argument expression is GetValue'd before the value enters the parameter slot
+- **Comma operator** — evaluates and GetValue's each operand
+- **Conditional operator** (`? :`) — GetValue's the selected branch
+- **Logical operators** (`&&`, `||`, `??`) — GetValue the result when short-circuiting resolves
+- **`return`** — GetValue's the expression
+
+### Operations that do NOT consume a Reference
+
+- **Grouping `( )`** — transparent, returns operand as-is
+- **Member access** (`.` or `[]`) — consumes the *previous* Reference (to get the object), but *produces a new one* with that object as base
+
+### The "method extraction" pattern — unified explanation
+
+Every case where "a method loses `this`" is the same mechanism: something called GetValue on the member-expression Reference before the call operator saw it.
+
+```js
+"use strict";
+const obj = { name: "obj", greet() { return this.name; } };
+
+// Direct call — Reference reaches call operator intact
+obj.greet();                    // "obj"
+
+// Extraction patterns — GetValue fires before ()
+const fn = obj.greet; fn();     // undefined (assignment consumed Ref)
+[obj.greet][0]();               // this = the array (new Ref with array base)
+(true && obj.greet)();          // undefined (&& GetValue'd the result)
+(obj.greet || null)();          // undefined (|| GetValue'd the result)
+setTimeout(obj.greet, 0);       // undefined (argument passing consumed Ref)
+```
+
+All one rule. No special cases to memorize.
+
+### Edge case: computed member expression with side effects
+
+```js
+"use strict";
+let count = 0;
+const obj = {
+  get prop() { count++; return function() { return this; }; }
+};
+
+obj.prop();  // this = obj
+```
+
+Even though `prop` is a getter that runs code, the *member expression* `obj.prop` still produces `Ref { base: obj, name: "prop" }`. The call operator reads `[[Base]]` = `obj` → `thisValue = obj`. GetValue is called to get the function (which triggers the getter), but the Reference's base was already read for `this` determination. The getter's side effects don't affect `this`.
+
+### Decision tree as a flowchart
+
+```mermaid
+flowchart TD
+    Start["Expression before ()"] --> Q1{"Is it a<br/>Reference Record?"}
+    Q1 -->|"No (plain value)"| U["thisValue = undefined"]
+    Q1 -->|"Yes"| Q2{"[[Base]] type?"}
+    Q2 -->|"Object"| OBJ["thisValue = [[Base]]"]
+    Q2 -->|"Environment Record"| U
+    U --> Coerce{"Function strict?"}
+    OBJ --> Store["ER.[[ThisValue]] = thisValue"]
+    Coerce -->|"Strict"| Store2["ER.[[ThisValue]] = undefined"]
+    Coerce -->|"Sloppy"| Store3["ER.[[ThisValue]] = globalThis"]
+
+    style Start fill:#46c,stroke:#fff,color:#fff
+    style Q1 fill:#555,stroke:#fff,color:#fff
+    style Q2 fill:#555,stroke:#fff,color:#fff
+    style U fill:#c42,stroke:#fff,color:#fff
+    style OBJ fill:#2a2,stroke:#fff,color:#fff
+    style Coerce fill:#555,stroke:#fff,color:#fff
+    style Store fill:#2a2,stroke:#fff,color:#fff
+    style Store2 fill:#2a2,stroke:#fff,color:#fff
+    style Store3 fill:#c42,stroke:#fff,color:#fff
+```
