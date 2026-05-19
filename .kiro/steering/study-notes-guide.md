@@ -296,6 +296,15 @@ Present questions **one at a time** — question, answer, feedback, next. In `to
 
 **Code blocks in questions include line-number comments** (`// L1`, `// L2`) on every statement line so the user can reference specific lines. Empty lines and lone braces don't need labels.
 
+### Code block line labels (all teaching contexts)
+
+**Applies to:** teaser snippets, teaching draft examples, chat code blocks, quiz/test questions — any code the user is expected to reason about or discuss.
+
+- Add `// L1`, `// L2`, … comments on every statement line. Empty lines and lone braces (`}`) don't need labels.
+- **Semantic markers** (`// A`, `// B`, `// C` …) are optional — use them when a specific line will be referenced repeatedly in explanation or when grouping related lines aids discussion. Place after the line-number label: `// L3 — A`.
+- Purpose: enables precise communication ("what happens at L4?" / "the key is line B") without counting lines manually.
+- **Exception:** very short snippets (≤ 3 lines) where line numbers add more noise than value can omit them.
+
 ## Writing Guidelines
 
 See `writing-style.md` for full content rules, style rules, formatting, and mermaid conventions. Key points repeated here for quick reference:
