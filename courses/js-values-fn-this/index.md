@@ -10,9 +10,11 @@ Linear — each note builds on the previous:
 2. [The Reference type](reference-type.md) — the spec-internal struct that preserves "where a value was accessed from" between expression evaluation and the call operator
 3. [`this` determination](this-determ.md) — the one rule (Reference base → `[[ThisValue]]`), the three-term pipeline, strict/sloppy coercion, and the complete decision tree
 4. [`call`, `apply`, `bind`](call-apply-bind.md) — explicit overrides that bypass the Reference-base rule; BoundFunction as a structural wrapper; partial application
+5. [Arrow functions](arrow-fns.md) — no `this` machinery (`[[ThisMode]]: "lexical"`); `this` resolves via `[[OuterEnv]]` chain walk; structurally immune to `this`-loss
 
 ## Cross-cutting concepts
 
 - **Slot model.** Every binding is a fixed-size slot. This mental model carries from value storage through Reference Records to `[[ThisValue]]` — all are "a value in a slot."
 - **GetValue as the boundary.** GetValue is the operation that extracts a value from a Reference, discarding the wrapper. It's the mechanism behind both property access and `this`-loss — any operation that needs the value (not the address) calls GetValue.
 - **Per-call, not per-function.** `this` is stored in the Function ER (created fresh per call), not on the function object. The same function gets different `this` values from different call sites.
+- **Structural immunity via absence.** Arrows don't "lock" `this` — they lack the machinery entirely. `HasThisBinding() = false` makes the chain walk pass through, resolving `this` in the enclosing scope. Same `[[OuterEnv]]` chain as variable lookup, different predicate.
