@@ -116,7 +116,7 @@ The BoundFunction stores three internal slots:
 |------|-------|---------|
 | `[[BoundTargetFunction]]` | The original function (`greet`) | What to actually invoke |
 | `[[BoundThis]]` | The `thisArg` you passed to `bind` | Replaces any incoming `thisValue` |
-| `[[BoundArguments]]` | Any extra args passed to `bind` | Prepended to call-time arguments |
+| `[[BoundArguments]]` | Any extra args passed to `bind` | Prepended to call-time arguments (partial application) |
 
 ### The BoundFunction `[[Call]]` algorithm
 
@@ -186,3 +186,50 @@ original === bound;  // false — different objects entirely
 ```
 
 `bind` is pure — it returns a new object, leaves the original untouched. No mutation, no shared state.
+
+### The full `this`-determination pipeline (with overrides)
+
+```mermaid
+flowchart TD
+    A["Expression before ()"] --> Q0{"How is the function invoked?"}
+    
+    Q0 -->|"Normal call: expr()"| Q1{"Is expr a Reference?"}
+    Q0 -->|"func.call(thisArg) /<br/>func.apply(thisArg)"| CA["thisValue = thisArg<br/>(you supply it)"]
+    
+    Q1 -->|"Yes, object base"| OBJ["thisValue = [[Base]]"]
+    Q1 -->|"Yes, ER base / No"| UN["thisValue = undefined"]
+    
+    OBJ --> BF{"Is the function a<br/>BoundFunction?"}
+    UN --> BF
+    CA --> BF
+    
+    BF -->|"Yes"| BIND["Discard thisValue<br/>Use [[BoundThis]] instead"]
+    BF -->|"No"| COERCE["OrdinaryCallBindThis<br/>(coerce if sloppy)"]
+    
+    BIND --> COERCE
+    COERCE --> ER["ER.[[ThisValue]] = final value"]
+    ER --> KW["this keyword reads slot"]
+
+    style A fill:#46c,stroke:#fff,color:#fff
+    style Q0 fill:#555,stroke:#fff,color:#fff
+    style Q1 fill:#555,stroke:#fff,color:#fff
+    style CA fill:#c42,stroke:#fff,color:#fff
+    style OBJ fill:#2a2,stroke:#fff,color:#fff
+    style UN fill:#c42,stroke:#fff,color:#fff
+    style BF fill:#555,stroke:#fff,color:#fff
+    style BIND fill:#a3c,stroke:#fff,color:#fff
+    style COERCE fill:#c42,stroke:#fff,color:#fff
+    style ER fill:#2a2,stroke:#fff,color:#fff
+    style KW fill:#2a2,stroke:#fff,color:#fff
+```
+
+**† Legend:**
+- Blue: starting point
+- Green: `this` successfully bound from object base / stored in ER
+- Red: `undefined` path or coercion step
+- Purple: `bind` interception — unconditionally replaces whatever came before
+- Grey: decision nodes
+
+**Abbreviations:** ER = Environment Record, BF = BoundFunction
+
+`bind` sits *after* both the Reference-base rule and `call`/`apply`. No matter which path produces `thisValue`, if the function is a BoundFunction, that value gets discarded and replaced with `[[BoundThis]]`.
