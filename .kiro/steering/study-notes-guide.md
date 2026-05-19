@@ -245,7 +245,7 @@ All competence tracking lives in `toc.md`. After every understanding check, quiz
 
 ### Format
 
-Indented lines under the chunk entry. Tag upgrades append a new line so history is visible — the latest level drives pacing decisions. Refinements go in a `🔧 Refinements:` block on the same entry.
+Indented lines under the chunk entry. **Never replace a previous tag line — always append a new line** showing the transition (e.g. `📊 shaky → solid`). The full history stays visible; the latest line drives pacing decisions. Refinements go in a `🔧 Refinements:` block on the same entry.
 
 Short refinements (1–2 items, each fitting on one line) can use an inline-dash form on the same line as the header. Longer or multi-sentence refinements use indented bullets on following lines — easier to scan than a wall of dashes.
 
@@ -273,7 +273,7 @@ Triggered immediately after any check that produces a `shaky` or `weak` tag.
 
 1. Brief re-teach from a different angle (new analogy, different example, contrast).
 2. 2–3 targeted questions focused narrowly on the weak point, one at a time.
-3. Update the tag on success; leave it for the next review sweep if still shaky/weak.
+3. Append a new tag line on success (e.g. `📊 weak → shaky`); leave unchanged for the next review sweep if still shaky/weak. Never delete or overwrite the previous tag line.
 4. One attempt per weak point per session.
 
 ## Quizzes and Tests
