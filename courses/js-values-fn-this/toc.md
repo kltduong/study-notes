@@ -40,7 +40,9 @@ Progress tracker for the course.
 - [x] **Explicit overrides: `call`, `apply`, `bind`** — `Function.prototype.call/apply` supply `this` directly; `bind` returns a BoundFunction exotic object with fixed `[[BoundThis]]`; partial application
       📊 shaky → solid — nailed [[Call]] vs [[Construct]] separation on remediation
       🔧 Refinements: — Predicted `call` overrides `bind` (wrong: wrapper intercepts). Predicted `new BoundFoo()` uses `[[BoundThis]]` (wrong: `[[Construct]]` never reads it).
-- [ ] **Quiz: values, Reference & `this` basics** — covers chunks 1–4
+- [x] **Quiz: values, Reference & `this` basics** — covers chunks 1–4
+      📊 solid
+      🔧 Refinements: — Forgot sloppy-mode ToObject coercion on primitives passed to `call`/`apply` (answered `"number"` instead of `"object"`).
 - [ ] **Arrow functions** — no own `[[ThisValue]]`/`arguments`/`new.target`; `this` resolved via `[[OuterEnv]]` chain walk; not constructable; the `self = this` problem they solve
 - [ ] **Constructor calls (`new`)** — OrdinaryCreateFromConstructor, `this` = fresh object, `new.target`, return-value override, `[[IsConstructor]]` internal slot
 - [ ] **Class & `this`** — class methods as non-constructable, field initializer `this`-binding, `super()` as `this`-provider in derived constructors, `this`-TDZ before `super()`
