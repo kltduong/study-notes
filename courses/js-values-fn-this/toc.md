@@ -37,7 +37,9 @@ Progress tracker for the course.
 - [x] **`this` determination** — the single rule: extract base from Reference at call site → `[[ThisValue]]`; ER base → `undefined`; strict vs sloppy coercion to `globalThis`
       📊 solid
       🔧 Refinements: — Assumed optional chaining `?.()` consumes the Reference (like comma); it actually preserves it.
-- [ ] **Explicit overrides: `call`, `apply`, `bind`** — `Function.prototype.call/apply` supply `this` directly; `bind` returns a BoundFunction exotic object with fixed `[[BoundThis]]`; partial application
+- [x] **Explicit overrides: `call`, `apply`, `bind`** — `Function.prototype.call/apply` supply `this` directly; `bind` returns a BoundFunction exotic object with fixed `[[BoundThis]]`; partial application
+      📊 shaky → solid — nailed [[Call]] vs [[Construct]] separation on remediation
+      🔧 Refinements: — Predicted `call` overrides `bind` (wrong: wrapper intercepts). Predicted `new BoundFoo()` uses `[[BoundThis]]` (wrong: `[[Construct]]` never reads it).
 - [ ] **Quiz: values, Reference & `this` basics** — covers chunks 1–4
 - [ ] **Arrow functions** — no own `[[ThisValue]]`/`arguments`/`new.target`; `this` resolved via `[[OuterEnv]]` chain walk; not constructable; the `self = this` problem they solve
 - [ ] **Constructor calls (`new`)** — OrdinaryCreateFromConstructor, `this` = fresh object, `new.target`, return-value override, `[[IsConstructor]]` internal slot

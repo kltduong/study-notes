@@ -9,6 +9,7 @@ Linear — each note builds on the previous:
 1. [Values & memory model](values-memory.md) — what lives in a slot (primitives vs references), copy semantics, identity
 2. [The Reference type](reference-type.md) — the spec-internal struct that preserves "where a value was accessed from" between expression evaluation and the call operator
 3. [`this` determination](this-determ.md) — the one rule (Reference base → `[[ThisValue]]`), the three-term pipeline, strict/sloppy coercion, and the complete decision tree
+4. [`call`, `apply`, `bind`](call-apply-bind.md) — explicit overrides that bypass the Reference-base rule; BoundFunction as a structural wrapper; partial application
 
 ## Cross-cutting concepts
 

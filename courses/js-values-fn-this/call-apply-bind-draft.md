@@ -4,9 +4,9 @@
 
 - [x] `call` and `apply` — mechanism: bypass Reference-base rule by supplying `thisValue` directly
 - [x] `bind` — mechanism: BoundFunction exotic object, `[[BoundThis]]` + `[[BoundArguments]]`
-- [ ] Priority / interaction — why `bind` beats `call`/`apply` (wrapper intercepts)
-- [ ] Partial application — `bind` with pre-filled arguments
-- [ ] Edge cases and gotchas
+- [x] Priority / interaction — why `bind` beats `call`/`apply` (wrapper intercepts)
+- [x] Partial application — `bind` with pre-filled arguments
+- [x] Edge cases and gotchas
 
 ---
 
@@ -233,3 +233,162 @@ flowchart TD
 **Abbreviations:** ER = Environment Record, BF = BoundFunction
 
 `bind` sits *after* both the Reference-base rule and `call`/`apply`. No matter which path produces `thisValue`, if the function is a BoundFunction, that value gets discarded and replaced with `[[BoundThis]]`.
+
+---
+
+## Part 3: Partial application — `bind` with pre-filled arguments
+
+### The mechanism
+
+`bind(thisArg, arg1, arg2, ...)` stores extra arguments in `[[BoundArguments]]`. When the BoundFunction is called, its `[[Call]]` prepends them:
+
+```
+BoundFunction.[[Call]](thisArgument, callArgs):
+    args = concat([[BoundArguments]], callArgs)
+    target.[[Call]]([[BoundThis]], args)
+```
+
+The target function sees one flat argument list — it has no way to tell which args were pre-filled and which came at call time.
+
+### Basic example
+
+```js
+"use strict";
+function log(level, msg) {       // L1
+  return `[${level}] ${msg}`;    // L2
+}
+
+const warn = log.bind(null, "WARN");  // L3 — [[BoundArguments]] = ["WARN"]
+
+warn("disk full");              // L4 — args = ["WARN", "disk full"] → "[WARN] disk full"
+warn("WARN", "disk full");     // L5 — args = ["WARN", "WARN", "disk full"] → "[WARN] WARN"
+```
+
+L5 shows the trap: `"WARN"` is already baked in. Passing it again just shifts everything — `msg` receives the second `"WARN"`, and `"disk full"` falls off (no third parameter).
+
+### `this`-free partial application
+
+When you only want to fix arguments (not `this`), pass `null` as `thisArg`:
+
+```js
+"use strict";
+const double = (x) => x * 2;                // L1 — arrow, no this concern
+const addTen = ((a, b) => a + b).bind(null, 10);  // L2 — fix first arg
+
+addTen(5);   // L3 — concat([10], [5]) → (10, 5) → 15
+```
+
+In strict mode, `this = null` passes through unchanged — harmless if the function never reads `this`. With arrows, `this` isn't even relevant (they ignore it structurally).
+
+### Stacking partial application
+
+Each `bind` wraps the previous result. Arguments accumulate:
+
+```js
+"use strict";
+function sum(a, b, c) { return a + b + c; }  // L1
+
+const add5 = sum.bind(null, 5);       // L2 — [[BoundArgs]] = [5]
+const add5and10 = add5.bind(null, 10); // L3 — [[BoundArgs]] = [10], wraps add5
+
+add5and10(20);  // L4
+// add5and10.[[Call]]: concat([10], [20]) → calls add5 with (10, 20)
+// add5.[[Call]]:      concat([5], [10, 20]) → calls sum with (5, 10, 20)
+// sum(5, 10, 20) → 35
+```
+
+Each wrapper prepends its own `[[BoundArguments]]` before forwarding. The innermost wrapper's args end up first in the final list.
+
+### Partial application vs currying
+
+| | Partial application (`bind`) | Currying |
+|---|---|---|
+| What it does | Fix N args now, supply the rest in one call | Transform `f(a,b,c)` into `f(a)(b)(c)` |
+| Number of remaining calls | 1 | N (one per arg) |
+| Built into JS? | Yes (`bind`) | No (library or manual) |
+| Knows arity? | No — extra args silently ignored | Yes — returns next function until all args received |
+
+`bind` does partial application. It doesn't know or care how many parameters the target expects — it just prepends and forwards.
+
+---
+
+## Part 4: Edge cases and gotchas
+
+### `new` overrides `[[BoundThis]]`
+
+`bind` locks `this` against all *call-time* overrides — `call`, `apply`, Reference base. But `new` is a different invocation mode (construction, not calling). BoundFunction has a separate `[[Construct]]` method:
+
+```
+BoundFunction.[[Construct]](argumentsList, newTarget):
+    1. Let target = [[BoundTargetFunction]]
+    2. Let args = concat([[BoundArguments]], argumentsList)  ← args still prepended
+    3. Return target.[[Construct]](args, newTarget)          ← [[BoundThis]] IGNORED
+```
+
+No step reads `[[BoundThis]]`. Construction creates a fresh object — using the bound `this` would corrupt the prototype chain.
+
+```js
+"use strict";
+function Foo(x) {          // L1
+  this.x = x;              // L2
+}
+
+const BoundFoo = Foo.bind({ name: "ignored" }, 42);  // L3
+
+const obj = new BoundFoo();  // L4
+obj.x;                       // L5 → 42 (arg was prepended)
+obj.name;                    // L6 → undefined ({ name: "ignored" } was never used)
+obj instanceof Foo;          // L7 → true (prototype chain is correct)
+```
+
+**Mental model:** `bind` locks `this` for *calls*. `new` isn't a call — it's construction. `[[BoundArguments]]` still apply (they're about arguments, not `this`), but `[[BoundThis]]` is irrelevant in construction mode.
+
+### `.name` and `.length` on bound functions
+
+```js
+function original(a, b, c) {}           // L1 — .name = "original", .length = 3
+const bound = original.bind(null, "x"); // L2
+
+bound.name;    // L3 → "bound original"
+bound.length;  // L4 → max(0, 3 - 1) = 2
+```
+
+- `.name`: prefixed with `"bound "` — helps debugging (you can tell it's a wrapper in stack traces).
+- `.length`: `max(0, target.length - boundArgs.length)` — reports remaining expected arguments.
+
+### `bind` on already-bound functions (stacking)
+
+```js
+"use strict";
+function f() { return this.x; }       // L1
+
+const b1 = f.bind({ x: 1 });          // L2
+const b2 = b1.bind({ x: 2 });         // L3
+
+b2();  // L4 → 1 (not 2)
+```
+
+Each `bind` wraps the previous. `b2.[[Call]]` passes `{ x: 2 }` to `b1.[[Call]]`, which ignores it and uses `{ x: 1 }`. The innermost (first) `bind` always wins for `this`.
+
+### `call`/`apply` with `null`/`undefined` in sloppy mode
+
+```js
+function sloppy() { return this; }     // L1
+
+sloppy.call(null);       // L2 → globalThis (coerced)
+sloppy.call(undefined);  // L3 → globalThis (coerced)
+```
+
+OrdinaryCallBindThis coerces `null`/`undefined` → `globalThis` in sloppy mode. This is a common source of accidental global pollution. Strict mode passes through unchanged — one more reason to always use strict.
+
+### `apply` with non-array iterables
+
+```js
+"use strict";
+function show(...args) { return args; }  // L1
+
+show.apply(null, "abc");     // L2 → ["a", "b", "c"] (string is array-like)
+show.apply(null, { 0: "x", 1: "y", length: 2 });  // L3 → ["x", "y"]
+```
+
+`apply` accepts any array-like (has `.length` and indexed properties), not just arrays. It uses `CreateListFromArrayLike` internally.
