@@ -3,7 +3,7 @@
 ## Plan (teaching order)
 
 - [x] `call` and `apply` — mechanism: bypass Reference-base rule by supplying `thisValue` directly
-- [ ] `bind` — mechanism: BoundFunction exotic object, `[[BoundThis]]` + `[[BoundArguments]]`
+- [x] `bind` — mechanism: BoundFunction exotic object, `[[BoundThis]]` + `[[BoundArguments]]`
 - [ ] Priority / interaction — why `bind` beats `call`/`apply` (wrapper intercepts)
 - [ ] Partial application — `bind` with pre-filled arguments
 - [ ] Edge cases and gotchas
@@ -88,3 +88,101 @@ strict.call(42);         // → 42 (pass-through, no wrapping)
 Same coercion rules as normal calls — `call`/`apply` only replace the *source* of `thisValue`, not the downstream processing.
 
 > **Aside —** `apply`'s main historical use case (spreading an array into arguments) is largely obsolete since ES6 spread syntax. You'll still see it in older code and in one niche: forwarding an `arguments` object without knowing its length.
+
+---
+
+## Part 2: `bind` — the BoundFunction wrapper
+
+### Teaser
+
+```js
+"use strict";
+function greet() { return this.name; }
+
+const bound = greet.bind({ name: "A" });
+
+bound.call({ name: "B" });  // → "A"
+```
+
+`call` faithfully delivers `{ name: "B" }` — but it delivers it to the *wrapper*, not to `greet`. The wrapper intercepts and substitutes.
+
+### What `bind` actually returns
+
+`Function.prototype.bind(thisArg, ...args)` does **not** mutate or annotate the original function. It creates and returns a new object — a **BoundFunction exotic object**. "Exotic" means it has a custom `[[Call]]` internal method (unlike ordinary functions which all share the same `[[Call]]` algorithm).
+
+The BoundFunction stores three internal slots:
+
+| Slot | Value | Purpose |
+|------|-------|---------|
+| `[[BoundTargetFunction]]` | The original function (`greet`) | What to actually invoke |
+| `[[BoundThis]]` | The `thisArg` you passed to `bind` | Replaces any incoming `thisValue` |
+| `[[BoundArguments]]` | Any extra args passed to `bind` | Prepended to call-time arguments |
+
+### The BoundFunction `[[Call]]` algorithm
+
+When anything invokes a BoundFunction (normal call, `call`, `apply`, another `bind`, doesn't matter):
+
+```
+BoundFunction.[[Call]](thisArgument, argumentsList):
+    1. Let target = [[BoundTargetFunction]]
+    2. Let boundThis = [[BoundThis]]           ← ignores thisArgument entirely
+    3. Let boundArgs = [[BoundArguments]]
+    4. Let args = concat(boundArgs, argumentsList)
+    5. Return target.[[Call]](boundThis, args)  ← calls the real function
+```
+
+Step 2 is the key: `thisArgument` (whatever the caller supplied) is **never read**. The wrapper unconditionally uses `[[BoundThis]]`. This isn't a priority system — it's structural interception. The incoming `this` is discarded before it can reach the target.
+
+### Why `call`/`apply` can't override `bind`
+
+```js
+"use strict";
+function greet() { return this.name; }
+const bound = greet.bind({ name: "A" });
+
+bound.call({ name: "B" });
+```
+
+Trace:
+
+```
+1. .call invokes bound.[[Call]]({ name: "B" }, [])
+2. bound is a BoundFunction → its [[Call]] runs:
+   - Ignores { name: "B" }
+   - Uses [[BoundThis]] = { name: "A" }
+   - Calls greet.[[Call]]({ name: "A" }, [])
+3. greet runs with this = { name: "A" }
+4. → "A"
+```
+
+`call` did its job correctly — it passed `{ name: "B" }` as `thisArgument` to the function it was called on. But the function it was called on is the *wrapper*, and the wrapper's `[[Call]]` doesn't forward that argument.
+
+### Double-bind: same principle
+
+```js
+const bound1 = greet.bind({ name: "first" });
+const bound2 = bound1.bind({ name: "second" });
+
+bound2();  // → "first"
+```
+
+`bound2` is a BoundFunction wrapping `bound1`. When called:
+- `bound2.[[Call]]` → uses its `[[BoundThis]]` = `{ name: "second" }`, calls `bound1.[[Call]]({ name: "second" }, [])`
+- `bound1.[[Call]]` → ignores `{ name: "second" }`, uses its `[[BoundThis]]` = `{ name: "first" }`, calls `greet.[[Call]]({ name: "first" }, [])`
+- `greet` sees `this = { name: "first" }`
+
+The innermost `bind` (closest to the original function) always wins — each wrapper discards whatever the outer wrapper passed.
+
+### `bind` doesn't affect the original
+
+```js
+const original = greet;
+const bound = greet.bind({ name: "bound" });
+
+original();  // TypeError (this = undefined, strict mode)
+bound();     // "bound"
+
+original === bound;  // false — different objects entirely
+```
+
+`bind` is pure — it returns a new object, leaves the original untouched. No mutation, no shared state.
