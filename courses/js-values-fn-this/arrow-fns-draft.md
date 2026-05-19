@@ -6,7 +6,7 @@
 - [x] `this` resolution mechanism — `[[OuterEnv]]` chain walk, ResolveThisBinding, HasThisBinding
 - [x] What arrows lack — no `arguments`, no `new.target`, not constructable (`[[IsConstructor]]` = false)
 - [x] The problem they solve — `self = this`, callback `this`-loss, the historical workaround
-- [ ] Interactions with `call`/`apply`/`bind` — all no-ops for `this`; `bind` still does partial application
+- [x] Interactions with `call`/`apply`/`bind` — all no-ops for `this`; `bind` still does partial application
 
 ---
 
@@ -333,3 +333,99 @@ The arrow doesn't "capture" `this` — it **doesn't have `this`**, so the keywor
 | Allocation | `.bind()` creates wrapper per call | No wrapper needed |
 
 > **Aside —** Arrows weren't designed *only* for `this`-loss. The concise syntax (`=>` vs `function`) and implicit return for expression bodies are independent ergonomic wins. But the `this` behavior is the *semantic* motivation — the reason they needed to be a new function kind rather than just shorter syntax for the same thing.
+
+---
+
+## Interactions with `call`/`apply`/`bind`
+
+### `call`/`apply` — `this` is a no-op, arguments still work
+
+`call`/`apply` deliver two things to `[[Call]]`: a `thisValue` and arguments. For arrows:
+
+- **`thisValue`** — delivered to OrdinaryCallBindThis, which sees `[[ThisMode]]: "lexical"` and returns immediately. Discarded.
+- **Arguments** — delivered normally. The arrow receives them in its parameters. Unaffected.
+
+```js
+"use strict";                                         // L1
+const arrow = (a, b) => ({ self: this, sum: a + b }); // L2 — defined at module top level
+
+arrow.call({ x: 1 }, 10, 20);                        // L3
+// → { self: undefined, sum: 30 }
+// this: { x: 1 } discarded, resolves to module this (undefined)
+// args: 10, 20 delivered normally
+```
+
+`call`/`apply` are still useful on arrows for **argument delivery** — just not for `this`. Rare in practice, but not broken.
+
+### `bind` — `this` is a no-op, partial application still works
+
+`bind` creates a BoundFunction wrapper. The wrapper has two jobs:
+
+1. Replace incoming `thisValue` with `[[BoundThis]]`
+2. Prepend `[[BoundArguments]]` to call-time args
+
+For arrows, job 1 is pointless (the arrow ignores whatever `thisValue` arrives), but job 2 works fine:
+
+```js
+"use strict";                                         // L1
+const add = (a, b) => a + b;                          // L2
+
+const add5 = add.bind(null, 5);                       // L3 — [[BoundThis]]=null, [[BoundArgs]]=[5]
+add5(10);                                             // L4 → 15
+
+// Trace:
+// 1. add5.[[Call]](undefined, [10])
+// 2. BoundFunction: thisValue = null (from [[BoundThis]]), args = concat([5], [10]) = [5, 10]
+// 3. Calls add.[[Call]](null, [5, 10])
+// 4. OrdinaryCallBindThis: [[ThisMode]] = "lexical" → return (null discarded)
+// 5. Arrow body: a=5, b=10 → 15
+```
+
+The `null` first argument to `bind` is a convention — it signals "I don't care about `this`, I'm here for partial application." With arrows, any value works (it's ignored regardless), but `null` communicates intent.
+
+### Summary: what works, what doesn't
+
+| Operation | Effect on arrow's `this` | Effect on arrow's arguments |
+|---|---|---|
+| `arrow.call(thisArg, ...args)` | None — discarded | Normal delivery |
+| `arrow.apply(thisArg, args)` | None — discarded | Normal delivery |
+| `arrow.bind(thisArg, ...args)` | None — discarded | Partial application works |
+| `obj.arrow()` (member call) | None — Reference base ignored | Normal delivery |
+| `new arrow()` | TypeError — not constructable | N/A |
+
+Every path that tries to influence `this` fails at the same point: OrdinaryCallBindThis's early return. The arrow is structurally immune — not by priority, but by absence of the machinery that would receive the value.
+
+### When to use `bind` on an arrow
+
+Rare, but legitimate for partial application when you want both lexical `this` *and* pre-filled arguments:
+
+```js
+"use strict";                                         // L1
+function Controller() {                               // L2
+  this.prefix = "[CTRL]";                             // L3
+  const log = (level, msg) => `${this.prefix} ${level}: ${msg}`;  // L4
+  this.warn = log.bind(null, "WARN");                 // L5
+  this.error = log.bind(null, "ERROR");               // L6
+}                                                     // L7
+
+const c = new Controller();                           // L8
+c.warn("disk full");    // L9 → "[CTRL] WARN: disk full"
+c.error("crash");       // L10 → "[CTRL] ERROR: crash"
+```
+
+`this.prefix` resolves via `[[OuterEnv]]` to Controller's `[[ThisValue]]` (the instance). `bind` handles only the `level` argument. Clean separation: arrow owns `this` resolution, `bind` owns argument pre-filling.
+
+### Why the arrow version is stronger than the ordinary-function alternative
+
+Without the arrow, you'd need `bind` to handle *both* `this` and arguments:
+
+```js
+const log = function(level, msg) {                    // L1
+  return `${this.prefix} ${level}: ${msg}`;           // L2
+};                                                    // L3
+this.warn = log.bind(this, "WARN");                   // L4 — bind must lock this AND prepend arg
+```
+
+This works, but now `this` depends on `bind`'s wrapper surviving — if someone does `new (c.warn)()`, `[[Construct]]` bypasses `[[BoundThis]]` and `this.prefix` breaks. With the arrow version, `this` is resolved via the environment chain regardless of how the function is invoked — `new` is blocked entirely (`[[IsConstructor]] = false`), and `call`/`apply`/`bind`/member-call all fail to override it.
+
+The arrow version is **structurally immune** to `this`-loss. The ordinary-function-with-`bind` version is immune only as long as you go through `[[Call]]` (not `[[Construct]]`). The arrow is the stronger guarantee.
