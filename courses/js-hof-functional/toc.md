@@ -30,7 +30,8 @@ Progress tracker for the course. Chunks grouped by theme.
 
 ## Progress
 
-- [ ] **Functions as values** — first-class functions, passing/returning functions, function references vs calls, closures as the enabling mechanism (bridge from js-values-fn-this)
+- [x] **Functions as values** — first-class functions, passing/returning functions, function references vs calls, closures as the enabling mechanism (bridge from js-values-fn-this)
+      📊 solid
 - [ ] **Core iteration abstractions** — `map`, `filter`, `reduce` as folds over collections, how they compose, when each is the right tool, relationship to `for` loops
 - [ ] **Reduce deep dive** — reduce as the universal fold, accumulator design, building other abstractions from reduce, common pitfalls (mutating accumulator, missing initial value)
 - [ ] **Quiz 1** (chunks 1–3): first-class functions, iteration abstractions, reduce mechanics
