@@ -4,7 +4,29 @@ Progress tracker for the course. Chunks grouped by theme.
 
 ## Calibration
 
-_(To be filled at session start.)_
+**Starting point:** Uses HOFs daily (map/filter/reduce, callbacks, arrow functions). Closures, first-class functions, `this`/arrows/bind all solid from js-vars-scope and js-values-fn-this. Hasn't formalized the underlying structure — folds, monoids, composition laws, algebraic patterns.
+
+**Goals:**
+
+1. Compact axiom set for functional patterns in JS — derive behavior from structure, not memorize recipes.
+2. Formal layer surfaced where it exists (folds, monoids, functors, composition associativity).
+3. Clear decision framework: when FP style wins, when it doesn't, how to mix idiomatically.
+
+**Planned arc:**
+
+1. Functions as values — bridge from js-values-fn-this (quick, mostly review + formalize)
+2. Core iteration abstractions — map/filter/reduce as structure
+3. Reduce deep dive — the universal fold
+4. Composition & pipelines — compose/pipe, point-free, transducers-lite
+5. Currying & partial application — distinct concepts, arity, use cases
+6. Immutability patterns — pure functions, copy idioms, structural sharing
+7. Algebraic structure — monoids, functors, why reduce needs identity
+8. Real-world patterns — memoization, debounce/throttle, decorators, lazy eval
+9. FP vs OOP tradeoffs — decision framework, mixing styles
+
+**Pacing notes:** Chunk 1 is light review — move fast. Chunks 2–3 are the core formalization. Chunk 4–5 are mechanism chunks. Chunk 7 is where the formal-abstraction preference pays off. Probe "right conclusion, wrong mechanism" on reduce semantics and composition associativity.
+
+**Dependencies:** js-vars-scope (closures, EC/ER), js-values-fn-this (first-class functions, arrows, bind, value semantics).
 
 ## Progress
 
