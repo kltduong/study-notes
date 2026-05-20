@@ -6,8 +6,8 @@
 - [x] `map` deep dive — structure preservation, the functor intuition
 - [x] `filter` deep dive — predicate as selector, Boolean coercion trick
 - [x] `reduce` intro — the accumulator loop, why it's the most general
-- [ ] Composition of the three — chaining, data-flow pipelines, when to fuse
-- [ ] Relationship to `for` loops — what you gain, what you lose
+- [x] Composition of the three — chaining, data-flow pipelines, when to fuse
+- [x] Relationship to `for` loops — what you gain, what you lose
 
 ---
 
@@ -309,4 +309,154 @@ Without an initial value, `reduce` uses the first element as the accumulator and
 ### 1.5.6. Python parallel
 
 `functools.reduce(fn, iterable, initial)` — same semantics. Python style discourages it in favor of explicit loops or comprehensions for readability. JS leans into it more heavily because method chaining (`.filter().map().reduce()`) reads as a pipeline.
+
+
+
+---
+
+## 1.6. Composition — chaining the three
+
+### 1.6.1. Method chaining as a pipeline
+
+Because `map` and `filter` return arrays, they can chain:
+
+```js
+const orders = [
+  { id: 1, total: 250, status: "shipped" },    // L1
+  { id: 2, total: 50, status: "pending" },     // L2
+  { id: 3, total: 300, status: "shipped" },    // L3
+  { id: 4, total: 120, status: "shipped" },    // L4
+];
+
+const result = orders
+  .filter(o => o.status === "shipped")          // L5 — subset: 3 orders
+  .map(o => o.total)                            // L6 — transform: [250, 300, 120]
+  .reduce((sum, t) => sum + t, 0);              // L7 — aggregate: 670
+```
+
+Read top-to-bottom as a data pipeline: select → transform → aggregate. Each step's output type matches the next step's input type. The chain communicates the *shape* at each stage without needing to read callback bodies.
+
+### 1.6.2. Ordering matters
+
+The chain order isn't arbitrary — it affects both correctness and performance.
+
+**Filter early:** Filtering before mapping means `map` processes fewer elements. If the filter removes 80% of items, you avoid 80% of transform work.
+
+```js
+// Good: filter first, map processes 3 items
+orders.filter(o => o.status === "shipped").map(o => o.total)
+
+// Wasteful: map all 4 items, then filter (and map produced values you discard)
+orders.map(o => o.total).filter(t => /* can't filter by status anymore — info lost */)
+```
+
+**General principle:** narrow the dataset as early as possible. `filter` before `map` before `reduce` is the default ordering unless the transform is needed for the filter condition.
+
+### 1.6.3. Intermediate arrays — the cost of chaining
+
+Each `.filter()` and `.map()` in a chain allocates a new intermediate array. For a chain of 3 methods on 10,000 elements: 2 intermediate arrays allocated and GC'd.
+
+```js
+// 3 passes, 2 intermediate arrays
+bigArray
+  .filter(pred)    // pass 1 → intermediate array A
+  .map(fn)         // pass 2 → intermediate array B
+  .reduce(agg, 0)  // pass 3 → final value (A and B become garbage)
+```
+
+**When this matters:** Almost never for typical application code. Array allocation is cheap, GC handles it, and the clarity of separate steps outweighs the cost. It matters for:
+- Very large arrays (100k+ elements) in hot paths.
+- Chains with many steps (5+) where intermediate arrays are large.
+- Performance-critical inner loops.
+
+### 1.6.4. Fusing with `reduce` — when and why
+
+You can fuse filter + map into a single `reduce` to eliminate intermediate arrays:
+
+```js
+// Chained (clear, 2 passes)
+orders.filter(o => o.status === "shipped").map(o => o.total)
+
+// Fused (1 pass, no intermediate array)
+orders.reduce((acc, o) => {
+  if (o.status === "shipped") acc.push(o.total);
+  return acc;
+}, [])
+```
+
+**Tradeoff:**
+- Chained: each step's shape is named (`filter` = subset, `map` = transform). Reader knows the structural guarantee at each point.
+- Fused: one pass, no intermediates, but the reader must parse the callback body to understand what shape the operation has.
+
+**Modern default:** Prefer chaining for clarity. Fuse into `reduce` only when profiling shows the intermediate arrays are a real bottleneck. Premature fusion is premature optimization — you lose the self-documenting shape names.
+
+> 🔖 **Later (chunk 4 — composition & pipelines):** Transducers formalize this fusion — compose map/filter logic without intermediate arrays while keeping the operations named and separate. That's the "best of both worlds" approach.
+
+### 1.6.5. The pipeline mental model
+
+Think of chained methods as a data-flow pipeline:
+
+```
+input → [filter: subset] → [map: transform] → [reduce: aggregate] → output
+```
+
+Each stage has a known shape. You can reason about the pipeline without reading callback bodies — the method names tell you the structural relationship between input and output at each stage. This is the core readability win of FP-style iteration over imperative loops.
+
+
+
+---
+
+## 1.7. Relationship to `for` loops
+
+### 1.7.1. Equivalence
+
+Every `map`, `filter`, and `reduce` can be written as a `for` loop. We showed the equivalents above. The reverse is also true — any `for` loop that builds a result can be expressed as `reduce` (since `reduce` is the universal fold).
+
+So the choice isn't about capability — it's about **what you communicate to the reader.**
+
+### 1.7.2. What you gain with named methods
+
+| Gain | Explanation |
+|------|-------------|
+| **Shape declaration** | `map` = same length. `filter` = subset. `reduce` = collapse. The method name is a structural guarantee the reader gets for free. |
+| **No mutation** | The result is a new array. No `let result = []` + `push` — fewer moving parts, fewer places for bugs. |
+| **Composability** | Methods chain into pipelines. Each step's output type feeds the next. |
+| **Forced single-responsibility** | Each callback does one thing. A `for` loop body can mix filtering, transforming, and accumulating — harder to untangle. |
+
+### 1.7.3. What you lose
+
+| Loss | Explanation |
+|------|-------------|
+| **Early exit** | `break`/`continue` don't exist in `map`/`filter`/`reduce`. If you need to stop at the first match, use `find`/`findIndex`/`some`/`every` — or a loop. |
+| **Single-pass multi-operation** | A chain does N passes. A loop can filter + transform + accumulate in one pass. (Rarely matters — see section 5.3.) |
+| **Index manipulation** | Skipping elements, looking ahead/behind, variable step size — loops handle naturally. Array methods process each element exactly once in order. |
+| **Async iteration** | `for await...of` works; `.map(async fn)` gives you an array of promises (not awaited results). Async loops are a different pattern. |
+
+### 1.7.4. Decision framework
+
+```
+Can I name the shape? (map / filter / reduce / find / some / every)
+  YES → use the named method. Shape is self-documenting.
+  NO  → is it because I need early exit?
+          YES → find / some / every / for loop
+          NO  → is it because the logic mixes multiple shapes in one pass?
+                  YES → for loop (or fused reduce if expression form needed)
+                  NO  → probably reduce with a custom accumulator
+```
+
+**Modern default:** Start with named methods. Fall back to `for` when the named methods can't express the operation cleanly — not for performance (unless profiled).
+
+### 1.7.5. Loop forms: which `for` to use
+
+When falling back to a loop, prefer `for...of` — it gives you values directly and supports `break`/`continue`/`await`. Use `for...in` only for object key enumeration (never arrays — it yields string indices and includes inherited properties). The classic `for (let i = 0; ...)` is for index manipulation or performance-critical paths where you need the index without destructuring overhead.
+
+### 1.7.6. `forEach` — the odd one out
+
+`forEach` is the array method equivalent of a `for` loop with no result:
+
+```js
+arr.forEach(fn);  // returns undefined — purely for side effects
+```
+
+It has the same limitations as other array methods (no `break`, no `await`) but produces no value. Use it when you genuinely want side effects over each element and don't need early exit. Otherwise, a plain `for...of` loop is simpler and supports `break`/`await`.
 
