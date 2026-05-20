@@ -361,3 +361,85 @@ isConstructor({ foo() {} }.foo);                      // L11 → false
 
 > **Aside —** There's no direct `[[IsConstructor]]` accessor in the language. The `Reflect.construct` trick works because the spec checks `IsConstructor(newTarget)` — if `fn` isn't constructable, it throws before doing anything else.
 
+---
+
+## 1.7. Interaction with `bind` — `[[Construct]]` on BoundFunction
+
+You already know from the `call`/`apply`/`bind` chunk that `bind` creates a **BoundFunction exotic object** with `[[BoundTargetFunction]]`, `[[BoundThis]]`, and `[[BoundArguments]]`. Here's how that interacts with `new`.
+
+### 1.7.1. The key rule: `[[Construct]]` ignores `[[BoundThis]]`
+
+When you `new` a bound function, the BoundFunction's `[[Construct]]` method:
+
+1. Prepends `[[BoundArguments]]` to the call-time args (same as `[[Call]]`).
+2. **Ignores `[[BoundThis]]`** — does NOT pass it to the target's `[[Construct]]`.
+3. Forwards `new.target` (or uses the bound function itself if it was the direct `new` target).
+4. Delegates to `[[BoundTargetFunction]].[[Construct]](args, newTarget)`.
+
+The target's `[[Construct]]` then runs its normal protocol: create fresh object, bind `this` = fresh object, run body.
+
+```js
+"use strict";                                         // L1
+function Dog(name) {                                  // L2
+  this.name = name;                                   // L3
+}                                                     // L4
+
+const BoundDog = Dog.bind({ x: "ignored" });          // L5
+const d = new BoundDog("Rex");                        // L6
+
+console.log(d.name);                                  // L7 → "Rex"
+console.log(d instanceof Dog);                        // L8 → true
+console.log(d.x);                                     // L9 → undefined
+```
+
+**Trace of L6:**
+1. `new BoundDog("Rex")` → `BoundDog.[[Construct]](["Rex"], BoundDog)`
+2. BoundFunction `[[Construct]]`:
+   - `newTarget === BoundDog === F` → set `newTarget = Dog` (the `[[BoundTargetFunction]]`)
+   - args = concat(`[[BoundArguments]]` = [], ["Rex"]) = ["Rex"]
+   - `[[BoundThis]]` = `{ x: "ignored" }` → **not used** (`[[Construct]]` ignores it)
+   - Delegates: `Dog.[[Construct]](["Rex"], Dog)`
+3. Dog's `[[Construct]]`:
+   - OrdinaryCreateFromConstructor(`Dog`, "%Object.prototype%") → `Get(Dog, "prototype")` = `Dog.prototype` → fresh object with `[[Prototype]] = Dog.prototype`
+   - `this` = fresh object, body runs, `this.name = "Rex"`
+   - No explicit return → fresh object returned
+4. `d` = `{ name: "Rex" }` with `[[Prototype]] = Dog.prototype`
+5. `d instanceof Dog` → `true` ✓
+
+### 1.7.2. Why `[[BoundThis]]` is ignored
+
+The design is consistent with the `[[Construct]]` protocol's purpose: construction creates a **new** object. The whole point is a fresh `this`. If `bind`'s `[[BoundThis]]` overrode the fresh object, you'd get a constructor that mutates an existing object instead of creating a new one — breaking the fundamental contract of `new`.
+
+Compare with `[[Call]]`:
+- `[[Call]]` on BoundFunction: replaces incoming `thisValue` with `[[BoundThis]]` → makes sense (you're calling, not constructing)
+- `[[Construct]]` on BoundFunction: ignores `[[BoundThis]]` → makes sense (you're constructing a new object)
+
+### 1.7.3. `bind` + partial application with `new`
+
+The useful part of `bind` under `new` is **argument pre-filling** — same as with arrows:
+
+```js
+"use strict";                                         // L1
+function Point(x, y) {                                // L2
+  this.x = x;                                        // L3
+  this.y = y;                                        // L4
+}                                                     // L5
+
+const PointOnXAxis = Point.bind(null, 0);             // L6 — [[BoundThis]]=null (irrelevant), [[BoundArgs]]=[0]
+const p = new PointOnXAxis(5);                        // L7
+
+console.log(p);                                       // L8 → { x: 0, y: 5 }
+console.log(p instanceof Point);                      // L9 → true
+```
+
+`bind(null, 0)` pre-fills `x = 0`. Under `new`, `null` is ignored (as is any `[[BoundThis]]`), and `[0]` is prepended to `[5]` → `Point.[[Construct]]([0, 5], Point)`.
+
+### 1.7.4. Summary: `bind` under `[[Call]]` vs `[[Construct]]`
+
+| Aspect | `boundFn()` (`[[Call]]`) | `new boundFn()` (`[[Construct]]`) |
+|---|---|---|
+| `[[BoundThis]]` | Used — replaces `thisValue` | Ignored — fresh object is `this` |
+| `[[BoundArguments]]` | Prepended to args | Prepended to args |
+| `newTarget` | N/A | Substituted to `[[BoundTargetFunction]]` if `newTarget === boundFn` |
+| Prototype of result | N/A | Comes from `[[BoundTargetFunction]].prototype` (via newTarget substitution) |
+

@@ -11,6 +11,7 @@ Linear — each note builds on the previous:
 3. [`this` determination](this-determ.md) — the one rule (Reference base → `[[ThisValue]]`), the three-term pipeline, strict/sloppy coercion, and the complete decision tree
 4. [`call`, `apply`, `bind`](call-apply-bind.md) — explicit overrides that bypass the Reference-base rule; BoundFunction as a structural wrapper; partial application
 5. [Arrow functions](arrow-fns.md) — no `this` machinery (`[[ThisMode]]: "lexical"`); `this` resolves via `[[OuterEnv]]` chain walk; structurally immune to `this`-loss
+6. [Constructor calls (`new`)](new-construct.md) — `[[Construct]]` vs `[[Call]]`, OrdinaryCreateFromConstructor, return-value override, `new.target`, `[[IsConstructor]]` gate, `bind` interaction
 
 ## Cross-cutting concepts
 
