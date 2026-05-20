@@ -2,5 +2,6 @@
   "markdown.styles": [".vscode/markdown.css"],
   "[markdown]": {
     "editor.formatOnSave": false
-  }
+  },
+  "markdown.extension.toc.updateOnSave": true
 }

@@ -22,7 +22,7 @@ Rules for writing and formatting study notes. Applies to all notes in both `cour
 - Link related notes with relative links (same folder only).
 - Short TL;DR at the top of each note.
 - **Quick reference section at the end.** Close each note with a `## Quick reference` section — a tight bullet list (3–6 items) summarizing the note's key mechanisms in one line each. Format: `- **Label** — one-sentence takeaway.` Purpose: future-self skims this first on revisit without re-reading the full note.
-- **Modern default for syntax alternatives.** When presenting multiple syntactic forms that achieve similar results, state the **modern default** — which form to reach for in new code. If an older form exists only for compatibility, say so explicitly (e.g. "legacy — use X instead"). Don't leave the reader to infer the recommendation from mechanism alone.
+- **Right tool for the job.** When presenting multiple syntactic forms or approaches that achieve similar results, state explicitly which to reach for *in which situation* — performance characteristics, readability tradeoffs, semantic fit, engine optimization differences. If one is the modern default for most new code, say so. If an older form is still the right choice in specific contexts (e.g. `for` loop when you need early `break` vs `.forEach` for side-effects vs `.map` for transforms), explain when each wins. If a form exists only for legacy compatibility, say so explicitly (e.g. "legacy — use X instead"). Don't leave the reader to infer the recommendation from mechanism alone.
 
 ## Style rules
 
