@@ -49,6 +49,6 @@ Progress tracker for the course.
 - [x] **Constructor calls (`new`)** — OrdinaryCreateFromConstructor, `this` = fresh object, `new.target`, return-value override, `[[IsConstructor]]` internal slot
       📊 solid
 - [ ] **Class & `this`** — class methods as non-constructable, field initializer `this`-binding, `super()` as `this`-provider in derived constructors, `this`-TDZ before `super()`
-- [ ] **Quiz: arrows, `new`, class** — covers chunks 5–7
 - [ ] **Patterns & pitfalls** — method extraction, callbacks, event handlers, setTimeout, historical workarounds, modern solutions (arrow fields, bind-in-constructor, decorator proposals)
+- [ ] **Quiz: arrows, `new`, class** — covers chunks 5–8
 - [ ] **Final test**

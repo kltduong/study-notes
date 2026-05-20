@@ -2,25 +2,25 @@
 
 Goal: whole-system literacy (frontend included) for a backend-strong dev. Reviewing and architecting UI work alongside AI/devs, not specializing.
 
-Last updated: 2026-05-19.
+Last updated: 2026-05-20.
 
 ## Path
 
-| #   | Course                     | Status        | Scope                                                                                                                                                      |
-| --- | -------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `js-vars-scope`            | in progress   | Finish closures + variable lifecycle                                                                                                                       |
-| 2   | `js-inheritance`           | in progress   | Finish chains, class syntax, composition (~30% remaining)                                                                                                  |
-| 3   | `js-values-fn-this`        | in progress   | Values & memory model (primitive vs object, slot vs heap reference, copy semantics, identity), Reference type, `this` determination (one rule + overrides), `call`/`apply`/`bind`, arrow functions, `new` protocol, class & `this`, patterns (~8 chunks) |
-| 4   | `js-hof-functional`        | new           | Functions as values, map/filter/reduce as folds, reduce deep dive, composition & pipelines, currying & partial application, immutability patterns, algebraic structure (monoids, functors), real-world patterns, FP vs OOP tradeoffs (~9 chunks) |
-| 5   | `js-modules`               | new           | Why modules exist, ES module syntax, static linking, live bindings, module record lifecycle, circular deps, dynamic `import()`, Node dual-mode, browser loading, bundlers, top-level `await` (~13 chunks) |
-| 6   | `js-modern-syntax`         | new           | Syntax fluency — class, fields, private `#`, static, extends/super, destructuring, spread/rest, `?.`, `??`, template literals, iterators, generators, symbols, proxy/reflect, misc modern features (~12 chunks) |
-| 7   | `js-error-handling`        | new           | Error anatomy, try/catch/finally semantics, custom errors & cause chaining, propagation strategies, async error handling, validation & defensive input, graceful degradation, patterns & anti-patterns (~8 chunks) |
-| 8   | `js-iterators-generators`  | new           | Iterator protocol, custom iterables, generator fundamentals, two-way channels (yield as expression), `yield*` & composition, async iterators & `for await...of`, async generators, streams & integration (~8 chunks) |
-| 9   | DOM fundamentals           | new           | Tree, querying, mutation, event dispatch, delegation, attrs vs props, input, forms, custom events, observers, capstone with CRP-lite (~11 chunks)          |
-| 10  | TypeScript fundamentals    | new           | Structural typing, primitives/literals, unions/intersections, generics + inference, narrowing, common utility types, working with libraries (~9–10 chunks) |
-| 11  | CSS layout fundamentals    | new           | Box model, normal flow, positioning, stacking contexts, flexbox, grid, responsive, typography essentials (~8–10 chunks)                                    |
-| 12  | Browser rendering pipeline | new, optional | Parse → CSSOM → render tree → layout → paint → composite, layer promotion, Core Web Vitals, profiling (~6–8 chunks)                                        |
-| 13  | Datastar fundamentals      | new           | Hypermedia-driven reactivity, signals & `data-*` attributes, SSE-based backend push, expressions & events, morphing, forms & CRUD, composition with fragments (~8–10 chunks) |
+| #   | Course                     | Status        | Progress | Scope                                                                                                                                                      |
+| --- | -------------------------- | ------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `js-vars-scope`            | in progress   | 91%      | Finish closures + variable lifecycle                                                                                                                       |
+| 2   | `js-inheritance`           | in progress   | 71%      | Finish chains, class syntax, composition (~30% remaining)                                                                                                  |
+| 3   | `js-values-fn-this`        | in progress   | 64%      | Values & memory model (primitive vs object, slot vs heap reference, copy semantics, identity), Reference type, `this` determination (one rule + overrides), `call`/`apply`/`bind`, arrow functions, `new` protocol, class & `this`, patterns (~8 chunks) |
+| 4   | `js-hof-functional`        | new           | 0%       | Functions as values, map/filter/reduce as folds, reduce deep dive, composition & pipelines, currying & partial application, immutability patterns, algebraic structure (monoids, functors), real-world patterns, FP vs OOP tradeoffs (~9 chunks) |
+| 5   | `js-modules`               | new           | 0%       | Why modules exist, ES module syntax, static linking, live bindings, module record lifecycle, circular deps, dynamic `import()`, Node dual-mode, browser loading, bundlers, top-level `await` (~13 chunks) |
+| 6   | `js-modern-syntax`         | new           | 0%       | Syntax fluency — class, fields, private `#`, static, extends/super, destructuring, spread/rest, `?.`, `??`, template literals, iterators, generators, symbols, proxy/reflect, misc modern features (~12 chunks) |
+| 7   | `js-error-handling`        | new           | 0%       | Error anatomy, try/catch/finally semantics, custom errors & cause chaining, propagation strategies, async error handling, validation & defensive input, graceful degradation, patterns & anti-patterns (~8 chunks) |
+| 8   | `js-iterators-generators`  | new           | 0%       | Iterator protocol, custom iterables, generator fundamentals, two-way channels (yield as expression), `yield*` & composition, async iterators & `for await...of`, async generators, streams & integration (~8 chunks) |
+| 9   | DOM fundamentals           | new           | 0%       | Tree, querying, mutation, event dispatch, delegation, attrs vs props, input, forms, custom events, observers, capstone with CRP-lite (~11 chunks)          |
+| 10  | TypeScript fundamentals    | new           | 0%       | Structural typing, primitives/literals, unions/intersections, generics + inference, narrowing, common utility types, working with libraries (~9–10 chunks) |
+| 11  | CSS layout fundamentals    | new           | 0%       | Box model, normal flow, positioning, stacking contexts, flexbox, grid, responsive, typography essentials (~8–10 chunks)                                    |
+| 12  | Browser rendering pipeline | new, optional | 0%       | Parse → CSSOM → render tree → layout → paint → composite, layer promotion, Core Web Vitals, profiling (~6–8 chunks)                                        |
+| 13  | Datastar fundamentals      | new           | 0%       | Hypermedia-driven reactivity, signals & `data-*` attributes, SSE-based backend push, expressions & events, morphing, forms & CRUD, composition with fragments (~8–10 chunks) |
 
 ## Parallel artifact (notes, not a course)
 
