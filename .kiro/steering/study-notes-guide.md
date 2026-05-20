@@ -315,6 +315,12 @@ See `writing-style.md` for full content rules, style rules, formatting, and merm
 - Mermaid for flow diagrams; box-drawing only for hierarchical layouts in code blocks.
 - Surgical edits — touch only what changed.
 
+## Roadmap
+
+The cross-course study roadmap lives at the repo root. It tracks course sequencing, status, and order rationale. Read it at session start alongside `learner-profile.md` to know what's in progress and what comes next.
+
+#[[file:../../roadmap.md]]
+
 ## Conventions
 
 - Topics come from the user. Don't pick, pivot, or suggest new topics unprompted. Surface tangents as questions first.
