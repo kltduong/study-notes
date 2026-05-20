@@ -80,14 +80,25 @@ When `new Dog("Rex")` executes, the engine runs `Dog.[[Construct]](["Rex"], Dog)
 
 ### Step 1: OrdinaryCreateFromConstructor
 
+**OrdinaryCreateFromConstructor** is a spec-level abstract operation — the mechanism that answers "where does the new object come from and what's its prototype chain?" It runs *before* the constructor body executes, producing the object that `this` will point to inside the body.
+
+The operation takes two arguments: the constructor function and a fallback intrinsic prototype (used if the constructor's `.prototype` isn't a valid object).
+
 ```
 OrdinaryCreateFromConstructor(Dog, "%Object.prototype%"):
-    1. proto = Dog.prototype    (or %Object.prototype% if Dog.prototype isn't an object)
+    1. proto = Get(Dog, "prototype")
+       → if Type(proto) is not Object, use the fallback (%Object.prototype%)
     2. obj = OrdinaryObjectCreate(proto)
+       → allocate a fresh ordinary object with [[Prototype]] = proto
     3. return obj
 ```
 
-This creates a **fresh ordinary object** whose `[[Prototype]]` is `Dog.prototype`. The object exists before the function body runs — it's the "blank canvas" that the constructor will populate.
+What this produces: a **fresh ordinary object** whose `[[Prototype]]` is `Dog.prototype`. The object exists before the function body runs — it's the "blank canvas" that the constructor will populate with properties.
+
+Why it matters:
+- It's the reason `new Dog()` instances have access to methods on `Dog.prototype` — the chain is wired here, not by the constructor body.
+- The constructor body's job is just to add own-properties to this already-linked object.
+- The return-value override (Step 5) can discard this object entirely — but OrdinaryCreateFromConstructor always runs regardless.
 
 Key detail: the engine reads `Dog.prototype` at construction time. If you reassign `Dog.prototype` later, already-created instances keep their original `[[Prototype]]`. New instances get the new one.
 
