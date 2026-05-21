@@ -275,7 +275,7 @@ L4 demonstrates that earlier fields are visible to later ones — they run in so
 
 ### The arrow-field pattern — solving `this`-loss structurally
 
-The combination of two facts unlocks the pattern:
+Recall from sub-part 2: extracting a prototype method (passing it as a callback, storing in a variable) loses `this` because the subsequent call is an identifier call → ER base → `undefined`. The combination of two facts gives a structural fix:
 
 1. Field initializers run with `this` = the instance.
 2. Arrow functions capture `this` lexically — once captured, no invocation path can override it.
