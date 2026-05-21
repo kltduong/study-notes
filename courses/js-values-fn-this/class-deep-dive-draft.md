@@ -5,8 +5,8 @@
 - [x] Sub-part 1: Method shorthand — non-constructable, `this` follows the same Reference-base rule
 - [x] Sub-part 2: Method extraction and `this`-loss — the class-specific shape of the problem
 - [x] Sub-part 3: Field initializers — when they run, what `this` they see, arrow-field pattern
-- [ ] Sub-part 4: `super()` as `this`-provider in derived constructors — `this`-TDZ, the uninitialized state
-- [ ] Sub-part 5: Synthesis — worked example tying the pieces together
+- [x] Sub-part 4: `super()` as `this`-provider in derived constructors — `this`-TDZ, the uninitialized state
+- [x] Sub-part 5: Synthesis — worked example tying the pieces together
 
 ---
 
@@ -362,3 +362,219 @@ class Child extends Parent {                          // L1
 ```
 
 The parser actually rejects this as a syntax error in some forms; in others it throws at runtime. Either way: if you need `super`, use a method, not an arrow field.
+
+---
+
+## Sub-part 4: `super()` as `this`-provider in derived constructors
+
+### The problem: where does `this` come from in a derived class?
+
+In a base class, `[[Construct]]` creates the fresh object *before* the constructor body runs (step 1 in the sequence from sub-part 3). The constructor's `[[ThisValue]]` is set immediately — fields and the body both see `this` from the start.
+
+A derived class **cannot do this**. The fresh object must have the correct `[[Prototype]]` — which depends on the *most-derived* constructor's `.prototype`. But the engine enters the *base* constructor first (via `super()` calls up the chain). So the object can't be created until the base constructor runs.
+
+This creates a structural asymmetry:
+
+| | Base class | Derived class |
+|---|---|---|
+| Who creates the object? | `[[Construct]]` (before constructor body) | The **base** constructor (via `super()` chain) |
+| When is `this` available? | Immediately | Only after `super()` returns |
+| What happens before `this` exists? | N/A — it always exists | `this` is in an **uninitialized** state |
+
+### The `this`-TDZ: uninitialized `[[ThisValue]]`
+
+"TDZ" (Temporal Dead Zone) is borrowed from `let`/`const` — the slot exists but accessing it before initialization throws. The same concept applies to `this` in a derived constructor:
+
+```js
+"use strict";                                         // L1
+class Base {                                          // L2
+  constructor() {                                     // L3
+    console.log("Base: this exists", this);           // L4
+  }                                                   // L5
+}                                                     // L6
+
+class Derived extends Base {                          // L7
+  constructor() {                                     // L8
+    console.log(this);                                // L9 — ReferenceError!
+    super();                                          // L10
+    console.log(this);                                // L11 — works: this = fresh object
+  }                                                   // L12
+}                                                     // L13
+
+new Derived();                                        // L14
+```
+
+L9 throws `ReferenceError: Must call super constructor in derived class before accessing 'this' or returning from derived constructor`. The `[[ThisValue]]` slot in the derived constructor's Function ER is **uninitialized** — the engine checks this on every `this` reference and throws if it hasn't been set yet.
+
+L10 (`super()`) is what initializes it. After `super()` returns, `this` is the fresh object that the base constructor created.
+
+### What `super()` actually does — the full sequence
+
+`super()` in a derived constructor is not just "call the parent constructor." It's the mechanism that **provides `this`** to the derived constructor. The sequence:
+
+```
+Derived constructor's [[Construct]] (called via `new Derived()`):
+  1. DO NOT create an object (unlike base class)
+  2. Set [[ThisValue]] = UNINITIALIZED in the constructor's Function ER
+  3. Enter constructor body
+
+  ... code before super() runs with this = UNINITIALIZED ...
+
+  4. super() encountered:
+     a. Resolve [[ConstructorToCall]] = Base (via [[HomeObject]].[[Prototype]])
+     b. Call Base.[[Construct]](args, newTarget=Derived)
+        i.   OrdinaryCreateFromConstructor(Derived) → fresh object
+             [[Prototype]] = Derived.prototype (uses newTarget, not Base!)
+        ii.  Bind this = fresh object in Base's ER
+        iii. Run Base's field initializers
+        iv.  Run Base's constructor body
+        v.   Return fresh object (unless explicit return override)
+     c. Take the returned object
+     d. BindThisValue(derivedConstructor's ER, returnedObject)
+        → [[ThisValue]] slot goes from UNINITIALIZED → the object
+
+  5. this is now live — Derived's field initializers run here
+  6. Rest of Derived's constructor body runs
+  7. Implicit return this (or explicit return override)
+```
+
+Key insight: `newTarget` in step 4.b.i is `Derived`, not `Base`. That's why the fresh object gets `[[Prototype]] = Derived.prototype` even though `Base`'s `[[Construct]]` creates it. The `new.target` value propagates down the `super()` chain.
+
+### Field initializer ordering in derived classes
+
+This is where sub-part 3's "fields run at the start of the constructor" gets refined. The full picture:
+
+```js
+"use strict";                                         // L1
+class Base {                                          // L2
+  baseField = console.log("Base field");              // L3
+  constructor() {                                     // L4
+    console.log("Base constructor body");             // L5
+  }                                                   // L6
+}                                                     // L7
+
+class Derived extends Base {                          // L8
+  derivedField = console.log("Derived field");        // L9
+  constructor() {                                     // L10
+    console.log("Before super");                      // L11
+    super();                                          // L12
+    console.log("After super");                       // L13
+  }                                                   // L14
+}                                                     // L15
+
+new Derived();                                        // L16
+```
+
+Output:
+```
+Before super
+Base field
+Base constructor body
+Derived field
+After super
+```
+
+Trace:
+1. `new Derived()` → enter Derived constructor, `this` = UNINITIALIZED
+2. L11 logs (no `this` access, so no error)
+3. L12 `super()` → enters Base's `[[Construct]]`:
+   - Creates fresh object (with `[[Prototype]] = Derived.prototype`)
+   - Runs Base's field initializers → L3 logs "Base field"
+   - Runs Base's constructor body → L5 logs "Base constructor body"
+   - Returns the object
+4. Back in Derived: `this` is now initialized to the returned object
+5. Derived's field initializers run → L9 logs "Derived field"
+6. L13 logs "After super"
+
+**The rule:** Base fields → Base body → (super returns) → Derived fields → Derived body (rest). Each class's fields run before its own constructor body, but the entire base construction completes before derived fields start.
+
+### What you can and cannot do before `super()`
+
+The `this`-TDZ is enforced on any `this` reference — but not all code requires `this`:
+
+```js
+class Derived extends Base {                          // L1
+  constructor(config) {                               // L2
+    // ✅ OK — no this access:
+    const validated = validate(config);               // L3
+    console.log("setting up");                        // L4
+    if (!validated) throw new Error("bad config");    // L5
+
+    super(validated);                                 // L6
+
+    // ✅ OK — this is live:
+    this.config = validated;                          // L7
+  }                                                   // L8
+}                                                     // L9
+```
+
+You can run arbitrary code before `super()` — compute arguments, validate, throw early — as long as you don't touch `this` or `super.property`. This is intentional: it lets derived constructors prepare arguments for the base constructor.
+
+**What throws before `super()`:**
+- `this.anything` — ReferenceError
+- `super.method()` — ReferenceError (needs `this` to dispatch on)
+- Implicit `return;` without calling `super()` — ReferenceError (the constructor must provide `this`)
+
+**What's fine before `super()`:**
+- Local variables, function calls, conditionals, `throw`
+- `arguments`, closures, anything that doesn't reference `this`
+
+### The "must call super" rule
+
+A derived constructor **must** call `super()` before it returns (unless it explicitly returns an object — the return-value override from chunk 6). If you omit `super()` entirely:
+
+```js
+class Broken extends Base {                           // L1
+  constructor() {                                     // L2
+    // no super() call                                // L3
+  }                                                   // L4 — implicit return this → ReferenceError!
+}                                                     // L5
+
+new Broken();                                         // L6
+```
+
+The implicit `return this` at L4 tries to read `[[ThisValue]]` — still UNINITIALIZED → ReferenceError. The only escape hatch: `return someObject;` (explicit non-`this` return), which bypasses the `this` slot entirely. This is the same return-value override rule from chunk 6, and it's the only way a derived constructor can avoid calling `super()`.
+
+### Default constructors — when you omit `constructor`
+
+If you don't write a constructor, the engine synthesizes one. The synthesized body depends on whether the class extends:
+
+```js
+// Base class (no extends) — synthesized:
+constructor() {}
+
+// Derived class (extends X) — synthesized:
+constructor(...args) { super(...args); }
+```
+
+The derived default forwards every argument to the parent — that's why omitting the constructor on a subclass still works when the parent expects arguments:
+
+```js
+class Animal {                                        // L1
+  constructor(name) { this.name = name; }             // L2
+}                                                     // L3
+class Dog extends Animal {}                           // L4 — synthesized: constructor(...args) { super(...args); }
+const d = new Dog("Rex");                             // L5 → d.name = "Rex"
+```
+
+The `...args` spread preserves arity. If the synthesized form were `constructor() { super(); }`, arguments would silently drop (`d.name` would be `undefined`). Argument forwarding is transparent by default.
+
+The synthesis is purely a parser-level convenience. By the time `[[Construct]]` runs, there's a real function in place — **same `[[ThisValue]] = UNINITIALIZED` start, same `super()` providing `this`, same field-initializer ordering.** Field initializers still run as usual; the synthesized constructor just has nothing else in its body.
+
+This is also why the `this`-TDZ surprises people: most simple subclasses never trip it, because the synthesized `super(...args)` satisfies the rule before any user code runs. The TDZ only bites when you write your own derived constructor and access `this` before the `super()` call.
+
+**Write an explicit derived constructor only when you need to:**
+- Do something *before* `super()` (validate, transform, throw early)
+- Do something *after* `super()` (set extra fields, register the instance)
+
+If neither applies, omit it. The synthesized default is identical to what you'd write, and the absence makes intent clearer.
+
+### Why this design? (motivation)
+
+The `this`-TDZ exists because of a real constraint: the engine can't create the instance until it knows the full prototype chain setup. In single inheritance this seems over-engineered — but consider:
+
+1. **The base constructor might have side effects** that depend on the object existing (assigning fields, registering in a global map). Those must happen on the *final* object, not a temporary.
+2. **`new.target` propagation** ensures the object gets the right `[[Prototype]]` even though the base creates it. Without this, `instanceof` would break.
+3. **The TDZ catches real bugs** — accessing `this` before the object is fully set up (base fields assigned, base constructor logic run) would read uninitialized properties. The ReferenceError is better than silent `undefined`.
+
+The Python comparison: Python's `__init__` receives `self` already created (by `__new__`). There's no TDZ — `self` is always available. But Python also can't enforce "base init ran first" — you can forget `super().__init__()` and get a half-initialized object silently. JS chose strictness over convenience here.
