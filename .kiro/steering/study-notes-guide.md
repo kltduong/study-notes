@@ -140,7 +140,9 @@ Before teaching each chunk:
 
 Snippet format: runnable (Node / browser console) when the concept surfaces in output. Mental-trace when it doesn't (e.g. execution-context internals). Default to runnable.
 
-**Snippet selection preference:** prefer snippets that use only prior knowledge to surface the gap the new concept fills — the user reasons confidently, hits a wall, and the new feature arrives as the answer to a felt need. Fall back to snippets that use the new feature directly when no natural "before" framing exists (e.g. explaining an engine-internal mechanism with no user-facing "without this" state).
+**Snippet selection preference:** prefer snippets that use only prior knowledge and produce a concrete failure (error, wrong output, unexpected behavior) — the user reasons confidently with what they know, hits a wall they can't fix with current tools, and the new concept arrives as the resolution. The teaser should make the learner *feel* the problem before seeing the solution.
+
+**Fallback:** when no natural "before = broken" framing exists (e.g. explaining an engine-internal mechanism with no user-facing failure state), fall back to snippets that use the new feature directly.
 
 ### Interactive rhythm
 
