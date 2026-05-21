@@ -46,6 +46,32 @@ t.startArrow();                                       // L19
 
 A class method (defined via method shorthand inside a `class` body) is an ordinary function object — same `[[Call]]`, same `this`-determination pipeline. But it differs from a function declaration/expression in two ways:
 
+> **Aside —** "Class method" in JS ≠ Python's `@classmethod`. A JS class method is an *instance* method (Python's `def bark(self):`). JS `static` is closer to Python's `@classmethod` — called on the class, `this` = the constructor. The key difference: Python's `@classmethod` descriptor *guarantees* `cls` regardless of call form; JS `static` still follows Reference-base and can lose `this` on extraction.
+
+```js
+"use strict";
+
+// ─── Class method (method shorthand inside class body) ───
+class Dog {
+  bark() { return "woof"; }           // [[IsConstructor]]=false, has [[HomeObject]]
+}
+
+// ─── Function declaration ───
+function bark() { return "woof"; }    // [[IsConstructor]]=true, no [[HomeObject]]
+
+// ─── Function expression assigned to property ───
+const dog = {
+  bark: function() { return "woof"; } // [[IsConstructor]]=true, no [[HomeObject]]
+};
+
+// ─── Method shorthand in object literal ───
+const dog2 = {
+  bark() { return "woof"; }           // [[IsConstructor]]=false, has [[HomeObject]]
+};
+// dog2.bark and Dog.prototype.bark have identical structural properties —
+// it's the shorthand syntax doing the work, not the class keyword.
+```
+
 | Property | Function declaration/expression | Class method (shorthand) |
 |---|---|---|
 | `[[IsConstructor]]` | `true` | `false` |

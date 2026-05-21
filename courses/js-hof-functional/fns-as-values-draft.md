@@ -197,11 +197,6 @@ console.log(fns[0](), fns[1](), fns[2]()); // L3 — 0, 1, 2 (each closes over i
 Each iteration of the loop evaluates the arrow expression → new function object → new closure over that iteration's block-scoped `i`. Three distinct objects, three distinct closures. (With `var` instead of `let`, you'd get three distinct objects that all close over the *same* binding — the classic bug. But that's a scope issue, not a first-class-function issue.)
 
 
-
-
-
-
-
 ---
 
 ## 1.6. Bridge: what this enables

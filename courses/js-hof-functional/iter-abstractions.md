@@ -1,8 +1,8 @@
-# 2. Core Iteration Abstractions
+# 1. Core Iteration Abstractions
 
 > **TL;DR:** `map`, `filter`, and `reduce` are three structural shapes for iterating arrays. `map` = 1-to-1 transform (same length, different values). `filter` = subset selection (≤ length, same values). `reduce` = many-to-one aggregation (collapses to anything). `reduce` is the most general — it can implement the other two. Prefer named methods for self-documenting shape; fall back to loops for early exit or mixed-shape single-pass logic.
 
-## 2.1. The three shapes
+## 1.1. The three shapes
 
 Every array iteration falls into one of three structural categories, distinguished by the input→output relationship:
 
@@ -12,11 +12,11 @@ Every array iteration falls into one of three structural categories, distinguish
 | **Subset selection** | `filter` | `T[] → T[]` | `output.length ≤ input.length` | Each element independently kept or discarded |
 | **Aggregation** | `reduce` | `T[] → U` | Collection → single value | All elements contribute to one accumulated result |
 
-### Hierarchy
+### 1.1.1. Hierarchy
 
 `reduce` is the universal fold — it can implement both `map` and `filter`. The reverse isn't true. The specialized methods exist because **constraints communicate intent**: "this is a map" tells the reader more than "this is a reduce that happens to produce a same-length array."
 
-## 2.2. `map` — structure-preserving transformation
+## 1.2. `map` — structure-preserving transformation
 
 **Contract:** output array has the same length as input. Element `i` of output is derived solely from element `i` of input. Each callback invocation is independent.
 
@@ -33,7 +33,7 @@ This intuition extends beyond arrays: `Promise.then(fn)` maps the resolved value
 
 > **Aside — Python parallel.** `map(fn, iterable)` returns a lazy iterator. Idiomatic Python prefers list comprehensions: `[fn(x) for x in iterable]`. JS has no comprehension syntax — `.map()` is the idiomatic equivalent.
 
-## 2.3. `filter` — subset selection
+## 1.3. `filter` — subset selection
 
 **Contract:** output contains only elements from the input (unchanged), in the same relative order, where the predicate returned truthy. `output.length ≤ input.length`.
 
@@ -44,7 +44,7 @@ const evens = nums.filter(x => x % 2 === 0);  // [2, 4, 6]
 
 The callback is a **predicate** — it answers "keep or discard?" per element. Compare: `map` callback answers "what should this become?"; `filter` callback answers "should this survive?"
 
-### The `Boolean` trick
+### 1.3.1. The `Boolean` trick
 
 ```js
 ["hello", "", "world", null, 0, "foo"].filter(Boolean)
@@ -53,11 +53,11 @@ The callback is a **predicate** — it answers "keep or discard?" per element. C
 
 `Boolean` as predicate filters out all falsy values. **Gotcha:** this removes `0` and `""` which might be valid data. For null-only filtering: `items.filter(x => x != null)`.
 
-### Filter does NOT transform
+### 1.3.2. Filter does NOT transform
 
 The predicate's return value is used as a boolean decision, not as the output element. `words.filter(w => w.toUpperCase())` keeps all truthy strings *unchanged* — it doesn't uppercase them.
 
-### Shared references, not copies
+### 1.3.3. Shared references, not copies
 
 "Elements pass through unchanged" means **references pass through**. `filter` creates a new array (new container), but elements inside are shared with the original — same heap objects.
 
@@ -70,7 +70,7 @@ console.log(data[0].name);  // "ALICE" — same object
 
 General rule: array methods create new arrays (new containers) but don't clone elements (contents). Applies to `map` too when the callback returns the same object reference.
 
-## 2.4. `reduce` — the general fold
+## 1.4. `reduce` — the general fold
 
 **Contract:** collapses an array into a single value by threading an accumulator through each element. Output can be anything.
 
@@ -90,7 +90,7 @@ return acc;
 
 The callback's return value becomes the next accumulator. Forgetting to return → `acc` becomes `undefined` next iteration.
 
-### Implementing map and filter via reduce
+### 1.4.1. Implementing map and filter via reduce
 
 ```js
 // map via reduce
@@ -103,15 +103,15 @@ arr.reduce((acc, x) => pred(x) ? [...acc, x] : acc, []);
 arr.reduce((acc, x) => pred(x) ? [...acc, fn(x)] : acc, []);
 ```
 
-### Always provide an initial value
+### 1.4.2. Always provide an initial value
 
 Without one, `reduce` uses `arr[0]` as the initial accumulator and starts from `arr[1]`. On an empty array → `TypeError`. The explicit initial value handles empty arrays, makes the type clear, and avoids off-by-one confusion.
 
 > 🔖 **Later (chunk 7):** The initial value is the *identity element* of the operation — `0` for `+`, `""` for string concat, `[]` for array concat. This is the monoid pattern.
 
-## 2.5. Composition — chaining the three
+## 1.5. Composition — chaining the three
 
-### Method chaining as a pipeline
+### 1.5.1. Method chaining as a pipeline
 
 ```js
 const orders = [
@@ -129,7 +129,7 @@ orders
 
 Read as a data pipeline: select → transform → aggregate. Each method name declares the structural shape at that stage.
 
-### Filter early, map late
+### 1.5.2. Filter early, map late
 
 **Narrow the dataset as early as possible.** Filter before map means:
 1. **Performance** — map processes fewer elements.
@@ -137,7 +137,7 @@ Read as a data pipeline: select → transform → aggregate. Each method name de
 
 Default ordering: `filter` → `map` → `reduce`, unless the transform is needed for the filter condition.
 
-### Intermediate arrays
+### 1.5.3. Intermediate arrays
 
 Each `.filter()` and `.map()` allocates an intermediate array. Almost never matters for typical application code. Matters for 100k+ elements in hot paths.
 
@@ -145,9 +145,9 @@ Each `.filter()` and `.map()` allocates an intermediate array. Almost never matt
 
 > 🔖 **Later (chunk 4):** Transducers formalize fusion — compose map/filter logic without intermediate arrays while keeping operations named and separate.
 
-## 2.6. Relationship to `for` loops
+## 1.6. Relationship to `for` loops
 
-### What named methods give you
+### 1.6.1. What named methods give you
 
 | Gain | Why |
 |------|-----|
@@ -156,7 +156,7 @@ Each `.filter()` and `.map()` allocates an intermediate array. Almost never matt
 | Composability | Methods chain into pipelines |
 | Single-responsibility | Each callback does one thing |
 
-### What loops give you
+### 1.6.2. What loops give you
 
 | Gain | Why |
 |------|-----|
@@ -165,19 +165,19 @@ Each `.filter()` and `.map()` allocates an intermediate array. Almost never matt
 | Index manipulation | Skip, look-ahead, variable step |
 | Async iteration | `for await...of` works; `.map(async fn)` gives unresolved promises |
 
-### Decision framework
+### 1.6.3. Decision framework
 
 Named method fits the shape? → Use it. Need early exit? → `find`/`some`/`every` or `for...of`. Need mixed-shape single-pass? → `for` loop (or fused `reduce` if expression form needed). Default: start with named methods, fall back to loops when they can't express the operation cleanly.
 
-### Loop forms
+### 1.6.4. Loop forms
 
 Prefer `for...of` — gives values directly, supports `break`/`continue`/`await`. Use `for...in` only for object key enumeration (never arrays — yields string indices, includes inherited properties). Classic `for (let i = 0; ...)` for index manipulation or when you need the numeric index.
 
-### `forEach`
+### 1.6.5. `forEach`
 
 Array method equivalent of a side-effect loop. Returns `undefined`. No `break`, no `await`. Use when you want side effects over each element without early exit; otherwise plain `for...of` is simpler.
 
-## 2.7. Quick reference
+## 1.7. Quick reference
 
 - **Three shapes** — map (1-to-1, same length), filter (subset, ≤ length, elements unchanged), reduce (many-to-one, output is anything).
 - **Reduce is universal** — can implement map and filter; the reverse isn't true.
