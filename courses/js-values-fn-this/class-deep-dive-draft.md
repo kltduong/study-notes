@@ -185,3 +185,24 @@ In pre-class code, methods on shared prototypes had the same extraction problem.
 Classes encourage an OOP style where behavior lives on instances (`this.method()`). But JavaScript's `this` is **per-call, not per-object** — determined by the call expression, not by where the function "belongs." Any API boundary that accepts a function (callbacks, event listeners, higher-order functions) strips the object context.
 
 This tension is the motivation for the solutions in sub-part 3 (arrow fields) and chunk 8 (patterns & pitfalls). The mechanism is already fully explained — what remains is the toolbox for fixing it.
+
+### The flip side: capabilities per-call `this` enables
+
+The same mechanic that breaks extraction is what enables JS to do things Java can't and Python only partially supports. The flexibility is real — but in modern application code, almost every capability has a clearer non-`this` replacement, so the actual *use* is narrow.
+
+| Capability | JS | Python | Java | Status / when to use |
+|---|---|---|---|---|
+| **Method borrowing** — `fn.call(otherObj)` | Yes | Partial — unbound call works, but methods are class-bound at definition | No — `invokevirtual` baked into bytecode | **Smell in app code.** Use `Array.from(x)` / `[...x]` / rest params instead. **OK in:** library internals on array-likes, ES5 maintenance, your own stdlib-style utilities |
+| **Prototype-mutation mixins** — `Object.assign(Cls.prototype, mixin)` | Yes | No — uses MRO + multiple inheritance | No — interfaces + default methods only | **Smell in most code.** Hidden deps, silent name collisions, broken `super`. **OK in:** documented framework internals, polyfills, test scaffolding. **Prefer:** composition, standalone functions, class factory mixins |
+| **Generic `this`-shape algorithms** — `function f() { return this.length }` | Yes | Limited — duck typing exists but methods are class-bound | No | **Smell in app code.** Implicit-first-argument via `this` is cute but unclear. **OK in:** protocol utilities meant to be installed on prototypes, library code targeting any array-like / iterable. **Prefer:** explicit first argument (`f(x)`) like `Array.from`, `Object.keys` |
+| **Free method extraction** — `const fn = obj.method` (bare function passed around) | Yes — automatic | Yes — but Python's bound-method wrapper makes it less common | No — method refs are wrappers, not bare functions | **Mixed.** Cause of `this`-loss bug, but enables functional pipelines. **OK when:** function is pure / arrow-bound / explicitly `.bind`-ed. **Smell when:** extracting a `this`-using method without binding |
+| **Run-time prototype reassignment** — `Object.setPrototypeOf(obj, NewProto)` | Yes | Limited (`__class__` reassignment, rare) | No | **Strong smell.** Wrecks engine optimizations, hard to reason about. **OK in:** reflection-heavy library code, certain proxy/wrapper patterns, type-mutating test tools. **Almost never** in app code |
+
+**The pattern.** Per-call `this` is a sharp generic-dispatch tool. Its real practical use today is narrow — it lives in **library/framework internals**, **polyfills/shims**, and **reading/maintaining old code** that predates modern alternatives. For application code, modern JS has converged on:
+
+- Explicit first arguments over `this`-dispatch (`Array.from(x)`, `Object.keys(o)`)
+- Composition over mixins
+- Spread / `Array.from` / rest params over `.call`-borrowing
+- Arrow fields or explicit `.bind` over hoping `this` survives extraction
+
+The capabilities exist to enable libraries — not to be reached for in everyday code.
