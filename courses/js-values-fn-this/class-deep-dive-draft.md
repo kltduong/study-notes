@@ -2,7 +2,7 @@
 
 ## Plan (teaching order)
 
-- [x] Sub-part 1: Class (shorthand) methods — non-constructable, `this` follows the same Reference-base rule
+- [x] Sub-part 1: Method shorthand — non-constructable, `this` follows the same Reference-base rule
 - [x] Sub-part 2: Method extraction and `this`-loss — the class-specific shape of the problem
 - [x] Sub-part 3: Field initializers — when they run, what `this` they see, arrow-field pattern
 - [ ] Sub-part 4: `super()` as `this`-provider in derived constructors — `this`-TDZ, the uninitialized state
@@ -40,11 +40,11 @@ t.startArrow();                                       // L19
 
 ---
 
-## Sub-part 1: Class (shorthand) methods — non-constructable, same `this` rule
+## Sub-part 1: Method shorthand — non-constructable, same `this` rule
 
-### Methods are ordinary functions with two structural differences
+### Methods defined via shorthand have two structural differences
 
-A class method (defined via method shorthand inside a `class` body) is an ordinary function object — same `[[Call]]`, same `this`-determination pipeline. But it differs from a function declaration/expression in two ways:
+A method defined via **shorthand syntax** (inside a `class` body or object literal) is an ordinary function object — same `[[Call]]`, same `this`-determination pipeline. But it differs from a function declaration/expression in two ways:
 
 > **Aside —** "Class method" in JS ≠ Python's `@classmethod`. A JS class method is an *instance* method (Python's `def bark(self):`). JS `static` is closer to Python's `@classmethod` — called on the class, `this` = the constructor. The key difference: Python's `@classmethod` descriptor *guarantees* `cls` regardless of call form; JS `static` still follows Reference-base and can lose `this` on extraction.
 
@@ -213,30 +213,40 @@ The capabilities exist to enable libraries — not to be reached for in everyday
 
 ### What a field is, mechanically
 
-A class field is a **per-instance property assignment** that the engine performs as part of construction. The syntax:
+An instance field declares a property that the engine assigns **per instance** during construction. (Static fields are per-class, run at class evaluation time — not relevant to `this`-binding here.) The syntax:
 
 ```js
-class Foo {
-  count = 0;            // public field with initializer
-  #secret = "hidden";   // private field
-  static name = "Foo";  // static field (set on the class itself, not instances)
-}
+class Foo {                                           // L1
+  count = 0;                                          // L2 — public instance field
+  #secret = "hidden";                                 // L3 — private instance field
+  static name = "Foo";                                // L4 — static field (set on class, not instances)
+  constructor() {                                     // L5
+    console.log(this.count);                          // L6 — 0 (field already assigned)
+    this.count = 99;                                  // L7 — constructor body overwrites
+  }                                                   // L8
+}                                                     // L9
 ```
 
-is sugar for: "during `[[Construct]]`, after `this` exists, run `this.count = 0` and `this.#secret = "hidden"`." Fields are not stored on the prototype — each instance gets its own copy. This is the structural opposite of methods (which live on the prototype, shared).
+is sugar for: "during `[[Construct]]`, after `this` exists, run `this.count = 0` (L2) and `this.#secret = "hidden"` (L3), then run the constructor body (L5–L8)." The static field (L4) runs once when the class is evaluated, not per instance. Instance fields are not stored on the prototype — each instance gets its own copy. This is the structural opposite of methods (which live on the prototype, shared).
 
 ### When initializers run
 
-In a **base class** (no `extends`), field initializers run at the start of the constructor, immediately after `this` is bound to the fresh object:
+Each instance field has its own **initializer** — the right-hand side expression (`0` in `count = 0`, `"hidden"` in `#secret = "hidden"`). Internally, the engine wraps each initializer in a separate function that it calls with `this` = the fresh instance. Fields without an initializer (`name;`) default to `undefined`.
+
+In a **base class** (no `extends`), these initializers run at the start of the constructor, immediately after `this` is bound to the fresh object:
 
 ```
 [[Construct]] for base class Foo:
   1. OrdinaryCreateFromConstructor → fresh object, [[Prototype]] = Foo.prototype
   2. Bind this = fresh object
-  3. Run all field initializers in source order  ← fields run here
-  4. Run constructor body
+  3. Run instance field initializers in source order  ← L2, L3 run here
+  4. Run constructor body                             ← L5–L8 run here
   5. Return-value override rule
+
+(L4 — static field — runs once at class evaluation time, not during [[Construct]])
 ```
+
+L6 sees `0` because the field initializer (L2, step 3) ran before the constructor body (step 4). The constructor can read and overwrite fields that already exist on `this`.
 
 The initializer expression is evaluated **for each new instance** — the right-hand side is not shared. `count = []` gives every instance its own array.
 
@@ -270,7 +280,23 @@ The combination of two facts unlocks the pattern:
 1. Field initializers run with `this` = the instance.
 2. Arrow functions capture `this` lexically — once captured, no invocation path can override it.
 
-So if you assign an arrow to a field, the arrow captures the instance as its `this`, **per instance**, at construction time:
+**The problem (method on prototype):**
+
+```js
+"use strict";                                         // L1
+class Logger {                                        // L2
+  prefix = "[LOG]";                                   // L3
+  log(msg) { return `${this.prefix} ${msg}`; }        // L4 — method on Logger.prototype
+}                                                     // L5
+
+const l = new Logger();                               // L6
+const fn = l.log;                                     // L7 — extraction: GetValue discards Reference
+fn("hi");                                             // L8 → TypeError: Cannot read properties of undefined (reading 'prefix')
+```
+
+L8: `fn` is an identifier → ER base → `this = undefined` → `undefined.prefix` throws.
+
+**The fix (arrow field):**
 
 ```js
 "use strict";                                         // L1
