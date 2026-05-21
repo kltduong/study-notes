@@ -158,51 +158,30 @@ The extraction happened at L13. The `this`-loss manifests at L5. They can be far
 
 The function object is identical — same `.name`, same body, same `[[HomeObject]]`. The difference is purely in what the **call-site expression** looks like. GetValue extracts the function from the Reference at the point of assignment/passing — after that, the Reference (and its base) is gone.
 
-### Where extraction happens in class code
+### Common extraction sites
 
-Extraction isn't always obvious. Every pattern below stores the method as a bare value, losing the object base:
+Extraction isn't always as visible as `const fn = obj.method`. Every pattern below triggers GetValue on a member expression, discarding the Reference:
 
-```js
-"use strict";                                         // L1
-class Logger {                                        // L2
-  prefix = "[LOG]";                                   // L3
-  log() { return `${this.prefix} message`; }          // L4
-}                                                     // L5
-const logger = new Logger();                          // L6
+- **Variable assignment:** `const fn = logger.log;` → `fn()` loses `this`
+- **Callback argument:** `setTimeout(logger.log, 100)` — argument passing calls GetValue
+- **Destructuring:** `const { log } = logger;` — desugars to GetValue on each property
+- **Higher-order functions:** `[1,2,3].forEach(logger.log)` — same as callback argument
+- **Array/object storage:** `handlers.push(logger.log)` — stored as bare value; later call site determines `this`
 
-// Pattern 1: explicit variable assignment
-const fn = logger.log;                                // L7
-fn();                                                 // L8 → TypeError
+All are the same mechanism — GetValue at the boundary, identifier-based call afterward.
 
-// Pattern 2: passed as callback argument
-setTimeout(logger.log, 100);                          // L9 → TypeError inside
+> **Aside —** What about `handlers[0]()`? That *is* a property access — `IsPropertyReference` = true, base = the `handlers` array. So `this` inside `log` would be the array itself (not `undefined`). Still not `logger`, still a TypeError on `this.prefix` — but the mechanism is "wrong object as base," not "ER base → undefined." Subtly different failure path, same practical outcome.
 
-// Pattern 3: stored in a data structure
-const handlers = [logger.log];                        // L10
-handlers[0]();                                        // L11 → TypeError
+### Why classes make this worse
 
-// Pattern 4: destructuring
-const { log } = logger;                               // L12
-log();                                                // L13 → TypeError
+In pre-class code, methods on shared prototypes had the same extraction problem. Two factors make it more common and more painful with classes:
 
-// Pattern 5: higher-order — passed to .map/.forEach/etc.
-[1, 2, 3].forEach(logger.log);                        // L14 → TypeError
-```
+1. **Strict mode is mandatory.** Sloppy-mode constructor functions got `globalThis` as the fallback — an extracted method might silently "work" (reading `window.prefix` → `undefined`, no crash). Classes are always strict → `this = undefined` → immediate TypeError on any property access. The bug is louder, which is good — but you *must* handle it.
 
-All five are the same mechanism: `logger.log` evaluates to a Reference (base=`logger`, name=`"log"`), then GetValue extracts the function object for assignment/passing, discarding the Reference. The subsequent call has no memory of `logger`.
-
-> **Aside —** Pattern 3 (`handlers[0]()`) is subtly different from the others syntactically — it *is* a property access (element access on the array). But the base of that Reference is the `handlers` array, not `logger`. So `this` inside `log` would be the array (in sloppy mode) or `undefined` after strict-mode coercion rules apply. Either way, not `logger`.
-
-### Why classes make this worse than plain objects
-
-In pre-class code, methods lived on shared prototypes too — but two factors make extraction more common and more painful with classes:
-
-1. **Strict mode is mandatory.** Old-style constructor functions in sloppy mode got `globalThis` as the fallback — the method might accidentally work (reading `window.prefix` returns `undefined`, not a TypeError). Classes are always strict → immediate TypeError on `this.anything`. The bug is louder, which is good — but it means you *must* handle it.
-
-2. **Class methods are the primary API surface.** With classes, you hand out instances and consumers call methods. The moment a consumer does `const { save } = repo;` or `btn.addEventListener("click", repo.save)` — extraction. This is the dominant pattern in frameworks (React class components, event systems, DI containers).
+2. **Class methods are the primary API surface.** Classes encourage handing out instances where consumers call methods. The moment a consumer does `btn.addEventListener("click", repo.save)` or `const { save } = repo` — extraction. This is the dominant pattern in frameworks (React class components, event systems, DI containers).
 
 ### The fundamental tension
 
-Classes encourage an OOP style where behavior lives on instances (`this.method()`). But JavaScript's `this` is **per-call, not per-object** — it's determined by the call expression, not by where the function "belongs." Any API boundary that accepts a function (callbacks, event listeners, higher-order functions) strips the object context.
+Classes encourage an OOP style where behavior lives on instances (`this.method()`). But JavaScript's `this` is **per-call, not per-object** — determined by the call expression, not by where the function "belongs." Any API boundary that accepts a function (callbacks, event listeners, higher-order functions) strips the object context.
 
 This tension is the motivation for the solutions in sub-part 3 (arrow fields) and chunk 8 (patterns & pitfalls). The mechanism is already fully explained — what remains is the toolbox for fixing it.
