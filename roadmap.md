@@ -2,7 +2,7 @@
 
 Goal: whole-system literacy (frontend included) for a backend-strong dev. Reviewing and architecting UI work alongside AI/devs, not specializing.
 
-Last updated: 2026-05-20.
+Last updated: 2026-05-22.
 
 ## Path
 
@@ -10,8 +10,8 @@ Last updated: 2026-05-20.
 | --- | -------------------------- | ------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | `js-vars-scope`            | in progress   | 92%      | Finish closures + variable lifecycle                                                                                                                       |
 | 2   | `js-inheritance`           | in progress   | 73%      | Finish chains, class syntax, composition (~30% remaining)                                                                                                  |
-| 3   | `js-values-fn-this`        | in progress   | 64%      | Values & memory model (primitive vs object, slot vs heap reference, copy semantics, identity), Reference type, `this` determination (one rule + overrides), `call`/`apply`/`bind`, arrow functions, `new` protocol, class & `this`, patterns (~8 chunks) |
-| 4   | `js-hof-functional`        | new           | 0%       | Functions as values, map/filter/reduce as folds, reduce deep dive, composition & pipelines, currying & partial application, immutability patterns, algebraic structure (monoids, functors), real-world patterns, FP vs OOP tradeoffs (~9 chunks) |
+| 3   | `js-values-fn-this`        | in progress   | 73%      | Values & memory model (primitive vs object, slot vs heap reference, copy semantics, identity), Reference type, `this` determination (one rule + overrides), `call`/`apply`/`bind`, arrow functions, `new` protocol, class & `this`, patterns (~8 chunks) |
+| 4   | `js-hof-functional`        | in progress   | 13%      | Functions as values, map/filter/reduce as folds, reduce deep dive, composition & pipelines, currying & partial application, immutability patterns, algebraic structure (monoids, functors), real-world patterns, FP vs OOP tradeoffs (~9 chunks) |
 | 5   | `js-modules`               | new           | 0%       | Why modules exist, ES module syntax, static linking, live bindings, module record lifecycle, circular deps, dynamic `import()`, Node dual-mode, browser loading, bundlers, top-level `await` (~13 chunks) |
 | 6   | `js-modern-syntax`         | new           | 0%       | Syntax fluency — class, fields, private `#`, static, extends/super, destructuring, spread/rest, `?.`, `??`, template literals, iterators, generators, symbols, proxy/reflect, misc modern features (~12 chunks) |
 | 7   | `js-error-handling`        | new           | 0%       | Error anatomy, try/catch/finally semantics, custom errors & cause chaining, propagation strategies, async error handling, validation & defensive input, graceful degradation, patterns & anti-patterns (~8 chunks) |
