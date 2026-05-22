@@ -6,7 +6,7 @@
 - [x] **1. The pitfall sites** — catalog of where extraction happens (callbacks, event handlers, setTimeout, destructuring, higher-order)
 - [x] **2. The DOM exception** — Web IDL "invoke a callback" sets `this = currentTarget`; consequences
 - [x] **3. The fix spectrum** — arrow at call site, arrow field, `bind`-in-constructor, `EventListener` object protocol; status/when to use
-- [ ] **4. Decision matrix** — pulling pitfall sites + DOM exception + fix spectrum into a "which fix for which site" table
+- [x] **4. Decision matrix** — pulling pitfall sites + DOM exception + fix spectrum into a "which fix for which site" table
 - [ ] **5. Worked synthesis** — one example showing 3+ sites + 3+ fixes side-by-side
 
 ## 1.2. Teaser
@@ -321,8 +321,6 @@ button.addEventListener("click", l.log);                               // L8 —
 button.dispatchEvent(new Event("click"));                              // L9 — but arg shape mismatch
 ```
 
-Wait — what does L9 print?
-
 `l.log` is the arrow field, which expects `(msg)`. The dispatcher calls it with `(event)` as the argument. So `msg = event` (an `Event` object), and template-literal stringification of an `Event` typically gives `[object Event]`. The output is `"[LOG] [object Event]"` — not exactly what was wanted, but no `this`-loss, no TypeError.
 
 The arrow-field fix solves *`this`*-loss but doesn't change the dispatcher's argument-passing. Your method has to either accept the dispatcher's argument shape directly, or you wrap (back to the *arrow at call site* fix above).
@@ -501,3 +499,83 @@ button.addEventListener("click", l.log.bind(l, "[manual prefix]"));    // partia
 | Bare `.bind` | A BoundFunction at the call site | 1 per registration | Only if saved to var | Partial application is wanted alongside `this`-locking |
 
 > **Aside —** Stage-3 decorators (TC39, partially landed in TS 5.0+) include `@bound` and similar primitives that compile to one of these patterns. They don't introduce a *new* mechanism — they're sugar over arrow field / bind-in-constructor. Status: not yet baseline in plain JS. Use them only behind a transpiler. Once they reach Stage 4 and bake into engines, they become the cleanest option for "this method is always self-bound."
+
+
+## 1.6. Decision matrix — which fix for which site
+
+The previous two sections enumerated *sites* (where extraction strikes) and *fixes* (mechanisms to insert). This section pulls them together: given a concrete site, which fix is the default? The decision is driven by three axes — none of them about the dispatcher itself.
+
+### 1.6.1. The three axes
+
+| Axis | Question | Why it matters |
+|---|---|---|
+| **Locality** | Is this a one-off registration, or is the method *primarily* used as a callback? | One-off → wrap inline. Primarily-callback → bake the lock into the class. |
+| **Removability** | Will I ever need to `removeEventListener` / `clearTimeout` / unsubscribe? | If yes, the wrapper needs stable identity — store it once. Anonymous wrappers can't be removed. |
+| **Argument shape** | Does the dispatcher's argument list match the method's? | Mismatch → wrapper must remap (arrow at call site is the cleanest remap). |
+
+The dispatcher itself is *almost* a separate axis — it changes the failure mode (loud vs silent) but doesn't change the right fix. The exception is `EventListener` object, which is DOM-only.
+
+### 1.6.2. Site → recommended fix
+
+The table reads "if you're at this site and these axes apply, reach for this fix first." Alternatives are noted; *italicized* items are rare-but-legitimate.
+
+| Site | One-off? | Removable needed? | Arg-shape match? | Default fix |
+|---|---|---|---|---|
+| `addEventListener` (one event, one listener) | yes | maybe | varies | **Arrow at call site**, save to `const handler` if removable |
+| `addEventListener` (class is *the* listener for many events) | no | yes | n/a | **`EventListener` object** with `handleEvent + switch` |
+| `addEventListener` (method designed to be passed) | no | yes | yes | **Arrow field** |
+| `setTimeout`/`setInterval` | yes | maybe | usually yes | **Arrow at call site** — `setTimeout(() => l.tick(), 100)` |
+| `Promise.then` / `.catch` | yes | n/a | varies | **Arrow at call site** — `.then(v => obj.handle(v))` |
+| `queueMicrotask`, `requestAnimationFrame` | yes | rare (`cancelAnimationFrame` if rAF) | varies | **Arrow at call site**, save to `const` if cancellable |
+| `forEach`/`map`/`filter`/`find`/`reduce` | yes | n/a | yes | **Arrow at call site** OR pass `thisArg` (see below) |
+| `Node EventEmitter` (`emitter.on`) | maybe | yes (`emitter.off`) | varies | **Arrow at call site**, save; or **arrow field** if registering many handlers |
+| Constructor passing (`callback` parameter to a function I wrote) | n/a | n/a | n/a | **Don't fix** — your own code can keep the Reference; document the contract |
+
+> **Aside —** Array methods take a `thisArg` as their 2nd argument: `arr.forEach(fn, thisArg)`. This is the dispatcher's *own* built-in fix — equivalent to `bind` but supplied by the dispatcher contract, not wrapped around the function. Mechanism: the spec for `forEach` does `callback.[[Call]](thisArg, [element, index, arr])`. No wrapper, no allocation. **Status:** legitimate but largely abandoned — the `(el) => obj.handle(el)` arrow form is more uniform across dispatchers (most don't have a `thisArg`), so codebases tend to use arrows everywhere for consistency.
+
+### 1.6.3. Decision flow
+
+```mermaid
+flowchart TD
+    Start[Need to pass a method to a dispatcher] --> Q1{Does this method get<br/>passed as callback often,<br/>or just here?}
+    Q1 -->|Often, I control the class| Q2{Does it use<br/>super calls?}
+    Q1 -->|Just here, one-off| Q3{Need to<br/>removeEventListener<br/>or cancel later?}
+    Q2 -->|No| AF[Arrow field<br/>method = arg => body]
+    Q2 -->|Yes| BIC[bind-in-constructor<br/>this.m = this.m.bind this]
+    Q3 -->|No| AAC[Arrow at call site<br/>register&nbsp;arg => obj.m arg]
+    Q3 -->|Yes| AACS[Arrow at call site,<br/>saved to const handler]
+    Q1 -->|Class is THE<br/>listener for many<br/>events on one target| ELO[EventListener object<br/>handleEvent + switch type]
+
+    style AF fill:#46c,stroke:#fff,color:#fff
+    style BIC fill:#666,stroke:#fff,color:#fff
+    style AAC fill:#46c,stroke:#fff,color:#fff
+    style AACS fill:#46c,stroke:#fff,color:#fff
+    style ELO fill:#48a,stroke:#fff,color:#fff
+```
+
+**Legend:**
+- Solid blue (Arrow field, Arrow at call site) — the two defaults that cover ~95% of cases.
+- Teal (EventListener object) — DOM-only, niche but underused.
+- Grey (`bind`-in-constructor) — legacy; reach only when arrow field is blocked by `super`.
+
+### 1.6.4. What's *not* in the matrix
+
+A few things deserve a non-mention so future-self doesn't go looking:
+
+- **`obj.method.bind(obj)` at the call site** — works, but no advantage over `(args) => obj.method(args)` and noisier. Use only when you also want partial application of arguments (`fn.bind(this, prefix)`) — that's `bind`'s actual edge.
+- **`function() { return this.method() }.bind(obj)`** — strictly worse than arrow at call site. No reason in modern code.
+- **`@bind` decorator** — Stage 3, not yet baseline. When it lands, it'll be sugar over arrow field; same tradeoffs apply.
+- **Reassigning `this`** (`var self = this; setTimeout(function () { self.tick() })`) — pre-arrow workaround. Strictly superseded by the arrow-at-call-site form, which does the same thing without the named alias. Status: legacy only — read it in old code, don't write it.
+
+### 1.6.5. The combined call
+
+Two axes can interact in one decision. Common combinations:
+
+| Combination | Resolution |
+|---|---|
+| Method passed as callback **and** uses `super` | Can't use arrow field. Use **`bind`-in-constructor** (the only fix that keeps the prototype method's `[[HomeObject]]`). |
+| Method passed as callback **and** needs argument remapping (dispatcher passes `(event)`, method wants `(msg)`) | **Arrow at call site** wins — arrow field doesn't help with arg shape. Or write the method to accept the dispatcher's shape. |
+| Method passed to a DOM event **and** also to a non-DOM dispatcher (timer, Promise) | **Arrow field** — `EventListener` object only helps the DOM case; arrow field works everywhere. |
+| Method on a base class, overridden in subclass | **Avoid arrow field** in the base — fields don't participate in the prototype chain. Method + `bind`-in-constructor (or callers always wrap with arrow at call site). |
+
+The pattern: pick the most *local* fix that satisfies the constraint axes. Don't pre-bake (arrow field) when one-off (arrow at call site) is enough; don't reach for `bind`-in-constructor when arrow field works.

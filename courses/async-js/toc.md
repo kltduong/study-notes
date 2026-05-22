@@ -8,10 +8,10 @@
 
 **Planned arc:**
 
-1. Foundations (chunks 1–2) — why async exists, event loop model (call stack + task queue). Moderate pace; this is where the fuzziness lives.
-2. Callbacks (chunks 3–5) — original async pattern, error handling, callback hell. Lighter pace; focus on _why_ and pain points.
-3. Promises (chunks 6–11) — states, chaining, combinators, testing. Moderate-to-slow; build the scheduling mental model.
-4. Async/Await & Advanced Event Loop (chunks 12–15) — syntax sugar, microtasks vs macrotasks, task priorities, rAF. Slower pace; final layer of the execution-order model.
+1. Foundations (*Intro & What Is Asynchronicity?* and *Event Loop Basics*) — why async exists, event loop model (call stack + task queue). Moderate pace; this is where the fuzziness lives.
+2. Callbacks (*Callbacks*, *Callback Problems & HTTP*, *Testing Callbacks*) — original async pattern, error handling, callback hell. Lighter pace; focus on _why_ and pain points.
+3. Promises (*Promise Fundamentals* through *Testing Promises*) — states, chaining, combinators, testing. Moderate-to-slow; build the scheduling mental model.
+4. Async/Await & Advanced Event Loop (*Async/Await* through *Wrap-Up*) — syntax sugar, microtasks vs macrotasks, task priorities, rAF. Slower pace; final layer of the execution-order model.
 
 Throughout: emphasis on predicting execution order as the proof the mental model works.
 
@@ -33,7 +33,7 @@ Throughout: emphasis on predicting execution order as the proof the mental model
       What Is a Callback In JavaScript?; Callbacks Are Not Always Asynchronous; How To Handle Errors In Asynchronous Code; Pros & Cons Of Callbacks; Callback Examples In JavaScript Libraries.
       📊 solid
 
-  → [x] Quiz (chunks 2–3): event loop mechanics, callback fundamentals, error handling patterns.
+  → [x] Quiz (covers *Event Loop Basics* and *Callbacks*): event loop mechanics, callback fundamentals, error handling patterns.
   📊 solid
 
 - [x] **Chunk 4: Callback Problems & HTTP**
@@ -46,7 +46,7 @@ Throughout: emphasis on predicting execution order as the proof the mental model
       🔧 Refinements: - Said missing `done` parameter causes a timeout — Mocha actually treats it as sync and passes immediately (false positive) - Said arrow function `this` falls back to global object — it captures `this` from the enclosing lexical scope at definition time, which may or may not be global
       📊 shaky → solid — nailed both weak spots on review sweep
 
-  → [x] Test — Part 1 (chunks 1–5): async fundamentals, event loop, callbacks end-to-end.
+  → [x] Test — Part 1 (covers *Intro & What Is Asynchronicity?* through *Testing Callbacks*): async fundamentals, event loop, callbacks end-to-end.
   📊 solid — missed error scattering as a distinct structural problem (lumped it with composition/readability)
   🔧 Refinements: - Listed nesting and readability as two separate problems instead of identifying the three distinct structural issues: inversion of control, inside-out composition, and scattered error handling
 
@@ -62,7 +62,7 @@ Throughout: emphasis on predicting execution order as the proof the mental model
       📊 solid — hardcoded values in promisification wrapper instead of passing through originals; corrected quickly
       🔧 Refinements: - Hardcoded `reject(new Error("No city"))` and `resolve(22)` instead of passing through `err` and `value` — wrapper should be general-purpose, not tied to one call
 
-  → [x] Quiz (chunks 6–7): promise states, .then, chaining, promisification.
+  → [x] Quiz (covers *Promise Fundamentals* and *Working with Promises*): promise states, .then, chaining, promisification.
   📊 solid
   🔧 Refinements: - Said returning a plain value vs returning a promise from a .then() handler makes "no difference" — same resolved value, but different timing: returning a promise costs extra microtask ticks due to the adoption procedure
 
@@ -75,7 +75,7 @@ Throughout: emphasis on predicting execution order as the proof the mental model
       Executing Promises In Parallel: Promise.all; How Promise.all Handles Rejections; Promise.all: Implementing From Scratch; Executing Promises In Parallel: Promise.allSettled; Promise.allSettled: Implementing From Scratch.
       📊 solid
 
-  → [x] Quiz (chunks 8–9): fetch, rejection flows, parallel combinators.
+  → [x] Quiz (covers *Fetch & Rejection Handling* and *Promise.all & Promise.allSettled*): fetch, rejection flows, parallel combinators.
   📊 solid
 
 - [x] **Chunk 10: Promise.race & Promise.any**
@@ -87,7 +87,7 @@ Throughout: emphasis on predicting execution order as the proof the mental model
       Setting Up Testing Environment; Testing JavaScript Promises Using Mocha And Chai; Timeouts In Mocha; Making Multiple Promise Assertions In One Test.
       📊 solid
 
-  → [x] Test — Part 2 (chunks 6–11): promises end-to-end, combinators, testing.
+  → [x] Test — Part 2 (covers *Promise Fundamentals* through *Testing Promises*): promises end-to-end, combinators, testing.
   📊 solid — one detail slip on Q4 (asserted type instead of message content); corrected immediately when pointed out
   🔧 Refinements: - Initial rejection test asserted `isObject(config)` instead of checking `err.message` for the required string — right structure, wrong assertion target
 
@@ -98,7 +98,7 @@ Throughout: emphasis on predicting execution order as the proof the mental model
       📊 solid — correctly traced await suspension and microtask scheduling; identified sequential-vs-parallel problem; initially fired dependent calls before awaiting the dependency but corrected when pointed out
       🔧 Refinements: - Fired `fetchOrders(user.id)` before awaiting `fetchUser()` — `user` didn't exist yet; dependency analysis before parallelizing
 
-  → [x] Quiz (chunk 12): async/await mechanics, error handling, sequential vs parallel.
+  → [x] Quiz (covers *Async/Await*): async/await mechanics, error handling, sequential vs parallel.
   📊 solid
 
 - [x] **Chunk 13: Task Priorities & Microtasks**
@@ -110,7 +110,7 @@ Throughout: emphasis on predicting execution order as the proof the mental model
       Debugging Our Initial Example; Animations; Creating Animations Using requestAnimationFrame.
       📊 solid
 
-  → [x] Quiz (chunks 13–14): microtasks vs macrotasks, task scheduling, rAF.
+  → [x] Quiz (covers *Task Priorities & Microtasks* and *Debugging & Animations*): microtasks vs macrotasks, task scheduling, rAF.
   📊 solid — nailed microtask drain ordering, rAF scheduling, and microtask-based animation failure; missed the specific visual artifacts (jitter, frame-rate-dependent speed) on the setInterval-on-120Hz question
   🔧 Refinements: - On setInterval + high-refresh display: identified resource waste and background tabs instead of the visual problems (vsync drift causing jitter, speed tied to frame count not elapsed time) — need to connect scheduling theory to concrete rendering consequences
 
@@ -118,7 +118,7 @@ Throughout: emphasis on predicting execution order as the proof the mental model
       Quick Recap of Event Loop in the Browser; Summary.
       📊 solid
 
-  → [x] Test — Part 3 (chunks 12–15): async/await, advanced event loop, microtasks, animations.
+  → [x] Test — Part 3 (covers *Async/Await* through *Wrap-Up*): async/await, advanced event loop, microtasks, animations.
   📊 solid — strong on suspension/continuation, two-queue ordering, microtask-vs-task yielding, rAF timestamp reasoning; missed the `btn.click()` scripted-dispatch case (didn't address second half of Q5)
   🔧 Refinements:
   - Framed `await` as "keeping a reference to a callback" — more precise: `await` _suspends the execution context_ and registers the continuation as a `.then()` handler on the awaited promise

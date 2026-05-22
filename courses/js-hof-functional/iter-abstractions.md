@@ -27,7 +27,7 @@ const doubled = nums.map(x => x * 2);  // [2, 4, 6, 8]
 
 **The functor intuition:** `map` changes what's *inside* the container without changing the container itself — same length, same order, only values differ. The type can change (`T[] → U[]` where `T ≠ U`) — the structural guarantee is about the array, not the element types.
 
-This intuition extends beyond arrays: `Promise.then(fn)` maps the resolved value preserving the Promise container. Any "mappable container" follows the same pattern (formalized in chunk 7 as functors).
+This intuition extends beyond arrays: `Promise.then(fn)` maps the resolved value preserving the Promise container. Any "mappable container" follows the same pattern (formalized later in the *Algebraic structure* chunk as functors).
 
 **Not for side effects.** `map` allocates a new array. If you discard the return value, use `forEach` instead — it signals "side effects only."
 
@@ -107,7 +107,7 @@ arr.reduce((acc, x) => pred(x) ? [...acc, fn(x)] : acc, []);
 
 Without one, `reduce` uses `arr[0]` as the initial accumulator and starts from `arr[1]`. On an empty array → `TypeError`. The explicit initial value handles empty arrays, makes the type clear, and avoids off-by-one confusion.
 
-> 🔖 **Later (chunk 7):** The initial value is the *identity element* of the operation — `0` for `+`, `""` for string concat, `[]` for array concat. This is the monoid pattern.
+> 🔖 **Later (*Algebraic structure* chunk):** The initial value is the *identity element* of the operation — `0` for `+`, `""` for string concat, `[]` for array concat. This is the monoid pattern.
 
 ## 1.5. Composition — chaining the three
 
@@ -143,7 +143,7 @@ Each `.filter()` and `.map()` allocates an intermediate array. Almost never matt
 
 **Fusing with reduce** eliminates intermediates but loses self-documenting shape names. Modern default: prefer chaining for clarity; fuse only when profiling shows a real bottleneck.
 
-> 🔖 **Later (chunk 4):** Transducers formalize fusion — compose map/filter logic without intermediate arrays while keeping operations named and separate.
+> 🔖 **Later (*Composition & pipelines* chunk):** Transducers formalize fusion — compose map/filter logic without intermediate arrays while keeping operations named and separate.
 
 ## 1.6. Relationship to `for` loops
 

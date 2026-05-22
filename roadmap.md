@@ -36,33 +36,33 @@ Last updated: 2026-05-20.
 
 - **Web workers** — only if in-browser AI inference / heavy client compute appears.
 - **Browser security model course** (CORS + cookies + CSP + iframe + `postMessage` + SRI) — only if a project demands; otherwise CORS lives in `notes/client-http/`.
-- **Functions deep-dive (`this`/bind/composition)** — promoted to main path as #3 (`js-values-fn-this`). HoF/functional patterns split out as #4 (`js-hof-functional`).
-- **React fundamentals** — promote to main path only if a project mandates it (client / employer / OSS integration), or if a UI-interactive carve-out appears that Datastar doesn't fit. Estimate: 1–2 week focused sprint, not a full course, given the fundamentals base from #1–#8. Vue not on the table — pivot only if a specific project demands it.
+- **Functions deep-dive (`this`/bind/composition)** — promoted to main path as `js-values-fn-this`. HoF/functional patterns split out as `js-hof-functional`.
+- **React fundamentals** — promote to main path only if a project mandates it (client / employer / OSS integration), or if a UI-interactive carve-out appears that Datastar doesn't fit. Estimate: 1–2 week focused sprint, not a full course, given the fundamentals base from `js-vars-scope` through `js-iterators-generators`. Vue not on the table — pivot only if a specific project demands it.
 
 ## Order rationale
 
-- **1 → 2** — close open loops; preserve calibration data; promote `shaky` → `solid`.
-- **2 → 3** — value semantics (primitive vs reference) are needed to understand what `this` *is* (a reference in a slot); `this` determination builds directly on EC/ER internals from #1; js-inheritance needs `this` in constructors/methods, so cover it first.
-- **3 → 4** — HoF patterns build directly on closures (#1), `this`/arrows/bind (#3), and the value-vs-reference model (#3). Composition and currying need those settled. Also: reduce-as-fold connects to the formal-abstraction preference in the learner profile.
-- **4 → 5** — modules build on scope (ER types, lexical binding) and `this` (module scope has no global `this`); static linking is easier to reason about with the EC model in memory. HoF patterns (composition, re-exports) make module design choices intuitive.
-- **5 → 6** — modules introduce import/export syntax; modern-syntax course systematizes the rest of ES2015+ grammar so everything after reads fluently.
-- **6 → 7** — error handling uses `cause` chaining (ES2022 from #6), async errors build on promise rejection model (async-js), and validation patterns feed directly into DOM event handlers (#9) and TS narrowing (#10). Placed here so DOM/TS code can assume error literacy.
-- **7 → 8** — generators are a mechanism topic (suspend/resume, coroutines) that extends the async mental model. Needs iterator syntax from #6. Async generators + streams feed directly into Datastar's SSE consumption (#13) and `notes/client-http/` streaming.
-- **8 → 9** — DOM code uses classes, destructuring, optional chaining, iterators constantly; syntax fluency + iterator/generator mechanics mean DOM examples need no detours.
-- **9 → 10** — TS leverages reading comprehension on every later course; types land concretely on the DOM APIs just learned.
-- **10 → 11** — CSS is the biggest blind spot for backend-strong devs; closes the visible-UI gap.
-- **11 → 12** — CRP needs CSSOM literacy to make sense; safely skippable since DOM capstone gives the lite version.
-- **12 → 13** — Datastar is the capstone; DOM events, SSE (from `notes/client-http/`), async generators (#8), and CSS layout all feed directly into understanding hypermedia-driven reactivity without a virtual DOM layer in between.
+- **`js-vars-scope` → `js-inheritance`** — close open loops; preserve calibration data; promote `shaky` → `solid`.
+- **`js-inheritance` → `js-values-fn-this`** — value semantics (primitive vs reference) are needed to understand what `this` *is* (a reference in a slot); `this` determination builds directly on EC/ER internals from `js-vars-scope`; js-inheritance needs `this` in constructors/methods, so cover it first.
+- **`js-values-fn-this` → `js-hof-functional`** — HoF patterns build directly on closures (from `js-vars-scope`), `this`/arrows/bind (from `js-values-fn-this`), and the value-vs-reference model (from `js-values-fn-this`). Composition and currying need those settled. Also: reduce-as-fold connects to the formal-abstraction preference in the learner profile.
+- **`js-hof-functional` → `js-modules`** — modules build on scope (ER types, lexical binding) and `this` (module scope has no global `this`); static linking is easier to reason about with the EC model in memory. HoF patterns (composition, re-exports) make module design choices intuitive.
+- **`js-modules` → `js-modern-syntax`** — modules introduce import/export syntax; modern-syntax course systematizes the rest of ES2015+ grammar so everything after reads fluently.
+- **`js-modern-syntax` → `js-error-handling`** — error handling uses `cause` chaining (ES2022 from `js-modern-syntax`), async errors build on promise rejection model (async-js), and validation patterns feed directly into DOM event handlers (DOM fundamentals) and TS narrowing (TypeScript fundamentals). Placed here so DOM/TS code can assume error literacy.
+- **`js-error-handling` → `js-iterators-generators`** — generators are a mechanism topic (suspend/resume, coroutines) that extends the async mental model. Needs iterator syntax from `js-modern-syntax`. Async generators + streams feed directly into Datastar's SSE consumption (Datastar fundamentals) and `notes/client-http/` streaming.
+- **`js-iterators-generators` → DOM fundamentals** — DOM code uses classes, destructuring, optional chaining, iterators constantly; syntax fluency + iterator/generator mechanics mean DOM examples need no detours.
+- **DOM fundamentals → TypeScript fundamentals** — TS leverages reading comprehension on every later course; types land concretely on the DOM APIs just learned.
+- **TypeScript fundamentals → CSS layout fundamentals** — CSS is the biggest blind spot for backend-strong devs; closes the visible-UI gap.
+- **CSS layout fundamentals → Browser rendering pipeline** — CRP needs CSSOM literacy to make sense; safely skippable since DOM capstone gives the lite version.
+- **Browser rendering pipeline → Datastar fundamentals** — Datastar is the capstone; DOM events, SSE (from `notes/client-http/`), async generators (from `js-iterators-generators`), and CSS layout all feed directly into understanding hypermedia-driven reactivity without a virtual DOM layer in between.
 
 ## Off-ramps
 
-- **Stop after #11** — ~4 months of work, reasonably literate, can review most UI work.
-- **Stop after #13 (skipping #12)** — full path minus engine depth; hypermedia-driven UI covered.
-- **Complete through #13 including #12** — full fundamentals depth; ready to architect, not just review.
+- **Stop after CSS layout fundamentals** — ~4 months of work, reasonably literate, can review most UI work.
+- **Stop after Datastar fundamentals (skipping Browser rendering pipeline)** — full path minus engine depth; hypermedia-driven UI covered.
+- **Complete through Datastar fundamentals including Browser rendering pipeline** — full fundamentals depth; ready to architect, not just review.
 
 ## Rough timeline
 
-At one chunk per session and a short session per day: ~6–7 months end-to-end after #2 closes out. Off-ramping at #10 cuts to ~4 months.
+At one chunk per session and a short session per day: ~6–7 months end-to-end after `js-inheritance` closes out. Off-ramping at TypeScript fundamentals cuts to ~4 months.
 
 ## Revising
 

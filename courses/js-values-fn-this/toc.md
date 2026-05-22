@@ -23,7 +23,7 @@ Progress tracker for the course.
 7. **Class & `this`** — field initializers, method `this`-loss, `super()` and `this`-TDZ in derived constructors. Call-protocol aspects only (inheritance mechanics stay in js-inheritance).
 8. **Patterns & pitfalls** — callbacks losing `this`, event handlers, method extraction, historical patterns (`self`/`that`), modern solutions (arrow fields, `bind` in constructor).
 
-**Pacing notes:** Chunk 1 is the new foundation — value semantics and memory layout. Chunks 2–3 are the core `this` machinery — the Reference type is the new spec-level concept; spend time there. Chunk 4 is moderate. Chunks 5–6 build on the foundation with clear derivations. Chunks 7–8 are application/synthesis. Probe "right conclusion, wrong mechanism" weakness — `this` is a prime area for coincidence-based reasoning.
+**Pacing notes:** *Values & memory model* is the new foundation — value semantics and memory layout. *The Reference type* and *`this` determination* are the core `this` machinery — the Reference type is the new spec-level concept; spend time there. *Explicit overrides* is moderate. *Arrow functions* and *Constructor calls* build on the foundation with clear derivations. *Class & `this`* and *Patterns & pitfalls* are application/synthesis. Probe "right conclusion, wrong mechanism" weakness — `this` is a prime area for coincidence-based reasoning.
 
 **Dependencies:** js-vars-scope (EC, Function ER, `[[ThisValue]]` slot, `[[OuterEnv]]` chain). Feeds into js-inheritance (method dispatch, constructor `this`).
 
@@ -40,7 +40,7 @@ Progress tracker for the course.
 - [x] **Explicit overrides: `call`, `apply`, `bind`** — `Function.prototype.call/apply` supply `this` directly; `bind` returns a BoundFunction exotic object with fixed `[[BoundThis]]`; partial application
       📊 shaky → solid — nailed [[Call]] vs [[Construct]] separation on remediation
       🔧 Refinements: — Predicted `call` overrides `bind` (wrong: wrapper intercepts). Predicted `new BoundFoo()` uses `[[BoundThis]]` (wrong: `[[Construct]]` never reads it).
-- [x] **Quiz: values, Reference & `this` basics** — covers chunks 1–4
+- [x] **Quiz: values, Reference & `this` basics** — covers *Values & memory model* through *Explicit overrides: `call`, `apply`, `bind`*
       📊 solid
       🔧 Refinements: — Forgot sloppy-mode ToObject coercion on primitives passed to `call`/`apply` (answered `"number"` instead of `"object"`).
 - [x] **Arrow functions** — no own `[[ThisValue]]`/`arguments`/`new.target`; `this` resolved via `[[OuterEnv]]` chain walk; not constructable; the `self = this` problem they solve
@@ -61,5 +61,5 @@ Progress tracker for the course.
         - **General lesson** — "later" was misleading shorthand. The real axis is *who does the `[[Call]]`*: your code, or a dispatcher. Any dispatcher (sync or async) overrides the bare-function default with its own contract.
       🔧 Refinements (sub-part 2):
         - **Predicted `this.name` would print "Button"** on a `dispatchEvent`-supplied `this = button`. Got `this = button` right (mechanism solid), but didn't follow through to "does `EventTarget` have a `name` property?" — it doesn't, so `button.name` reads `undefined`. The class field `Reporter.name = "rep"` lives on the *original Reporter instance*, which was discarded at extraction; it's not on the object the dispatcher chose. Right conclusion direction (silent-`undefined`), wrong specific value.
-- [ ] **Quiz: arrows, `new`, class** — covers chunks 5–8
+- [ ] **Quiz: arrows, `new`, class** — covers *Arrow functions* through *Patterns & pitfalls*
 - [ ] **Final test**

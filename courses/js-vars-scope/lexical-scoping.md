@@ -344,7 +344,7 @@ function f() {
 }
 ```
 
-The deciding question is always *"which ER does each binding live in?"* — the same question chunk 6 reduced everything to.
+The deciding question is always *"which ER does each binding live in?"* — the same question [scope-model.md](scope-model.md) reduced everything to.
 
 ### 1.4.2. Cross-keyword trap — `let` + nested-block `var`
 
