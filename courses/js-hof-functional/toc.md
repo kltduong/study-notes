@@ -34,7 +34,8 @@ Progress tracker for the course. Chunks grouped by theme.
       📊 solid
 - [x] **Core iteration abstractions** — `map`, `filter`, `reduce` as folds over collections, how they compose, when each is the right tool, relationship to `for` loops
       📊 solid
-- [ ] **Reduce deep dive** — reduce as the universal fold, accumulator design, building other abstractions from reduce, common pitfalls (mutating accumulator, missing initial value)
+- [x] **Reduce deep dive** — reduce as the universal fold, accumulator design, building other abstractions from reduce, common pitfalls (mutating accumulator, missing initial value)
+      📊 solid
       🔧 Refinements (sub-part *Common pitfalls* check):
         - In a snippet with both "forgot return" and "missing init," cited "missing init" as the cause of the throw. Whether that's right depends on mode: in **strict mode**, missing init throws on iter 1 (`Cannot create property 'b' on string 'a'`); in **sloppy mode**, missing init silently no-ops on iter 1 and forgot-return throws on iter 2 (`Cannot read properties of undefined`). Diagnostic principle: when multiple bugs co-exist, strict mode tends to surface the earliest one by converting silent no-ops into throws.
 - [ ] **Quiz 1** (covering *Functions as values*, *Core iteration abstractions*, *Reduce deep dive*): first-class functions, iteration abstractions, reduce mechanics
