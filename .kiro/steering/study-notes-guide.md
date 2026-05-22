@@ -187,6 +187,20 @@ Applies to all teaching workflows (discussion and course-guided alike).
 
 **Don't bypass on grounds of "the mechanism is obvious."** Especially with `this`, prototype chains, return-value overrides, async ordering, coercion edges, scope/closure details — these are exactly the topics where confident reasoning fails. If the topic is being taught precisely *because* it's tricky, the snippet must be run.
 
+**Read the output, don't infer it.** Running the script is necessary but not sufficient — the output displayed in the tool isn't always the output the script produced. Three failure modes have surfaced:
+
+1. **Display swallowing** — the tool output pipeline silently drops or filters content even though the script produced it. "No output displayed" is **not** evidence of "no output produced."
+2. **Stderr-only output** — uncaught exceptions, stack traces, and warnings go to stderr; without `2>&1` they're invisible alongside stdout that *was* captured.
+3. **Silent caught exceptions** — a `try { … } catch (e) {}` with no log in the catch block produces no output and exits 0; reasoning from "exit 0 + no output" to "ran to completion without throwing" is unsafe.
+
+**Protocol for any code-verification snippet:**
+
+- **End with a sentinel.** Last line of every diagnostic script: `console.log("__DONE__");` (or language equivalent — `print("__DONE__")` for Python). Now the trichotomy is unambiguous: sentinel + lines = ran cleanly; sentinel alone = ran cleanly with no other output; output without sentinel = crashed mid-run; **nothing at all = display layer dropped output, re-run with byte-level verification.**
+- **Always merge stderr.** `2>&1` on every invocation. Catches stack traces and warnings.
+- **When *absence* of output is the load-bearing observation, verify at byte level.** If the conclusion rests on "the script produced nothing," prove it with `| xxd | head` or `| wc -c`. If `wc -c` says > 0 but nothing was displayed, the display lied — ignore the display and read the bytes.
+
+**Rule of thumb:** if you would *retract a teaching claim* based on observed output (or its absence), the observation must be verifiable at the byte level, not just at the displayed level.
+
 If for some reason the code can't be run (no runtime available, browser-only API, requires a build step), state that explicitly: _"I can't run this here; predicted output is X but verify before relying on it."_ Don't pretend confidence.
 
 ## Critical lens
