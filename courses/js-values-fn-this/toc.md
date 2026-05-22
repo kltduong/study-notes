@@ -59,5 +59,7 @@ Progress tracker for the course.
         - **`setTimeout(fn, 0)` predicted as TypeError** — host dispatcher (Node `Timeout`, browser `window`) supplies `this` itself, so the symptom is silent `NaN`/wrong-object reads, not a loud throw. ECMAScript's strict-mode "plain call → undefined" rule doesn't apply when a host API is the caller.
         - **`forEach(c.tick)` predicted as no-op** — synchronous dispatchers count as dispatchers. `forEach` (and `map`/`filter`/`find`/etc.) calls the callback with `thisValue = undefined` unless `thisArg` is passed. Mistook "I haven't called it yet" for "no one calls it."
         - **General lesson** — "later" was misleading shorthand. The real axis is *who does the `[[Call]]`*: your code, or a dispatcher. Any dispatcher (sync or async) overrides the bare-function default with its own contract.
+      🔧 Refinements (sub-part 2):
+        - **Predicted `this.name` would print "Button"** on a `dispatchEvent`-supplied `this = button`. Got `this = button` right (mechanism solid), but didn't follow through to "does `EventTarget` have a `name` property?" — it doesn't, so `button.name` reads `undefined`. The class field `Reporter.name = "rep"` lives on the *original Reporter instance*, which was discarded at extraction; it's not on the object the dispatcher chose. Right conclusion direction (silent-`undefined`), wrong specific value.
 - [ ] **Quiz: arrows, `new`, class** — covers chunks 5–8
 - [ ] **Final test**
