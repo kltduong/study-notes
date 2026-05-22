@@ -1,15 +1,15 @@
-# Patterns & Pitfalls — teaching draft
+# 1. Patterns & Pitfalls — teaching draft
 
-## Plan (teaching order)
+## 1.1. Plan (teaching order)
 
 - [x] **0. Teaser** — DOM `addEventListener` extraction; surprising `this` (not `undefined`)
 - [x] **1. The pitfall sites** — catalog of where extraction happens (callbacks, event handlers, setTimeout, destructuring, higher-order)
 - [x] **2. The DOM exception** — Web IDL "invoke a callback" sets `this = currentTarget`; consequences
 - [x] **3. The fix spectrum** — arrow at call site, arrow field, `bind`-in-constructor, `EventListener` object protocol; status/when to use
-- [ ] **4. Decision matrix** — pulling §1–§3 into a "which fix for which site" table
+- [ ] **4. Decision matrix** — pulling pitfall sites + DOM exception + fix spectrum into a "which fix for which site" table
 - [ ] **5. Worked synthesis** — one example showing 3+ sites + 3+ fixes side-by-side
 
-## 0. Teaser
+## 1.2. Teaser
 
 ```js
 "use strict";                                                          // L1
@@ -35,7 +35,7 @@ Three plausible answers — pick one and explain:
 Which mechanism produces your prediction? (Reference base on `addEventListener`'s side, the dispatch algorithm, the runtime, …?)
 
 
-### 0.1. Reveal
+### 1.2.1. Reveal
 
 Actual output of L9:
 
@@ -53,7 +53,7 @@ this = undefined → this.prefix → TypeError
 
 That reasoning is correct **for a plain runtime call** — the kind a generic "schedule this function" mechanism would do. The piece it's missing is that `dispatchEvent` is not a plain call. It's a DOM-spec algorithm that supplies `thisValue` explicitly.
 
-#### What dispatch actually does
+#### 1.2.1.1. What dispatch actually does
 
 The DOM standard's event dispatch algorithm calls the listener through Web IDL's **"invoke a callback function"** operation. The relevant step (paraphrased):
 
@@ -70,7 +70,7 @@ button.dispatchEvent(new Event("click"));  // L9 — calls l.log.[[Call]](button
 
 Inside `log`, `this = button` (an `EventTarget`). `button.prefix` doesn't exist → reads as `undefined` — no error, just a missing property. Template literal interpolates `undefined` to the string `"undefined"`.
 
-#### Why this matters
+#### 1.2.1.2. Why this matters
 
 The extraction *did* happen. The Reference was lost. But the next call site **isn't a plain call** — it's a DOM-driven call with a built-in `this` override. So the failure mode is different:
 
@@ -85,7 +85,7 @@ DOM events are the dominant case where extraction produces a *silent* bug instea
 - Loud failure (`fn()` → TypeError) tells you *immediately* that something's wrong.
 - Silent failure (`addEventListener` → `target.prefix → undefined`) means the handler "runs" — and your debugging starts with "why isn't the counter incrementing?" rather than "where's the TypeError?".
 
-#### Tying it back to the pipeline
+#### 1.2.1.3. Tying it back to the pipeline
 
 This is consistent with everything we've built. `dispatchEvent` is just another caller; the only question is "what does the caller pass to `[[Call]]` as `thisValue`?":
 
@@ -99,9 +99,9 @@ The mechanism itself is unchanged — only the source of `thisValue` varies. Add
 
 
 
-## 1. The pitfall sites
+## 1.3. The pitfall sites
 
-§0 showed one site (DOM dispatch). The full catalog: every call site that takes a function value, stores it, and invokes it later through *some* dispatcher. The dispatcher decides what `this` is — your code has no say once the function is handed over.
+The *Teaser* showed one site (DOM dispatch). The full catalog: every call site that takes a function value, stores it, and invokes it later through *some* dispatcher. The dispatcher decides what `this` is — your code has no say once the function is handed over.
 
 Three things have to happen for a `this`-loss bug:
 
@@ -111,7 +111,7 @@ Three things have to happen for a `this`-loss bug:
 
 Steps 1 and 3 can be far apart in the source — that's what makes these bugs slippery.
 
-### 1.1. Extraction shapes
+### 1.3.1. Extraction shapes
 
 All of these run `GetValue` on a member expression and discard the Reference. After this point, the function is a bare object — no memory of where it came from.
 
@@ -130,11 +130,11 @@ What is **not** extraction (Reference preserved):
 | Non-extraction | Why |
 |---|---|
 | `obj.method()` | The `()` operator is the consumer; Reference goes straight to it |
-| `obj.method?.()` | Optional-call preserves Reference (verified in chunk 3) |
+| `obj.method?.()` | Optional-call preserves Reference (covered earlier in [`this` determination](this-determ.md)) |
 | `(obj.method)()` | Parentheses around a Reference don't trigger GetValue |
 | `obj.method.bind(obj)` | `.bind` is invoked *as a method on the function*, then the BoundFunction stores `obj` |
 
-### 1.2. Re-invocation sites — what each dispatcher passes as `this`
+### 1.3.2. Re-invocation sites — what each dispatcher passes as `this`
 
 Once a bare function is stored, its eventual call site decides `thisValue`. The interesting part: **most real dispatchers aren't plain calls.** Each environment-supplied dispatcher has its own contract.
 
@@ -147,7 +147,7 @@ Once a bare function is stored, its eventual call site decides `thisValue`. The 
 | `Promise.then(fn)` / `.catch(fn)` | `undefined` (per spec) | Loud TypeError |
 | `queueMicrotask(fn)` | `undefined` | Loud TypeError |
 | `requestAnimationFrame(fn)` | `globalThis` (browser) | Silent wrong-object |
-| `EventTarget.dispatchEvent` (via `addEventListener`) | `currentTarget` | **Silent wrong-object** (§0) |
+| `EventTarget.dispatchEvent` (via `addEventListener`) | `currentTarget` | **Silent wrong-object** (the *Teaser reveal* above) |
 | `node.on("event", fn)` (Node EventEmitter) | The `EventEmitter` instance | Silent wrong-object |
 | Web Worker `postMessage` handler | The `Worker`/global scope | Silent wrong-object |
 | `MutationObserver` callback | The observer instance | Silent wrong-object |
@@ -156,7 +156,7 @@ Once a bare function is stored, its eventual call site decides `thisValue`. The 
 
 The pattern: **runtime-internal dispatchers (Promise, microtask, array methods)** stay close to the spec's "plain call" default and pass `undefined`. **Host-environment dispatchers (DOM, Node EventEmitter, timers)** typically supply something — usually whatever the environment thinks is the "natural target." That something is almost never the object the method came from.
 
-### 1.3. The two failure shapes
+### 1.3.3. The two failure shapes
 
 This is the practical takeaway from the catalog:
 
@@ -169,14 +169,37 @@ Strict mode (mandatory in classes/modules) made the **loud** path louder — a p
 
 So: arrows / `bind` / etc. exist not just to "preserve `this` for safety" — they exist to flip silent bugs into correct behavior, and (where a fix is missing) to flip silent bugs into loud ones.
 
-> **Aside —** Several of the entries in §1.2 are themselves subject to spec evolution. Pre-ES2015, `Array.prototype.forEach`'s `this` for the callback was sloppy-`globalThis`; under strict it's `undefined`. The DOM's "use `currentTarget`" rule has been there since DOM Level 2 and isn't going to change, but the rule for *new* host APIs ("what `this` should we pass?") is still made case-by-case by spec authors. The mental model — "find the dispatcher, find its contract" — generalizes; the table doesn't.
+> **Aside —** Several entries in *Re-invocation sites* are themselves subject to spec evolution. Pre-ES2015, `Array.prototype.forEach`'s `this` for the callback was sloppy-`globalThis`; under strict it's `undefined`. The DOM's "use `currentTarget`" rule has been there since DOM Level 2 and isn't going to change, but the rule for *new* host APIs ("what `this` should we pass?") is still made case-by-case by spec authors. The mental model — "find the dispatcher, find its contract" — generalizes; the table doesn't.
 
 
-## 2. The DOM exception — why dispatch passes `currentTarget`
+## 1.4. The DOM exception — why dispatch passes `currentTarget`
 
-§0 stated the rule: DOM event dispatch calls listeners with `this = currentTarget`. This section unpacks *why* — both the spec mechanism and the historical motivation. Once both layers are clear, the silent-failure pattern stops looking arbitrary.
+The *Teaser reveal* stated the rule: DOM event dispatch calls listeners with `this = currentTarget`. This section unpacks *why* — both the spec mechanism and the historical motivation. Once both layers are clear, the silent-failure pattern stops looking arbitrary.
 
-### 2.1. Two specs, two layers
+### 1.4.1. The minimum event model (just-enough scope)
+
+DOM events get a full course later (the *DOM fundamentals* course on the roadmap — capture/bubble phases, delegation, custom events, observers). For this chunk, only three things matter:
+
+- **`EventTarget`** — an object that can have listeners registered on it. In the browser, every DOM element is an `EventTarget`. In Node 19+, `EventTarget` is a built-in global class used for examples here (so the snippets run without a browser).
+- **`addEventListener(type, listener)`** — registers `listener` for events of name `type` (e.g. `"click"`). Registering the same listener twice for the same type is a silent no-op.
+- **`dispatchEvent(event)`** — synchronously calls every registered listener whose type matches `event.type`. Each call is roughly `listener.[[Call]](currentTarget, [event])` — i.e. equivalent to `listener.call(currentTarget, event)`. `currentTarget` is the `EventTarget` `addEventListener` was called on.
+
+That is the entire dispatcher we need. No capture/bubble phases, no propagation, no `event.stopPropagation()`. We use `dispatchEvent` only because it's the simplest concrete dispatcher whose `thisValue` contract isn't `undefined` — it lets us study `this` extraction onto a host-supplied dispatcher without setting up a browser.
+
+```js
+"use strict";                                                          // L1
+const target = new EventTarget();                                      // L2 — node we attach listeners to
+target.addEventListener("ping", function (event) {                     // L3 — register
+  console.log("got", event.type, "this is target?", this === target);  // L4
+});                                                                    // L5
+target.dispatchEvent(new Event("ping"));                               // L6 → "got ping this is target? true"
+```
+
+L6 trace: dispatch finds the one registered listener, calls it as `listener.[[Call]](target, [event])`. Inside the listener, `this = target`, `event` is the regular argument.
+
+> 🔖 Later: capture vs bubble phases, `event.target` vs `event.currentTarget` (they differ on bubbled events), `stopPropagation`, custom events, observer APIs — all in the *DOM fundamentals* course. The single-target model above is sufficient for studying `this` determination here.
+
+### 1.4.2. Two specs, two layers (where the contract comes from)
 
 JS doesn't define `addEventListener` — the **DOM standard** does (a separate W3C/WHATWG spec layered on top of ECMAScript). The DOM standard composes ECMAScript via **Web IDL** — the interface description language used to translate spec-level operations into JS-callable methods.
 
@@ -197,7 +220,7 @@ listener.[[Call]](currentTarget, [event])
 
 This is structurally identical to `listener.call(currentTarget, event)` from your perspective. The DOM spec just chose `currentTarget` as the value; the rest of the pipeline is unchanged.
 
-### 2.2. Why `currentTarget`? (motivation)
+### 1.4.3. Why `currentTarget`? (motivation)
 
 The choice predates classes, modules, and arrow functions. In the late-1990s DOM Level 0 / Level 2 era, the dominant pattern was:
 
@@ -220,9 +243,9 @@ A common idiom built on this: "click once and disable" submit buttons, where the
 
 In **modern** code with classes, that convention reverses: `this` "should" be the controller object that owns state, not the DOM node. So the DOM's well-meaning convenience has become the most common silent-`this`-loss source in app code.
 
-The behavior is correct per spec; what changed is what programmers want `this` to mean. **Status:** legacy convention. Don't write new code that relies on `this = currentTarget` inside a listener — use `event.currentTarget` explicitly when you need the element, and `this` for your controller object (with one of the §3 fixes).
+The behavior is correct per spec; what changed is what programmers want `this` to mean. **Status:** legacy convention. Don't write new code that relies on `this = currentTarget` inside a listener — use `event.currentTarget` explicitly when you need the element, and `this` for your controller object (with one of the fixes from *the fix spectrum* below).
 
-### 2.3. Other host dispatchers follow the same template
+### 1.4.4. Other host dispatchers follow the same template
 
 The DOM is the most common case but not the only one. Each host environment defines its own `thisValue` contract for the callbacks it dispatches. The mental model: **find the dispatcher's spec, look up the contract.**
 
@@ -239,9 +262,9 @@ The DOM is the most common case but not the only one. Each host environment defi
 Pure-JS dispatchers (Promise, microtask, Array methods) stay close to the ECMAScript default of `undefined`. **Host-driven dispatchers tend to supply something** — almost never the object you wrote `obj.method` for. Treat any host API that takes a function as a candidate for silent `this`-loss until the spec confirms otherwise.
 
 
-## 3. The fix spectrum
+## 1.5. The fix spectrum
 
-§1–§2 mapped *where* `this` goes wrong. §3 maps *how* to make it right. Five mechanisms — five different tradeoffs. None is universal best; the right pick depends on the call shape, memory profile, and whether you'll need to remove the listener.
+The previous sections (*pitfall sites* and *the DOM exception*) mapped *where* `this` goes wrong. This section maps *how* to make it right. Five mechanisms — five different tradeoffs. None is universal best; the right pick depends on the call shape, memory profile, and whether you'll need to remove the listener.
 
 A fix works by inserting one of:
 
@@ -250,7 +273,7 @@ A fix works by inserting one of:
 
 Both shapes solve the same problem (preventing extraction-then-rebind). They differ in object identity, memory cost, and whether `this` can be overridden later.
 
-### 3.1. Arrow at call site — wrap the extraction inline
+### 1.5.1. Arrow at call site — wrap the extraction inline
 
 The minimal fix. Replace the extraction with an inline arrow that performs the call:
 
@@ -275,15 +298,15 @@ Mechanism trace at L8:
 | Aspect | Verdict |
 |---|---|
 | **Memory cost** | One arrow per registration site (typically not per instance — depends on enclosing scope) |
-| **`this`-locking strength** | Strong — arrow is structurally immune (chunk 5) |
+| **`this`-locking strength** | Strong — arrow is structurally immune (covered in [arrow-fns](arrow-fns.md)) |
 | **Removable?** | Only if you keep the arrow reference in a variable: `const handler = (e) => l.log(e.type); button.addEventListener("click", handler); button.removeEventListener("click", handler);` |
 | **Status** | Default for one-off listener registration. Most readable for "convert this dispatcher's call into a member-expression call." |
 
 Trade-off: the arrow body has to translate the dispatcher's argument shape into your method's argument shape. For a parameterless method this is just `() => l.log()`; for one that needs the event, `(e) => l.log(e.type)`. Sometimes verbose, but always explicit.
 
-### 3.2. Arrow field — lock `this` per instance, structurally
+### 1.5.2. Arrow field — lock `this` per instance, structurally
 
-Already introduced in chunk 7 (Class & `this` §1.3). Recap in this context: define the method as a class field with an arrow function. The arrow captures `this = the instance` at construction time and is structurally immune to extraction-rebinding.
+Already introduced in [Class & `this`](class-deep-dive.md), in the *arrow-field pattern* section. Recap in this context: define the method as a class field with an arrow function. The arrow captures `this = the instance` at construction time and is structurally immune to extraction-rebinding.
 
 ```js
 "use strict";                                                          // L1
@@ -302,7 +325,7 @@ Wait — what does L9 print?
 
 `l.log` is the arrow field, which expects `(msg)`. The dispatcher calls it with `(event)` as the argument. So `msg = event` (an `Event` object), and template-literal stringification of an `Event` typically gives `[object Event]`. The output is `"[LOG] [object Event]"` — not exactly what was wanted, but no `this`-loss, no TypeError.
 
-The arrow-field fix solves *`this`*-loss but doesn't change the dispatcher's argument-passing. Your method has to either accept the dispatcher's argument shape directly, or you wrap (back to §3.1).
+The arrow-field fix solves *`this`*-loss but doesn't change the dispatcher's argument-passing. Your method has to either accept the dispatcher's argument shape directly, or you wrap (back to the *arrow at call site* fix above).
 
 | Aspect | Verdict |
 |---|---|
@@ -310,10 +333,10 @@ The arrow-field fix solves *`this`*-loss but doesn't change the dispatcher's arg
 | **`this`-locking strength** | Strong — structural; survives any number of extractions, `call`/`apply`/`bind` |
 | **Removable?** | Yes — `l.log` is the same identity every time it's read (it's a property on the instance) |
 | **`super`-callable?** | No (arrows have no `[[HomeObject]]`) |
-| **Subclass override?** | Awkward — must be a field, not a method, in the subclass too (chunk 7 §1.3.6) |
+| **Subclass override?** | Awkward — must be a field, not a method, in the subclass too (the *what goes wrong if you reach for arrow fields by default* section in [Class & `this`](class-deep-dive.md)) |
 | **Status** | Default when the method *will* be passed as a callback. If you control the class and the method's main purpose is being handed to dispatchers, arrow field is the right shape. |
 
-### 3.3. `bind`-in-constructor — pre-class workaround, still legal
+### 1.5.3. `bind`-in-constructor — pre-class workaround, still legal
 
 The historical alternative to arrow fields. Inside the constructor, replace each method with a bound version:
 
@@ -333,7 +356,7 @@ Mechanism: `this.log` on L5 RHS resolves to the prototype method (Reference, the
 | Aspect | Verdict |
 |---|---|
 | **Memory cost** | One BoundFunction per method per instance (same as arrow field) |
-| **`this`-locking strength** | Strong via the BoundFunction wrapper (chunk 4) |
+| **`this`-locking strength** | Strong via the BoundFunction wrapper (covered in [`call`, `apply`, `bind`](call-apply-bind.md)) |
 | **Removable?** | Yes — `instance.log` is stable identity |
 | **`super`-callable?** | Yes — the bound target is the prototype method, which has `[[HomeObject]]` |
 | **Subclass override?** | Trickier — subclass must also bind |
@@ -341,9 +364,9 @@ Mechanism: `this.log` on L5 RHS resolves to the prototype method (Reference, the
 
 > **Aside —** Notice the constructor needs to repeat `this.method = this.method.bind(this)` for *every* method. With many methods this is noisy and easy to forget; the field-syntax form (arrow field) folds it into the field declaration itself. This is mostly why arrow fields won out.
 
-### 3.4. `EventListener` object protocol — no extraction, no wrapper
+### 1.5.4. `EventListener` object protocol — no extraction, no wrapper
 
-The DOM-specific fix from §2.3 (now relocated here, where it belongs alongside the other fixes). `addEventListener` accepts two listener shapes:
+The DOM-specific fix that was deferred from *the DOM exception* (it's a *fix*, not a `this`-contract explanation, so it belongs alongside the others here). `addEventListener` accepts two listener shapes:
 
 ```js
 button.addEventListener("click", fn);                                  // function listener — extraction risk
@@ -389,9 +412,9 @@ When not to:
 - The class needs different `this` per event (it doesn't — but if your design suggests it does, that's a refactor signal).
 - Anything other than `addEventListener` — the protocol is DOM-specific.
 
-### 3.5. The `removeEventListener` identity trap
+### 1.5.5. The `removeEventListener` identity trap
 
-A pitfall that hits §3.1 and §3.3 hard, §3.2 and §3.4 not at all. Worth its own beat because it's a silent footgun.
+A pitfall that hits *arrow at call site* and *`bind`-in-constructor* hard, *arrow field* and *`EventListener` object* not at all. Worth its own beat because it's a silent footgun.
 
 `removeEventListener(type, listener)` matches the listener by **object identity**, not by source code or by any "deep equality" check. If the function value passed to `add` and the function value passed to `remove` aren't `===`, removal silently does nothing — no error, no warning.
 
@@ -430,7 +453,7 @@ button.addEventListener("click", this.boundLog);                       // L2
 button.removeEventListener("click", this.boundLog);                    // L3 — same wrapper, works
 ```
 
-Why §3.2 and §3.4 are immune:
+Why *arrow field* and *`EventListener` object* are immune:
 
 - **Arrow field** — `l.log` reads the same property each time. Same identity. `add` and `remove` both reference the per-instance arrow.
 - **`EventListener` object** — `l` is the same object identity each time. Trivially removable.
@@ -445,7 +468,7 @@ Why §3.2 and §3.4 are immune:
 
 > **Aside —** `addEventListener` does *one* helpful thing: registering the same listener twice for the same event-type/capture-phase is a no-op (the second call is silently dropped). So you can't accidentally double-fire by re-registering. But you can't accidentally `bind`-equal either, and that's where most "I called remove but it still fires" bugs come from.
 
-### 3.6. `Function.prototype.bind` outside the constructor — the bare `.bind` pattern
+### 1.5.6. `Function.prototype.bind` outside the constructor — the bare `.bind` pattern
 
 For completeness, the most common form of `bind` use in real code: inline at the registration site.
 
@@ -461,20 +484,20 @@ Mechanism: `l.log.bind(l)` produces a fresh BoundFunction with `[[BoundThis]] = 
 | **`this`-locking strength** | Strong — same as bind-in-constructor |
 | **Removable?** | **No** — anonymous BoundFunction. Save it: `const bound = l.log.bind(l); add(bound); ... remove(bound);` |
 | **Verbosity** | Repeats `l` twice; slightly noisier than arrow at call site |
-| **Status** | Legitimate but largely superseded by arrow at call site (§3.1), which is more readable for the "wrap the dispatcher's call shape" task. Use `bind` here only when you also want partial application of arguments — a real `bind` superpower arrows-at-call-site can't match. |
+| **Status** | Legitimate but largely superseded by *arrow at call site*, which is more readable for the "wrap the dispatcher's call shape" task. Use `bind` here only when you also want partial application of arguments — a real `bind` superpower arrows-at-call-site can't match. |
 
 ```js
 button.addEventListener("click", l.log.bind(l, "[manual prefix]"));    // partial application — bind shines
 ```
 
-### 3.7. Summary — five fixes, one decision
+### 1.5.7. Summary — five fixes, one decision
 
 | Mechanism | Inserts what? | Memory | Removable? | When |
 |---|---|---|---|---|
-| Arrow at call site (§3.1) | An arrow that does the call | 1 per registration | Only if saved to var | One-off registrations; dispatcher arg shape ≠ method arg shape |
-| Arrow field (§3.2) | A locked-`this` arrow as instance property | 1 per instance per method | Yes | Methods primarily passed as callbacks; you control the class |
-| `bind`-in-constructor (§3.3) | A BoundFunction shadowing the prototype method | 1 per instance per method | Yes | Legacy; prefer arrow field |
-| `EventListener` object (§3.4) | Nothing (uses member-expression call) | 0 | Yes | DOM-only, class is *the* listener |
-| Bare `.bind` (§3.6) | A BoundFunction at the call site | 1 per registration | Only if saved to var | Partial application is wanted alongside `this`-locking |
+| Arrow at call site | An arrow that does the call | 1 per registration | Only if saved to var | One-off registrations; dispatcher arg shape ≠ method arg shape |
+| Arrow field | A locked-`this` arrow as instance property | 1 per instance per method | Yes | Methods primarily passed as callbacks; you control the class |
+| `bind`-in-constructor | A BoundFunction shadowing the prototype method | 1 per instance per method | Yes | Legacy; prefer arrow field |
+| `EventListener` object | Nothing (uses member-expression call) | 0 | Yes | DOM-only, class is *the* listener |
+| Bare `.bind` | A BoundFunction at the call site | 1 per registration | Only if saved to var | Partial application is wanted alongside `this`-locking |
 
 > **Aside —** Stage-3 decorators (TC39, partially landed in TS 5.0+) include `@bound` and similar primitives that compile to one of these patterns. They don't introduce a *new* mechanism — they're sugar over arrow field / bind-in-constructor. Status: not yet baseline in plain JS. Use them only behind a transpiler. Once they reach Stage 4 and bake into engines, they become the cleanest option for "this method is always self-bound."

@@ -19,7 +19,7 @@ A method defined via **shorthand syntax** (inside a `class` body or object liter
 class Dog {
   bark() { return "woof"; }                  // method shorthand — non-constructable, on prototype, ONE shared per class
   bark1 = () => { return "woof1"; };         // arrow field — non-constructable, per-instance, this lexically locked
-  bark2 = function () { return "woof2"; };   // function-expression field — constructable, per-instance, this from call site (worst of both worlds — see §1.3.6 aside)
+  bark2 = function () { return "woof2"; };   // function-expression field — constructable, per-instance, this from call site (worst of both worlds — see the *what goes wrong if you reach for arrow fields by default* aside below)
 }
 function bark() { return "woof"; }    // function declaration — constructable
 const dog = {
@@ -192,7 +192,7 @@ L6 sees `0` because the field initializer (step 3) ran before the constructor bo
 
 The initializer expression is evaluated **for each new instance** — the right-hand side is not shared. `count = []` gives every instance its own array.
 
-In a **derived class**, fields run **after `super()` returns**. See §1.4.
+In a **derived class**, fields run **after `super()` returns**. See *`super()` as `this`-provider in derived constructors* below.
 
 ### 1.3.3. What `this` is inside an initializer
 
@@ -217,7 +217,7 @@ L4 demonstrates that earlier fields are visible to later ones — they run in so
 
 ### 1.3.4. The arrow-field pattern — solving `this`-loss structurally
 
-Recall from §1.2: extracting a prototype method loses `this`. The combination of two facts gives a structural fix:
+Recall from *Method extraction and `this`-loss* above: extracting a prototype method loses `this`. The combination of two facts gives a structural fix:
 
 1. Field initializers run with `this` = the instance.
 2. Arrow functions capture `this` lexically — once captured, no invocation path can override it.
@@ -380,7 +380,7 @@ Key insight: `newTarget` in step 4.b.i is `Derived`, not `Base`. That's why the 
 
 ### 1.4.4. Field ordering in derived classes
 
-This refines §1.3.2's "fields run at the start of the constructor":
+This refines *When initializers run* above ("fields run at the start of the constructor"):
 
 ```js
 "use strict";                                         // L1
@@ -523,13 +523,13 @@ A single annotated example tracing every mechanism above through one constructio
 "use strict";                                                          // L1
 class Component {                                                      // L2
   // ─── Field — runs in source order during [[Construct]] ─── // L3
-  state = { count: 0 };                                                // L4 — base field initializer (§1.3)
+  state = { count: 0 };                                                // L4 — base field initializer (see *Field initializers — when they run, what `this` they see*)
 
   // ─── Arrow field — fresh function PER INSTANCE; this captured lexically ─── // L5
-  log = () => `[${this.constructor.name}] count=${this.state.count}`;  // L6 — n instances → n function objects (§1.3.4)
+  log = () => `[${this.constructor.name}] count=${this.state.count}`;  // L6 — n instances → n function objects (see *The arrow-field pattern*)
 
   // ─── Method shorthand — ONE function on prototype, shared by all instances ─── // L7
-  tick() {                                                             // L8 — non-constructable; lives on Component.prototype (§1.1)
+  tick() {                                                             // L8 — non-constructable; lives on Component.prototype (see *Method shorthand*)
     this.state.count++;                                                // L9 — Reference base = this
     return this;                                                       // L10 — return this enables chaining
   }                                                                    // L11
@@ -541,10 +541,10 @@ class Component {                                                      // L2
 
 class Counter extends Component {                                      // L16
   // ─── Derived field — runs AFTER super() returns ─── // L17
-  step = 1;                                                            // L18 — derived field initializer (§1.4.4)
+  step = 1;                                                            // L18 — derived field initializer (see *Field ordering in derived classes*)
 
   // No constructor written → synthesized: constructor(...args) { super(...args); }
-  // Argument forwarding handles the "label" parameter automatically (§1.4.7).
+  // Argument forwarding handles the "label" parameter automatically (see *Default constructors*).
 }                                                                      // L21
 
 class FastCounter extends Counter {                                    // L22
@@ -552,9 +552,9 @@ class FastCounter extends Counter {                                    // L22
 
   constructor(label) {                                                 // L24
     // ─── Pre-super code: this is UNINITIALIZED here ─── // L25
-    if (!label) throw new Error("label required");                     // L26 — OK, no this access (§1.4.5)
+    if (!label) throw new Error("label required");                     // L26 — OK, no this access (see *What you can and cannot do before `super()`*)
 
-    super(label);                                                      // L27 — provides this; runs full Counter→Component chain (§1.4.3)
+    super(label);                                                      // L27 — provides this; runs full Counter→Component chain (see *What `super()` actually does*)
 
     // ─── Post-super: this is live ─── // L28
     this.tick();                                                       // L29 — Reference base = this → tick runs with this=instance
@@ -564,10 +564,10 @@ class FastCounter extends Counter {                                    // L22
 const fc = new FastCounter("fast");                                    // L32
 
 // ─── Method extraction → divergent outcomes ─── // L33
-const safe = fc.log;                                                   // L34 — log is arrow field, this is locked (§1.3.4)
+const safe = fc.log;                                                   // L34 — log is arrow field, this is locked (see *The arrow-field pattern*)
 console.log(safe());                                                   // L35 — works! "[FastCounter] count=1"
 
-const lost = fc.tick;                                                  // L36 — tick is a prototype method, not arrow field (§1.2)
+const lost = fc.tick;                                                  // L36 — tick is a prototype method, not arrow field (see *Method extraction and `this`-loss*)
 lost();                                                                // L37 — TypeError: Cannot read properties of undefined (reading 'state')
 ```
 
@@ -654,14 +654,14 @@ L37: lost()
 
 | Annotation | Mechanism | Section |
 |---|---|---|
-| L4, L6, L18, L23 | Field initializer ordering, derived overwrites base | §1.3, §1.4.4 |
-| L6 | Arrow field captures `this` at construction time | §1.3.4 |
-| L8, L9, L29 | Method shorthand on prototype + Reference-base `this` | §1.1 |
-| L10 | `return this` enables fluent chaining | §1.1 |
-| L26 | Pre-`super()` code is fine without `this` | §1.4.5 |
-| L27 | `super()` provides `this` to derived constructor | §1.4.3 |
-| L34–L35 | Arrow field survives extraction | §1.3.4 |
-| L36–L37 | Prototype method loses `this` on extraction | §1.2 |
+| L4, L6, L18, L23 | Field initializer ordering, derived overwrites base | *Field initializers* + *Field ordering in derived classes* |
+| L6 | Arrow field captures `this` at construction time | *The arrow-field pattern* |
+| L8, L9, L29 | Method shorthand on prototype + Reference-base `this` | *Method shorthand* |
+| L10 | `return this` enables fluent chaining | *Method shorthand* |
+| L26 | Pre-`super()` code is fine without `this` | *What you can and cannot do before `super()`* |
+| L27 | `super()` provides `this` to derived constructor | *What `super()` actually does* |
+| L34–L35 | Arrow field survives extraction | *The arrow-field pattern* |
+| L36–L37 | Prototype method loses `this` on extraction | *Method extraction and `this`-loss* |
 
 The single `[[Construct]]` chain ties everything together: object creation flows up the chain, `this` flows back down, fields run at each level in a strict order, and the final object is what every method, arrow, and extraction interacts with afterward.
 
