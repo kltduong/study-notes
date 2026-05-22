@@ -36,9 +36,16 @@ Progress tracker for the course. Chunks grouped by theme.
       📊 solid
 - [x] **Reduce deep dive** — reduce as the universal fold, accumulator design, building other abstractions from reduce, common pitfalls (mutating accumulator, missing initial value)
       📊 solid
+      📊 solid → shaky (Quiz 1 — protocol mechanics + sloppy-mode chain)
       🔧 Refinements (sub-part *Common pitfalls* check):
         - In a snippet with both "forgot return" and "missing init," cited "missing init" as the cause of the throw. Whether that's right depends on mode: in **strict mode**, missing init throws on iter 1 (`Cannot create property 'b' on string 'a'`); in **sloppy mode**, missing init silently no-ops on iter 1 and forgot-return throws on iter 2 (`Cannot read properties of undefined`). Diagnostic principle: when multiple bugs co-exist, strict mode tends to surface the earliest one by converting silent no-ops into throws.
-- [ ] **Quiz 1** (covering *Functions as values*, *Core iteration abstractions*, *Reduce deep dive*): first-class functions, iteration abstractions, reduce mechanics
+      🔧 Refinements (Quiz 1):
+        - **Q3 — JS `+` coercion**: predicted `obj + num` would throw (Python / strongly-typed instinct). Actual: JS coerces the object via `valueOf → toString` to `"[object Object]"`, then `+` flips to string concat. `obj + num` never throws in JS. (Cross-cutting clarification candidate for `js-values-fn-this`.)
+        - **Q4 — `acc` vs `x` in reduce protocol**: stated the final result was the last `x`. Actual: reduce returns the final `acc`; the callback's return value replaces `acc`, `x` is the next array element — independent.
+        - **Q5 — read vs write on primitives**: described the strict-mode throw as "engine tries to access `"a"["b"]`". Reads from primitives auto-box silently and return `undefined`; only *writes* to primitives are what strict mode promotes to TypeError. Strict throws on iter 1's `acc["a"] = 1` (write to string), not on a read.
+        - **Q5 — sloppy-mode chain**: predicted "sloppy: no error, returns `"a"`". Sloppy mode silently swallows iter 1's write-to-primitive, then iter 2 throws on `undefined["a"]` because forgot-return left `acc = undefined`. Both modes throw — they differ on *which iteration* and *which underlying bug surfaces*.
+- [x] **Quiz 1** (covering *Functions as values*, *Core iteration abstractions*, *Reduce deep dive*): first-class functions, iteration abstractions, reduce mechanics
+      📊 fns-as-values: solid · iter-abstractions: solid · reduce: solid → shaky (protocol & sloppy-mode mechanics)
 - [ ] **Composition & pipelines** — function composition (`f(g(x))`), pipe/compose utilities (built on `reduceRight` / `reduce` respectively), point-free style, when pipelines clarify vs obscure, transducers-lite (compose map/filter without intermediate arrays)
 - [ ] **Currying & partial application** — currying vs partial application (distinct concepts), manual currying, `bind` as partial application, use cases (config factories, event handlers), arity and variadic functions
 - [ ] **Quiz 2** (covering *Composition & pipelines*, *Currying & partial application*): composition, currying, partial application
