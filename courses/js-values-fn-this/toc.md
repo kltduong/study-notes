@@ -55,5 +55,9 @@ Progress tracker for the course.
         - Said "synthesized constructor" loosely; tightened: `class Dog extends Animal {}` synthesizes `constructor(...args) { super(...args); }`, which then calls `super()` — two layers. The synthesized constructor is what makes "no constructor written" still trigger the full chain.
         - In method-chaining (`c.bump().bump()`), called the returned value "c2"; it's the same object `c` (since `bump` does `return this`).
 - [ ] **Patterns & pitfalls** — method extraction, callbacks, event handlers, setTimeout, historical workarounds, modern solutions (arrow fields, bind-in-constructor, decorator proposals)
+      🔧 Refinements (sub-part 1):
+        - **`setTimeout(fn, 0)` predicted as TypeError** — host dispatcher (Node `Timeout`, browser `window`) supplies `this` itself, so the symptom is silent `NaN`/wrong-object reads, not a loud throw. ECMAScript's strict-mode "plain call → undefined" rule doesn't apply when a host API is the caller.
+        - **`forEach(c.tick)` predicted as no-op** — synchronous dispatchers count as dispatchers. `forEach` (and `map`/`filter`/`find`/etc.) calls the callback with `thisValue = undefined` unless `thisArg` is passed. Mistook "I haven't called it yet" for "no one calls it."
+        - **General lesson** — "later" was misleading shorthand. The real axis is *who does the `[[Call]]`*: your code, or a dispatcher. Any dispatcher (sync or async) overrides the bare-function default with its own contract.
 - [ ] **Quiz: arrows, `new`, class** — covers chunks 5–8
 - [ ] **Final test**
