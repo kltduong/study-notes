@@ -35,8 +35,10 @@ Progress tracker for the course. Chunks grouped by theme.
 - [x] **Core iteration abstractions** — `map`, `filter`, `reduce` as folds over collections, how they compose, when each is the right tool, relationship to `for` loops
       📊 solid
 - [ ] **Reduce deep dive** — reduce as the universal fold, accumulator design, building other abstractions from reduce, common pitfalls (mutating accumulator, missing initial value)
+      🔧 Refinements (sub-part *Common pitfalls* check):
+        - In a snippet with both "forgot return" and "missing init," cited "missing init" as the cause of the throw. Whether that's right depends on mode: in **strict mode**, missing init throws on iter 1 (`Cannot create property 'b' on string 'a'`); in **sloppy mode**, missing init silently no-ops on iter 1 and forgot-return throws on iter 2 (`Cannot read properties of undefined`). Diagnostic principle: when multiple bugs co-exist, strict mode tends to surface the earliest one by converting silent no-ops into throws.
 - [ ] **Quiz 1** (covering *Functions as values*, *Core iteration abstractions*, *Reduce deep dive*): first-class functions, iteration abstractions, reduce mechanics
-- [ ] **Composition & pipelines** — function composition (`f(g(x))`), pipe/compose utilities, point-free style, when pipelines clarify vs obscure, transducers-lite (compose map/filter without intermediate arrays)
+- [ ] **Composition & pipelines** — function composition (`f(g(x))`), pipe/compose utilities (built on `reduceRight` / `reduce` respectively), point-free style, when pipelines clarify vs obscure, transducers-lite (compose map/filter without intermediate arrays)
 - [ ] **Currying & partial application** — currying vs partial application (distinct concepts), manual currying, `bind` as partial application, use cases (config factories, event handlers), arity and variadic functions
 - [ ] **Quiz 2** (covering *Composition & pipelines*, *Currying & partial application*): composition, currying, partial application
 - [ ] **Immutability patterns** — pure functions, avoiding side effects, shallow copy idioms (spread, `Object.assign`), structural sharing concept, when immutability helps (predictability, debugging) vs when it hurts (performance, ergonomics)
