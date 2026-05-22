@@ -48,7 +48,12 @@ Progress tracker for the course.
       🔧 Refinements: — Predicted `bind` overrides arrow's `this` (wrong: OrdinaryCallBindThis skips regardless of what delivers the thisValue).
 - [x] **Constructor calls (`new`)** — OrdinaryCreateFromConstructor, `this` = fresh object, `new.target`, return-value override, `[[IsConstructor]]` internal slot
       📊 solid
-- [ ] **Class & `this`** — class methods as non-constructable, field initializer `this`-binding, `super()` as `this`-provider in derived constructors, `this`-TDZ before `super()`
+- [x] **Class & `this`** — class methods as non-constructable, field initializer `this`-binding, `super()` as `this`-provider in derived constructors, `this`-TDZ before `super()`
+      📊 solid
+      🔧 Refinements:
+        - On a return-value override + arrow field combo, said "arrow keeps `this` so it survives": correct mechanism in general, but missed that `b.read` resolves on the *returned* object (O2), not on the original (O1) — the override discards the entire instance the arrow lived on, so extraction-via-`b.read` fails because the property doesn't exist on O2 at all. Arrow-survives-by-closure only applies when the arrow reference itself escapes the constructor (e.g. assigned to a variable before the override returns).
+        - Said "synthesized constructor" loosely; tightened: `class Dog extends Animal {}` synthesizes `constructor(...args) { super(...args); }`, which then calls `super()` — two layers. The synthesized constructor is what makes "no constructor written" still trigger the full chain.
+        - In method-chaining (`c.bump().bump()`), called the returned value "c2"; it's the same object `c` (since `bump` does `return this`).
 - [ ] **Patterns & pitfalls** — method extraction, callbacks, event handlers, setTimeout, historical workarounds, modern solutions (arrow fields, bind-in-constructor, decorator proposals)
 - [ ] **Quiz: arrows, `new`, class** — covers chunks 5–8
 - [ ] **Final test**

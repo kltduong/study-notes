@@ -12,6 +12,7 @@ Linear — each note builds on the previous:
 4. [`call`, `apply`, `bind`](call-apply-bind.md) — explicit overrides that bypass the Reference-base rule; BoundFunction as a structural wrapper; partial application
 5. [Arrow functions](arrow-fns.md) — no `this` machinery (`[[ThisMode]]: "lexical"`); `this` resolves via `[[OuterEnv]]` chain walk; structurally immune to `this`-loss
 6. [Constructor calls (`new`)](new-construct.md) — `[[Construct]]` vs `[[Call]]`, OrdinaryCreateFromConstructor, return-value override, `new.target`, `[[IsConstructor]]` gate, `bind` interaction
+7. [Class & `this`](class-deep-dive.md) — method shorthand structure, method extraction, field initializers + arrow-field pattern, `super()` as `this`-provider with `this`-TDZ, default constructors
 
 ## Cross-cutting concepts
 
