@@ -8,7 +8,7 @@
 - [x] **Building abstractions from reduce** — map/filter/find/some/every/max/groupBy/partition; the early-exit caveat
 - [x] **Mutate-vs-immutable accumulator** — `[...acc, x]` is O(n²); `acc.push(x)` is O(n); when mutation is safe
 - [x] **Common pitfalls** — forgetting return, missing initial value, shape mismatch, no `break`
-- [ ] **Worked synthesis** — annotated example tying the pieces together
+- [x] **Worked synthesis** — annotated example tying the pieces together
 
 > ⚠️ Corrected during teaching — `reduceRight` was scoped into this chunk during planning but cut as scope creep; its only meaningful use case (function composition) belongs in the next chunk (*Composition & pipelines*). A one-line forward-pointer added in *Reduce as the universal fold* signals it exists.
 
@@ -730,3 +730,126 @@ const totals = orders.reduce((acc, o) => {
 
 
 ---
+
+
+## 1.8. Worked synthesis — order summary report
+
+A single example that exercises everything in this chunk: type-changing fold (`T = Order`, `B = Record<userId, Summary>`), lazy bucket init, mutating the private accumulator, and fusing three aggregations (count, total, top) into one pass.
+
+### 1.8.1. The problem
+
+Given a flat list of orders, build a per-user summary with three fields:
+
+- `count` — how many orders the user placed
+- `total` — sum of `amount` across their orders
+- `top` — the single highest-amount order they placed (`{ product, amount }`)
+
+```js
+const orders = [
+  { userId: "u1", product: "book",  amount: 12 }, // L1
+  { userId: "u2", product: "lamp",  amount: 35 }, // L2
+  { userId: "u1", product: "pen",   amount:  3 }, // L3
+  { userId: "u1", product: "chair", amount: 89 }, // L4
+  { userId: "u2", product: "lamp",  amount: 35 }, // L5
+  { userId: "u3", product: "mug",   amount:  8 }, // L6
+];
+```
+
+### 1.8.2. The naive multi-pass version (for contrast)
+
+You *could* do this with three separate aggregations:
+
+```js
+// 3 passes, 3 intermediate maps — works, but redundant
+const counts = orders.reduce((acc, o) => {
+  acc[o.userId] = (acc[o.userId] || 0) + 1;
+  return acc;
+}, {});
+
+const totals = orders.reduce((acc, o) => {
+  acc[o.userId] = (acc[o.userId] || 0) + o.amount;
+  return acc;
+}, {});
+
+const tops = orders.reduce((acc, o) => {
+  const cur = acc[o.userId];
+  if (!cur || o.amount > cur.amount) {
+    acc[o.userId] = { product: o.product, amount: o.amount };
+  }
+  return acc;
+}, {});
+
+// Then merge the three maps... 3× iteration, 3× allocation, manual merge.
+```
+
+Three passes over the same array, three intermediate objects, then a fourth pass to merge. Each individual reduce is a clean specialization, but the *combined* output forces a structurally heavier shape than reduce can express in a single map-or-filter.
+
+### 1.8.3. The one-pass version
+
+Same answer, single fold:
+
+```js
+const summary = orders.reduce((acc, o) => {           // L1
+  if (!acc[o.userId]) {                                // L2 — A
+    acc[o.userId] = { count: 0, total: 0, top: null }; // L3 — A
+  }                                                    // L4
+  const u = acc[o.userId];                             // L5 — B
+  u.count += 1;                                        // L6
+  u.total += o.amount;                                 // L7
+  if (u.top === null || o.amount > u.top.amount) {     // L8 — C
+    u.top = { product: o.product, amount: o.amount };  // L9 — C
+  }                                                    // L10
+  return acc;                                          // L11
+}, {});                                                // L12 — D
+```
+
+Annotations:
+
+- **L12 — D — init = empty shape.** `B` is `Record<userId, { count, total, top }>`. The empty `B` is `{}`. We don't pre-seed bucket keys because user ids are discovered during iteration — *unknown keys, lazy bucket init* (the rule from *Accumulator design*).
+- **L2–L4 — A — lazy bucket init.** First time we see a user id, the bucket doesn't exist. Initialize it with the *empty shape of a single user's summary*: `count: 0` (additive identity for sum), `total: 0` (same), `top: null` (sentinel for "no order seen yet" — distinct from "the smallest possible amount"). Doing this once at first sight, not on every iteration, is what keeps the per-iteration cost O(1).
+- **L5 — B — alias the bucket.** `const u = acc[o.userId]` after the lazy init. Two reasons: readability (the next four lines all touch this user's row) and a tiny perf win (one property lookup instead of four). `u` is a *reference* into `acc`, so mutating `u` mutates `acc[o.userId]` — covered in *js-values-fn-this*'s value semantics.
+- **L6, L7 — count and total.** Plain additive aggregation. The accumulator is the running running totals; each order contributes its `+1` and `+o.amount`. This is a *type-uniform* sub-fold (number + number → number) embedded inside the type-changing outer fold.
+- **L8–L10 — C — top order with sentinel.** The "running maximum" pattern from the catalogue (*Building abstractions from reduce*) — but with a twist. Init can't be `-Infinity` here because we don't just want the largest *amount*, we want the entire `{ product, amount }` record of the order with the largest amount. So `top` starts as `null` (sentinel for empty), and the comparison `top === null || o.amount > top.amount` short-circuits the first iteration into "always replace" without needing a synthetic dummy order.
+- **L11 — return acc.** Mandatory. Without it, iteration 2 sees `acc = undefined` and L2's property access throws (the *Forgotten return* pitfall).
+- **Mutation choice.** `u.count += 1`, `u.total += o.amount`, `u.top = …` all mutate properties of objects living inside `acc`. The immutable equivalent (`{ ...acc, [o.userId]: { ...u, count: u.count + 1, total: u.total + o.amount, top: ... } }`) would work but spreads `acc` on every iteration — O(n²) by user count, plus a per-user-row spread on top. Since `acc` is private to the reduce (no other code holds a reference while it runs), mutation is safe and lands the entire reduce at O(n).
+
+### 1.8.4. Output
+
+```js
+{
+  u1: { count: 3, total: 104, top: { product: "chair", amount: 89 } },
+  u2: { count: 2, total: 70,  top: { product: "lamp",  amount: 35 } },
+  u3: { count: 1, total: 8,   top: { product: "mug",   amount: 8  } }
+}
+```
+
+Trace for `u1`:
+
+| Iter | Order in | Bucket before | Bucket after |
+|---|---|---|---|
+| 1 (L1 of orders) | `{ p: book,  a: 12 }` | absent | `{ count: 1, total: 12, top: { p: book,  a: 12 } }` |
+| 3 (L3 of orders) | `{ p: pen,   a:  3 }` | `count: 1, total: 12, top.a: 12` | `{ count: 2, total: 15, top: { p: book,  a: 12 } }` (3 < 12, top unchanged) |
+| 4 (L4 of orders) | `{ p: chair, a: 89 }` | `count: 2, total: 15, top.a: 12` | `{ count: 3, total: 104, top: { p: chair, a: 89 } }` (89 > 12, top replaced) |
+
+Per-row count converges to 3, total to 104, top to chair@89. Other users' rows are similar, just shorter.
+
+### 1.8.5. Why this is the right tool
+
+Reduce wins here because **the output shape doesn't fit any specialization**:
+
+- Not `map` — output isn't 1-to-1 with input (6 orders → 3 users).
+- Not `filter` — output elements aren't the input elements.
+- Not three separate reduces stitched together — that's three passes, three intermediate maps, and a manual merge. The single fold is structurally one operation; expressing it as three is decomposition for its own sake.
+
+The decision rule from *Building abstractions from reduce* — *reach for reduce when the operation doesn't fit any specialization, when fusing multiple shapes in one pass, or when `B` genuinely differs from element type and isn't a list* — fires on all three counts simultaneously here. That's the signature of the chunk's headline use case for reduce.
+
+### 1.8.6. What the example does *not* try to demonstrate
+
+Deliberate omissions, kept out so the synthesis stays focused:
+
+- **No early-exit reasoning.** This problem genuinely needs every order, so the early-exit caveat is irrelevant.
+- **No `reduceRight`.** Aggregation here is commutative, so direction doesn't matter — and `reduceRight` lands properly in the next chunk.
+- **No deeper algebraic structure.** Each sub-aggregation has a monoid (count: `(0, +)`, total: `(0, +)`, top: `(null, take-larger)`) but naming that structure is the *Algebraic structure* chunk's job. Here it's enough that the init values are the empty shapes.
+
+These are flagged so future-self doesn't misread the omission as a gap.
+
