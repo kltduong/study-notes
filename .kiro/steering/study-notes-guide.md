@@ -167,6 +167,23 @@ Teaching is a conversation, not a lecture.
 
 **Study-strategy proposals:** When new content is introduced, proactively propose a concrete study strategy for checking/reinforcing it (retrieval practice, mechanism-separate scoring, interleaving, faded worked examples), tailored to the learner profile — esp. recurring refinement patterns. Treat each as an experiment; flag winners as candidates to fold into this doc, with user approval. Don't stash such rules in memory.
 
+## Code accuracy — run before claiming output
+
+**Hard rule.** Any time a claim about code behavior is being made — predicted output, error type, whether something throws, what a property resolves to, what survives an override — **run the code and check** before stating the result. Do not rely on confident reasoning alone. This applies to:
+
+- Teaser snippets (verify the predicted output before presenting the reveal).
+- Quiz / test feedback (verify your "correct answer" matches the actual runtime behavior before accepting or correcting the user).
+- Worked examples in drafts and final notes (verify each output annotation).
+- Any "actually this prints X" intervention during a quiz exchange — those are highest-stakes; the user trusts the correction.
+
+**Mechanism:** use the bash tool to run a quick script via `node`, `uv run python`, or whatever the language requires. One-off `/tmp/*.js`, `/tmp/*.py`, etc. is fine.
+
+**Why this matters:** confidently-wrong corrections during a check are worse than admitting uncertainty. They mislead the learner, force a retraction, and erode trust in subsequent feedback. The cost of running the snippet is seconds; the cost of being wrong is much higher.
+
+**Don't bypass on grounds of "the mechanism is obvious."** Especially with `this`, prototype chains, return-value overrides, async ordering, coercion edges, scope/closure details — these are exactly the topics where confident reasoning fails. If the topic is being taught precisely *because* it's tricky, the snippet must be run.
+
+If for some reason the code can't be run (no runtime available, browser-only API, requires a build step), state that explicitly: _"I can't run this here; predicted output is X but verify before relying on it."_ Don't pretend confidence.
+
 ## Discussion Workflow
 
 1. User names the topic. If scope is ambiguous, clarify before starting.
