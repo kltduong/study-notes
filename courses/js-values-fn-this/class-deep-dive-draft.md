@@ -1,6 +1,6 @@
-# Class & `this` — Draft
+# 1. Class & `this` — Draft
 
-## Plan (teaching order)
+## 1.1. Plan (teaching order)
 
 - [x] Sub-part 1: Method shorthand — non-constructable, `this` follows the same Reference-base rule
 - [x] Sub-part 2: Method extraction and `this`-loss — the class-specific shape of the problem
@@ -10,7 +10,7 @@
 
 ---
 
-## Teaser
+## 1.2. Teaser
 
 ```js
 "use strict";                                         // L1
@@ -40,9 +40,9 @@ t.startArrow();                                       // L19
 
 ---
 
-## Sub-part 1: Method shorthand — non-constructable, same `this` rule
+## 1.3. Sub-part 1: Method shorthand — non-constructable, same `this` rule
 
-### Methods defined via shorthand have two structural differences
+### 1.3.1. Methods defined via shorthand have two structural differences
 
 A method defined via **shorthand syntax** (inside a `class` body or object literal) is an ordinary function object — same `[[Call]]`, same `this`-determination pipeline. But it differs from a function declaration/expression in two ways:
 
@@ -81,7 +81,7 @@ const dog2 = {
 
 **`[[HomeObject]]`** — enables `super.method()` calls. It's a static link to the prototype object the method was defined on. Not relevant to `this` determination, but it's the other structural difference worth noting (it feeds into js-inheritance).
 
-### `this` follows the exact same Reference-base rule
+### 1.3.2. `this` follows the exact same Reference-base rule
 
 ```js
 "use strict";                                         // L1
@@ -102,7 +102,7 @@ No class-specific `this` rule. L8 works because `d.bark()` is a member-expressio
 
 > **Aside —** Classes are always strict. The class body is implicitly strict regardless of surrounding code. So the sloppy-mode `globalThis` fallback never applies inside a class method — `this` is `undefined` on plain calls, never the global object.
 
-### Why non-constructable matters
+### 1.3.3. Why non-constructable matters
 
 ```js
 new d.bark();                                         // TypeError: d.bark is not a constructor
@@ -112,9 +112,9 @@ The engine checks `[[IsConstructor]]` before running `[[Construct]]`. Method sho
 
 ---
 
-## Sub-part 2: Method extraction and `this`-loss
+## 1.4. Sub-part 2: Method extraction and `this`-loss
 
-### The mechanism (traced through the teaser)
+### 1.4.1. The mechanism (traced through the teaser)
 
 Method extraction = storing a method in a variable, parameter, array slot, or any non-property-access position. The moment the next call uses that stored value, the call expression is an identifier (not a member expression on the original object) — so the Reference base is an ER, not the object.
 
@@ -158,7 +158,7 @@ The extraction happened at L13. The `this`-loss manifests at L5. They can be far
 
 The function object is identical — same `.name`, same body, same `[[HomeObject]]`. The difference is purely in what the **call-site expression** looks like. GetValue extracts the function from the Reference at the point of assignment/passing — after that, the Reference (and its base) is gone.
 
-### Common extraction sites
+### 1.4.2. Common extraction sites
 
 Extraction isn't always as visible as `const fn = obj.method`. Every pattern below triggers GetValue on a member expression, discarding the Reference:
 
@@ -172,7 +172,7 @@ All are the same mechanism — GetValue at the boundary, identifier-based call a
 
 > **Aside —** What about `handlers[0]()`? That *is* a property access — `IsPropertyReference` = true, base = the `handlers` array. So `this` inside `log` would be the array itself (not `undefined`). Still not `logger`, still a TypeError on `this.prefix` — but the mechanism is "wrong object as base," not "ER base → undefined." Subtly different failure path, same practical outcome.
 
-### Why classes make this worse
+### 1.4.3. Why classes make this worse
 
 In pre-class code, methods on shared prototypes had the same extraction problem. Two factors make it more common and more painful with classes:
 
@@ -180,13 +180,13 @@ In pre-class code, methods on shared prototypes had the same extraction problem.
 
 2. **Class methods are the primary API surface.** Classes encourage handing out instances where consumers call methods. The moment a consumer does `btn.addEventListener("click", repo.save)` or `const { save } = repo` — extraction. This is the dominant pattern in frameworks (React class components, event systems, DI containers).
 
-### The fundamental tension
+### 1.4.4. The fundamental tension
 
 Classes encourage an OOP style where behavior lives on instances (`this.method()`). But JavaScript's `this` is **per-call, not per-object** — determined by the call expression, not by where the function "belongs." Any API boundary that accepts a function (callbacks, event listeners, higher-order functions) strips the object context.
 
 This tension is the motivation for the solutions in sub-part 3 (arrow fields) and chunk 8 (patterns & pitfalls). The mechanism is already fully explained — what remains is the toolbox for fixing it.
 
-### The flip side: capabilities per-call `this` enables
+### 1.4.5. The flip side: capabilities per-call `this` enables
 
 The same mechanic that breaks extraction is what enables JS to do things Java can't and Python only partially supports. The flexibility is real — but in modern application code, almost every capability has a clearer non-`this` replacement, so the actual *use* is narrow.
 
@@ -209,9 +209,9 @@ The capabilities exist to enable libraries — not to be reached for in everyday
 
 ---
 
-## Sub-part 3: Field initializers — when they run, what `this` they see
+## 1.5. Sub-part 3: Field initializers — when they run, what `this` they see
 
-### What a field is, mechanically
+### 1.5.1. What a field is, mechanically
 
 An instance field declares a property that the engine assigns **per instance** during construction. (Static fields are per-class, run at class evaluation time — not relevant to `this`-binding here.) The syntax:
 
@@ -229,7 +229,7 @@ class Foo {                                           // L1
 
 is sugar for: "during `[[Construct]]`, after `this` exists, run `this.count = 0` (L2) and `this.#secret = "hidden"` (L3), then run the constructor body (L5–L8)." The static field (L4) runs once when the class is evaluated, not per instance. Instance fields are not stored on the prototype — each instance gets its own copy. This is the structural opposite of methods (which live on the prototype, shared).
 
-### When initializers run
+### 1.5.2. When initializers run
 
 Each instance field has its own **initializer** — the right-hand side expression (`0` in `count = 0`, `"hidden"` in `#secret = "hidden"`). Internally, the engine wraps each initializer in a separate function that it calls with `this` = the fresh instance. Fields without an initializer (`name;`) default to `undefined`.
 
@@ -252,7 +252,7 @@ The initializer expression is evaluated **for each new instance** — the right-
 
 In a **derived class** (`class Bar extends Foo`), fields run **after `super()` returns**. This shifts everything; we'll cover it in sub-part 4.
 
-### What `this` is inside an initializer
+### 1.5.3. What `this` is inside an initializer
 
 Field initializers run as part of the constructor's execution context. So `this` inside an initializer is the same `this` the constructor sees — the fresh instance.
 
@@ -273,7 +273,7 @@ L4 demonstrates that earlier fields are visible to later ones — they run in so
 
 > **Aside —** Spec mechanics: each field is internally a function (the "initializer function") whose `[[HomeObject]]` is the class's `.prototype` (for instance fields) or the class itself (for static fields). The constructor calls each initializer function via a special `[[Call]]` that uses the fresh instance as `thisValue`. So inside an initializer, `this` follows the same `[[ThisValue]]`-slot mechanism as a method body — just invoked by the engine, not your code.
 
-### The arrow-field pattern — solving `this`-loss structurally
+### 1.5.4. The arrow-field pattern — solving `this`-loss structurally
 
 Recall from sub-part 2: extracting a prototype method (passing it as a callback, storing in a variable) loses `this` because the subsequent call is an identifier call → ER base → `undefined`. The combination of two facts gives a structural fix:
 
@@ -313,7 +313,7 @@ setTimeout(l.log, 100);                               // L9 → still works as c
 
 L4 trace: when `new Logger()` runs, the `log` initializer evaluates `(msg) => ...`. The arrow's `[[OuterEnv]]` is captured at that moment, pointing at the constructor's ER, whose `[[ThisValue]]` is the fresh instance. From then on, `this` inside `log` always resolves to that instance via the chain walk — regardless of how `log` is called.
 
-### Tradeoff: per-instance copies vs prototype sharing
+### 1.5.5. Tradeoff: per-instance copies vs prototype sharing
 
 Arrow fields aren't free — they trade memory for safety:
 
@@ -335,7 +335,7 @@ Arrow fields aren't free — they trade memory for safety:
 
 > **Aside —** "Class fields" was a long-running proposal (TC39 stage 3 for years before reaching stage 4 in ES2022). Earlier code uses constructor-body assignment (`this.count = 0;` in `constructor()`) or Babel/TypeScript with the proposal flag. Modern engines (Node 12+, all current browsers) support it natively.
 
-### What goes wrong if you reach for arrow fields by default
+### 1.5.6. What goes wrong if you reach for arrow fields by default
 
 Two failure modes worth flagging:
 
@@ -365,9 +365,9 @@ The parser actually rejects this as a syntax error in some forms; in others it t
 
 ---
 
-## Sub-part 4: `super()` as `this`-provider in derived constructors
+## 1.6. Sub-part 4: `super()` as `this`-provider in derived constructors
 
-### The problem: where does `this` come from in a derived class?
+### 1.6.1. The problem: where does `this` come from in a derived class?
 
 In a base class, `[[Construct]]` creates the fresh object *before* the constructor body runs (step 1 in the sequence from sub-part 3). The constructor's `[[ThisValue]]` is set immediately — fields and the body both see `this` from the start.
 
@@ -381,7 +381,7 @@ This creates a structural asymmetry:
 | When is `this` available? | Immediately | Only after `super()` returns |
 | What happens before `this` exists? | N/A — it always exists | `this` is in an **uninitialized** state |
 
-### The `this`-TDZ: uninitialized `[[ThisValue]]`
+### 1.6.2. The `this`-TDZ: uninitialized `[[ThisValue]]`
 
 "TDZ" (Temporal Dead Zone) is borrowed from `let`/`const` — the slot exists but accessing it before initialization throws. The same concept applies to `this` in a derived constructor:
 
@@ -408,7 +408,7 @@ L9 throws `ReferenceError: Must call super constructor in derived class before a
 
 L10 (`super()`) is what initializes it. After `super()` returns, `this` is the fresh object that the base constructor created.
 
-### What `super()` actually does — the full sequence
+### 1.6.3. What `super()` actually does — the full sequence
 
 `super()` in a derived constructor is not just "call the parent constructor." It's the mechanism that **provides `this`** to the derived constructor. The sequence:
 
@@ -440,7 +440,7 @@ Derived constructor's [[Construct]] (called via `new Derived()`):
 
 Key insight: `newTarget` in step 4.b.i is `Derived`, not `Base`. That's why the fresh object gets `[[Prototype]] = Derived.prototype` even though `Base`'s `[[Construct]]` creates it. The `new.target` value propagates down the `super()` chain.
 
-### Field initializer ordering in derived classes
+### 1.6.4. Field initializer ordering in derived classes
 
 This is where sub-part 3's "fields run at the start of the constructor" gets refined. The full picture:
 
@@ -488,7 +488,7 @@ Trace:
 
 **The rule:** Base fields → Base body → (super returns) → Derived fields → Derived body (rest). Each class's fields run before its own constructor body, but the entire base construction completes before derived fields start.
 
-### What you can and cannot do before `super()`
+### 1.6.5. What you can and cannot do before `super()`
 
 The `this`-TDZ is enforced on any `this` reference — but not all code requires `this`:
 
@@ -519,7 +519,7 @@ You can run arbitrary code before `super()` — compute arguments, validate, thr
 - Local variables, function calls, conditionals, `throw`
 - `arguments`, closures, anything that doesn't reference `this`
 
-### The "must call super" rule
+### 1.6.6. The "must call super" rule
 
 A derived constructor **must** call `super()` before it returns (unless it explicitly returns an object — the return-value override from chunk 6). If you omit `super()` entirely:
 
@@ -535,7 +535,7 @@ new Broken();                                         // L6
 
 The implicit `return this` at L4 tries to read `[[ThisValue]]` — still UNINITIALIZED → ReferenceError. The only escape hatch: `return someObject;` (explicit non-`this` return), which bypasses the `this` slot entirely. This is the same return-value override rule from chunk 6, and it's the only way a derived constructor can avoid calling `super()`.
 
-### Default constructors — when you omit `constructor`
+### 1.6.7. Default constructors — when you omit `constructor`
 
 If you don't write a constructor, the engine synthesizes one. The synthesized body depends on whether the class extends:
 
@@ -569,7 +569,7 @@ This is also why the `this`-TDZ surprises people: most simple subclasses never t
 
 If neither applies, omit it. The synthesized default is identical to what you'd write, and the absence makes intent clearer.
 
-### Why this design? (motivation)
+### 1.6.8. Why this design? (motivation)
 
 The `this`-TDZ exists because of a real constraint: the engine can't create the instance until it knows the full prototype chain setup. In single inheritance this seems over-engineered — but consider:
 
@@ -578,3 +578,163 @@ The `this`-TDZ exists because of a real constraint: the engine can't create the 
 3. **The TDZ catches real bugs** — accessing `this` before the object is fully set up (base fields assigned, base constructor logic run) would read uninitialized properties. The ReferenceError is better than silent `undefined`.
 
 The Python comparison: Python's `__init__` receives `self` already created (by `__new__`). There's no TDZ — `self` is always available. But Python also can't enforce "base init ran first" — you can forget `super().__init__()` and get a half-initialized object silently. JS chose strictness over convenience here.
+
+
+---
+
+## 1.7. Sub-part 5: Worked synthesis
+
+A single annotated example tracing every mechanism from sub-parts 1–4 through one construction. Each commented line marks which mechanism is firing.
+
+```js
+"use strict";                                                          // L1
+class Component {                                                      // L2
+  // ─── Instance field — runs in source order during [[Construct]] ─── // L3
+  state = { count: 0 };                                                // L4 — base field initializer
+
+  // ─── Arrow field — fresh function PER INSTANCE; this captured lexically ─── // L5
+  log = () => `[${this.constructor.name}] count=${this.state.count}`;  // L6 — arrow field (n instances → n function objects)
+
+  // ─── Method shorthand — ONE function on prototype, shared by all instances ─── // L7
+  tick() {                                                             // L8 — non-constructable; lives on Component.prototype
+    this.state.count++;                                                // L9 — Reference base = this
+    return this;                                                       // L10
+  }                                                                    // L11
+
+  constructor(label) {                                                 // L12
+    this.label = label;                                                // L13 — body runs after fields
+  }                                                                    // L14
+}                                                                      // L15
+
+class Counter extends Component {                                      // L16
+  // ─── Derived field — runs AFTER super() returns ─── // L17
+  step = 1;                                                            // L18 — derived field initializer
+
+  // No constructor written → synthesized: constructor(...args) { super(...args); }
+  // Argument forwarding handles the "label" parameter automatically.
+}                                                                      // L21
+
+class FastCounter extends Counter {                                    // L22
+  step = 10;                                                           // L23 — overrides Counter's step
+
+  constructor(label) {                                                 // L24
+    // ─── Pre-super code: this is UNINITIALIZED here ─── // L25
+    if (!label) throw new Error("label required");                     // L26 — OK, no this access
+
+    super(label);                                                      // L27 — provides this; runs full Counter→Component chain
+
+    // ─── Post-super: this is live ─── // L28
+    this.tick();                                                       // L29 — Reference base = this → tick runs with this=instance
+  }                                                                    // L30
+}                                                                      // L31
+
+const fc = new FastCounter("fast");                                    // L32
+
+// ─── Method extraction → this-loss ─── // L33
+const safe = fc.log;                                                   // L34 — log is arrow field, this is locked
+console.log(safe());                                                   // L35 — works! "[FastCounter] count=1"
+
+const lost = fc.tick;                                                  // L36 — tick is a method, not arrow field
+lost();                                                                // L37 — TypeError: Cannot read properties of undefined (reading 'state')
+```
+
+### 1.7.1. Trace through L32 — the construction sequence
+
+`new FastCounter("fast")` triggers a chain of `[[Construct]]` calls. Following the mechanisms:
+
+```
+1. FastCounter.[[Construct]]("fast", newTarget=FastCounter):
+   - [[ThisValue]] = UNINITIALIZED (sub-part 4: this-TDZ)
+   - Enter L24 constructor body
+   - L26: validate label — OK, no this access
+   - L27 super("fast") → Counter.[[Construct]]("fast", newTarget=FastCounter):
+
+2. Counter.[[Construct]]("fast", newTarget=FastCounter):
+   - Synthesized constructor: (...args) { super(...args); }
+   - [[ThisValue]] = UNINITIALIZED
+   - super("fast") → Component.[[Construct]]("fast", newTarget=FastCounter):
+
+3. Component.[[Construct]]("fast", newTarget=FastCounter):
+   - OrdinaryCreateFromConstructor(newTarget=FastCounter)
+     → fresh object with [[Prototype]] = FastCounter.prototype  ← key: newTarget, not Component
+   - BindThisValue: Component's ER [[ThisValue]] = fresh object
+   - Run Component's field initializers in source order:
+     • L4: this.state = { count: 0 }      ← own property on the fresh object
+     • L6: this.log = (msg) => ...        ← arrow created NOW; [[OuterEnv]] captures
+                                            Component's ER, whose [[ThisValue]] = fresh object
+                                            (sub-part 3: arrow field locks this here)
+   - Run Component's constructor body:
+     • L13: this.label = "fast"
+   - Return fresh object
+
+4. Back in Counter (step 2):
+   - BindThisValue: Counter's ER [[ThisValue]] = fresh object  ← same object
+   - Run Counter's field initializers:
+     • L18: this.step = 1                 ← own property assigned
+   - Synthesized body has nothing else
+   - Return fresh object
+
+5. Back in FastCounter (step 1):
+   - BindThisValue: FastCounter's ER [[ThisValue]] = fresh object  ← same object, now in scope
+   - Run FastCounter's field initializers:
+     • L23: this.step = 10                ← OVERWRITES the 1 written at L18 (sub-part 4: derived fields run after super)
+   - Run FastCounter's constructor body:
+     • L29: this.tick()                   ← Reference base = this (the instance) → tick runs with this=instance
+                                            (sub-part 1: method shorthand follows Reference-base rule)
+                                            tick body: this.state.count++ → state.count = 1
+   - Return fresh object
+
+Final fc:
+  { state: { count: 1 }, log: <arrow>, label: "fast", step: 10 }
+  [[Prototype]] → FastCounter.prototype → Counter.prototype → Component.prototype → Object.prototype
+```
+
+### 1.7.2. Trace through L34–L37 — extraction outcomes diverge
+
+Two extractions, opposite outcomes — same `this`-loss mechanism, different protections:
+
+```
+L34: const safe = fc.log
+  - fc.log is a Reference (base=fc, name="log")
+  - GetValue extracts the arrow function, discards Reference
+  - safe = the arrow function object
+
+L35: safe()
+  - safe() is identifier call → Reference base = ER → thisValue = undefined
+  - But arrow ignores thisValue! [[ThisValue]] resolved via [[OuterEnv]] chain walk
+  - Walks to Component's ER (captured at L6) → finds fresh object (= fc)
+  - Returns "[FastCounter] count=1"
+  - this.constructor.name reads FastCounter.name (the actual class via prototype walk)
+  - WORKS — sub-part 3: arrow field structurally locks this
+
+L36: const lost = fc.tick
+  - fc.tick is a Reference (base=fc, name="tick")
+  - GetValue extracts the function from FastCounter.prototype's chain
+    (lookup walks FastCounter.prototype → Counter.prototype → Component.prototype → finds tick)
+  - lost = the method's function object (no [[BoundThis]], not an arrow)
+
+L37: lost()
+  - identifier call → Reference base = ER → thisValue = undefined (strict)
+  - Method's body executes with this = undefined
+  - L9: this.state.count++ → undefined.state → TypeError
+  - FAILS — sub-part 2: method extraction loses this
+```
+
+### 1.7.3. What the example demonstrates
+
+Reading top-to-bottom, each annotation maps to one earlier mechanism:
+
+| Line | Mechanism | From |
+|---|---|---|
+| L4 | Field initializer runs during `[[Construct]]`, source order | Sub-part 3 |
+| L6 | Arrow field captures `this` at construction time | Sub-part 3 |
+| L8 | Method shorthand → non-constructable, lives on prototype | Sub-part 1 |
+| L9 | Method body's `this` from Reference base at call site | Sub-part 1 |
+| L18 → L23 | Derived field overwrites base field on same object | Sub-part 4 |
+| L26 | Pre-`super()` code is fine without `this` access | Sub-part 4 |
+| L27 | `super()` provides `this` to derived constructor | Sub-part 4 |
+| L29 | Method call inside constructor — Reference base = `this` | Sub-part 1 |
+| L34–L35 | Arrow field survives extraction | Sub-part 3 |
+| L36–L37 | Prototype method loses `this` on extraction | Sub-part 2 |
+
+The single `[[Construct]]` chain ties all four sub-parts together: object creation flows up the chain, `this` flows back down, fields run at each level in a strict order, and the final object is what every method, arrow, and extraction interacts with afterward.
