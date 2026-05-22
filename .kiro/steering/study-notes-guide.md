@@ -66,7 +66,7 @@ If ambiguous, ask to clarify before proceeding. Courses go in `courses/`, everyt
 
 On every new session:
 
-1. Read `learner-profile.md` for background, preferences, global competence, and cross-cutting weaknesses.
+1. Read `learner-profile.md` and the repo-root `roadmap.md` for background, preferences, global competence, cross-cutting weaknesses, and what's in progress / what's next.
 2. If a `courses/<topic>/toc.md` exists for the current topic, read it to recover calibration, progress, and competence tags.
 3. Skim existing notes in the active folder if resuming work there.
 
@@ -122,13 +122,13 @@ Apply learner preferences from `learner-profile.md` to decide which elements to 
 Write teaching content to a **temp `.md` file in the same topic folder** rather than inline in chat. Mermaid diagrams and tables render properly in the editor's markdown preview but not in the chat panel.
 
 - **During teaching:** write to `<topic-folder>/<descriptive-name>-draft.md`. Mention the filename.
-- **After chunk confirmation:** write the final note. **Reorganize, don't compress.** The final note's structure differs from the draft (mental-model order, not teaching order), but the **substance is preserved** — reasoning, motivation, all three example roles (anchor + bug demo + worked synthesis), mechanism-level precision, first-principles framing. Drop only **teaching-flow scaffolding**: teaser snippets and predict-then-reveal Q&A, plan checklists, sub-part progress markers, chat-side dialogue. If the final note ends up dramatically shorter than the draft, re-check — substance likely got cut along with scaffolding. Keep the draft as the teaching-path record for later review. If writing the final note surfaces a factual error in the draft that escaped live teaching, patch the draft per the *Patch drafts surgically* rule below before finalizing — don't let the final note silently diverge from a known-wrong draft.
+- **After chunk confirmation:** write the final note. **Reorganize, don't compress.** The final note's structure differs from the draft (mental-model order, not teaching order), but the **substance is preserved** — reasoning, motivation, all three example roles (anchor + bug demo + worked synthesis), mechanism-level precision, first-principles framing. Drop only **teaching-flow scaffolding**: teaser snippets and predict-then-reveal Q&A, plan checklists, sub-part progress markers, chat-side dialogue. If the final note ends up dramatically shorter than the draft, re-check — substance likely got cut along with scaffolding. Keep the draft as the teaching-path record for later review. If writing the final note surfaces a factual error in the draft that escaped live teaching, patch the draft per the *Patch drafts in place on factual errors* rule below before finalizing — don't let the final note silently diverge from a known-wrong draft.
 - **Chat messages** stay short — signposting, questions, feedback, understanding checks. Not full content dumps.
 - Append to or overwrite the same draft file as new sections are taught. One draft per chunk, not one per section.
 - **One sub-part per turn to the draft.** Write only the current sub-part's content to the draft, then stop and deliver the sub-part check in chat. Do not write the next sub-part until the user has answered. The draft grows incrementally — never write multiple plan items in a single file operation.
 - **Top-of-draft plan checklist.** Open the draft with a `## Plan (teaching order)` checklist enumerating the chunk's sub-parts. Mark each `[x]` as that sub-part lands. Two purposes: the learner sees progress in the editor without asking; the teacher doesn't re-derive the sub-part list from conversation context each turn. Stays in the draft (not carried to the final note) — useful context when reviewing the teaching path later.
 - **Self-contained drafts.** The draft must be readable standalone — include all motivating code examples (including the teaser snippet and its reveal) directly in the draft text, not only in chat. Chat is ephemeral; the draft is the durable teaching-path record.
-- **Patch drafts surgically when teaching surfaces a factual error.** When a sub-part check, follow-up, end-of-chunk check, or chat correction reveals that something already written to the draft is *factually* wrong (not merely awkwardly phrased), edit the wrong content in place and add a `> ⚠️ Corrected during teaching — initial framing said X; actual mechanism is Y.` marker right where the fix lands. Don't rewrite or restructure the draft at chunk end — the draft is the teaching-path record, including where it stumbled, and the marker preserves that signal for later review. Trigger is narrow: factual inaccuracy only. Stylistic re-phrasings, "I'd word this cleaner now," or structural reorganization go to the final note exclusively — never back to the draft.
+- **Patch drafts in place on factual errors.** When a sub-part check, follow-up, end-of-chunk check, or chat correction reveals that something already written to the draft is *factually* wrong (not merely awkwardly phrased), edit the wrong content in place and add a `> ⚠️ Corrected during teaching — initial framing said X; actual mechanism is Y.` marker right where the fix lands. Don't rewrite or restructure the draft at chunk end — the draft is the teaching-path record, including where it stumbled, and the marker preserves that signal for later review. Trigger is narrow: factual inaccuracy only. Stylistic re-phrasings, "I'd word this cleaner now," or structural reorganization go to the final note exclusively — never back to the draft.
 
 ### Chunk opener (teaser-first)
 
@@ -166,9 +166,13 @@ Teaching is a conversation, not a lecture.
 
 **Multiple topics:** Ask whether to teach in sequence or focus on connections (compare/contrast, how one builds on the other). Don't silently interleave.
 
-**Study-strategy proposals:** When new content is introduced, proactively propose a concrete study strategy for checking/reinforcing it (retrieval practice, mechanism-separate scoring, interleaving, faded worked examples), tailored to the learner profile — esp. recurring refinement patterns. Treat each as an experiment; flag winners as candidates to fold into this doc, with user approval. Don't stash such rules in memory.
+### Study-strategy proposals
 
-## Code accuracy — run before claiming output
+When new content is introduced, proactively propose a concrete study strategy for checking/reinforcing it (retrieval practice, mechanism-separate scoring, interleaving, faded worked examples), tailored to the learner profile — esp. recurring refinement patterns. Treat each as an experiment; flag winners as candidates to fold into this doc, with user approval. Don't stash such rules in memory.
+
+Applies to all teaching workflows (discussion and course-guided alike).
+
+### Code accuracy — run before claiming output
 
 **Hard rule.** Any time a claim about code behavior is being made — predicted output, error type, whether something throws, what a property resolves to, what survives an override — **run the code and check** before stating the result. Do not rely on confident reasoning alone. This applies to:
 
@@ -185,6 +189,14 @@ Teaching is a conversation, not a lecture.
 
 If for some reason the code can't be run (no runtime available, browser-only API, requires a build step), state that explicitly: _"I can't run this here; predicted output is X but verify before relying on it."_ Don't pretend confidence.
 
+## Critical lens
+
+Source content (course material, articles, transcripts) often contains claims that are wrong, outdated, oversimplified, or misleading. Don't silently pass them through and don't drop them — flag inline.
+
+- Use the `> ⚠️` blockquote prefix (see `writing-style.md → Asides in blockquotes`).
+- Format: `> ⚠️ The original source claims X, but…` — state what the source said, what's actually true, and why the difference matters.
+- Applies to both course-guided and content-to-note workflows.
+
 ## Discussion Workflow
 
 1. User names the topic. If scope is ambiguous, clarify before starting.
@@ -197,7 +209,7 @@ If a `courses/<topic>/` exists on the same subject, the discussion is extending 
 ## Course-Guided Workflow
 
 1. **Outline received.** Accept it as the session roadmap. Clarify ambiguity before starting.
-2. **Create `toc.md`** in `courses/<topic>/`. Parse the outline into logical chunks (group related lessons), write one checkbox entry per chunk with a brief scope note. Add quiz and test entries per the placement rules in "Quizzes and Tests".
+2. **Create `toc.md`** in `courses/<topic>/`. Parse the outline into logical chunks (group related lessons), write one checkbox entry per chunk with a brief scope note. Add quiz and test entries per the placement rules in "Quizzes and tests".
 3. **Calibrate** and persist to `toc.md → ## Calibration`.
 4. **Teach chunk by chunk in course order**, but teach freely — restructure, reorder within a chunk, add missing context. Don't narrate slides.
 5. **Chunk gate.** After teaching is complete (and after the understanding check if the user triggered one):
@@ -210,7 +222,7 @@ If a `courses/<topic>/` exists on the same subject, the discussion is extending 
 6. **One note per chunk.** Captures the mental model — not a transcript. Organized by understanding, not course order. Never start the next chunk without saving the current one.
 7. **Track progress.** Answer _"where are we?" / "what's next?"_ clearly from `toc.md`.
 8. **Cross-reference within the folder.** If the course covers something already in a sibling note, point it out — skip, recap, or highlight what's new. No cross-folder references.
-9. **Critical lens.** Flag wrong, outdated, or oversimplified course content with inline notes (e.g. `> ⚠️ The original source claims X, but...`). Don't silently pass through or drop.
+9. **Apply the critical lens** to course content (see "Critical lens" section).
 10. **Review sweep before tests.** Scan `toc.md` for `shaky` or `weak` tags in chunks the test covers. For each: brief re-teach + 2–3 targeted questions, update the tag on success. Then run the test.
 11. **End-of-course solidification.** After the final test:
     - **Competence gaps.** Scan all tags. For any below `solid`: group related weak points, re-teach with fresh examples and synthesis, test with 2–3 questions per group, update tags. Repeat once more if needed. After two passes, note remaining gaps and move on.
@@ -226,10 +238,14 @@ The user has content and wants it organized. Notes from this workflow go under `
 1. **Identify the topic folder.** Use existing or create new. Ask if ambiguous.
 2. **Assess scope.** Single note or split into multiple? If splitting, tell the user the plan first.
 3. **Reorganize, don't transcribe.** Apply writing guidelines — TL;DR at top, top-down reading order, clear headings, code blocks / tables / mermaid where clearer, cut filler, preserve substance and non-obvious details.
-4. **Critical lens.** Flag wrong/outdated/oversimplified content with inline notes (e.g. `> ⚠️ The original source claims X, but...`).
+4. **Apply the critical lens** to source content (see "Critical lens" section).
 5. **Update `index.md`** if the folder now has 2+ notes.
 
-## Capturing clarifications
+## Tracking & Assessment
+
+All post-teaching tracking — what was learned, where the user stumbled, and how that gets verified — lives here. Applies to course-guided workflow; discussion can borrow pieces (clarifications) but doesn't track competence or run quizzes/tests.
+
+### Capturing clarifications
 
 When the user asks a clarifying question during teaching, quiz, or test that reveals a substantive mechanism, distinction, or gotcha worth keeping — persist it without waiting for an explicit "save".
 
@@ -251,11 +267,11 @@ When the user asks a clarifying question during teaching, quiz, or test that rev
 
 Apply at a natural break — end of a question, after feedback, before the next question. Mention briefly when persisting (_"Folding this into `promise-fundamentals.md`"_).
 
-## Competence Tracking
+### Competence tracking
 
 All competence tracking lives in `toc.md`. After every understanding check, quiz, or test, append a competence line to the relevant chunk entry.
 
-### Tag levels
+#### Tag levels
 
 | Tag        | Meaning                                         | Action                                 |
 | ---------- | ----------------------------------------------- | -------------------------------------- |
@@ -263,7 +279,7 @@ All competence tracking lives in `toc.md`. After every understanding check, quiz
 | `📊 shaky` | Got the gist but stumbled on a specific concept | Add short note on what was weak        |
 | `📊 weak`  | Fundamental misunderstanding surfaced           | Add short note; needs revisit          |
 
-### Format
+#### Format
 
 Indented lines under the chunk entry. **Never replace a previous tag line — always append a new line** showing the transition (e.g. `📊 shaky → solid`). The full history stays visible; the latest line drives pacing decisions. Refinements go in a `🔧 Refinements:` block on the same entry.
 
@@ -278,7 +294,7 @@ Short refinements (1–2 items, each fitting on one line) can use an inline-dash
         - Said "engine's internal slot" when the answer is `Dog.prototype` — a regular JS object
 ```
 
-### Refinements
+#### Refinements
 
 Record any answer that needed correction or refinement — regardless of overall tag level. Compact one-liners: what was off, what the correct framing is.
 
@@ -287,7 +303,7 @@ Two purposes:
 - **End-of-course review** — scan all refinements, group themes, suggest improvements.
 - **Cross-session awareness** — skim alongside tags on new sessions to catch recurring patterns early.
 
-### Remediation mini-quiz
+#### Remediation mini-quiz
 
 Triggered immediately after any check that produces a `shaky` or `weak` tag.
 
@@ -296,25 +312,23 @@ Triggered immediately after any check that produces a `shaky` or `weak` tag.
 3. Append a new tag line on success (e.g. `📊 weak → shaky`); leave unchanged for the next review sweep if still shaky/weak. Never delete or overwrite the previous tag line.
 4. One attempt per weak point per session.
 
-## Quizzes and Tests
+### Quizzes and tests
 
 Interactive checkpoints woven into `toc.md` alongside teaching chunks. Not saved as notes — they happen live in the session.
 
 - **Quiz** — covers the last 1–3 chunks. 3–5 questions. Recall and basic application.
 - **Test** — covers a major phase. Broader, harder, tests how concepts connect. Forces synthesis.
 
-### Placement
+#### Placement
 
 - Quizzes after every 2–3 thematically similar chunks. Group by relatedness, not rigid count.
 - Tests at roughly equal part boundaries (by chunk count). Each test covers its entire part.
 - Final test always present, always last. Cumulative across the whole course.
 - Tightly coupled chunks share a quiz.
 
-### Delivery
+#### Delivery
 
-Present questions **one at a time** — question, answer, feedback, next. In `toc.md`, quiz/test entries use the same checkbox format as chunks. Mark `[x]` when completed. Update competence tags.
-
-**Code blocks in questions include line-number comments** (`// L1`, `// L2`) on every statement line so the user can reference specific lines. Empty lines and lone braces don't need labels.
+Present questions **one at a time** — question, answer, feedback, next. In `toc.md`, quiz/test entries use the same checkbox format as chunks. Mark `[x]` when completed. Update competence tags. Code blocks in questions follow the line-label rule below.
 
 ### Code block line labels (all teaching contexts)
 
@@ -327,17 +341,11 @@ Present questions **one at a time** — question, answer, feedback, next. In `to
 
 ## Writing Guidelines
 
-See `writing-style.md` for full content rules, style rules, formatting, and mermaid conventions. Key points repeated here for quick reference:
-
-- TL;DR at top, Quick reference at bottom.
-- Three example roles: anchor, bug demo, worked synthesis.
-- Top-down clarity — no unexplained forward references.
-- Mermaid for flow diagrams; box-drawing only for hierarchical layouts in code blocks.
-- Surgical edits — touch only what changed.
+See `writing-style.md` for content rules, style rules, formatting, and mermaid conventions. Notes produced by any workflow in this guide must follow it.
 
 ## Roadmap
 
-The cross-course study roadmap lives at the repo root. It tracks course sequencing, status, and order rationale. Read it at session start alongside `learner-profile.md` to know what's in progress and what comes next.
+The cross-course study roadmap lives at the repo root. It tracks course sequencing, status, and order rationale — read alongside `learner-profile.md` per the *Session start* checklist.
 
 #[[file:../../roadmap.md]]
 
