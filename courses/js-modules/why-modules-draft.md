@@ -5,7 +5,7 @@
 - [x] **Teaser** — multi-script page, predict the bug
 - [x] **Pre-module pain points** — three concrete failures of the script-tag world
 - [x] **The IIFE workaround** — what it fixed, what it couldn't
-- [ ] **What a module system must provide** — derive from the failures above
+- [x] **What a module system must provide** — derive from the failures above
 - [ ] **Sub-part check** (rolled into end-of-chunk understanding check)
 
 ---
@@ -166,4 +166,45 @@ Two adjacent limitations the IIFE pattern also can't address — both motivate l
 - **No tooling for sharing within a project.** A 30-file app either pollutes `window.MyApp.utils` by hand or duplicates code. There's no `import` to say "use the `formatTime` from `./time-utils.js`."
 
 > **Aside —** AMD (RequireJS) and CommonJS (Node's `require`) both grew up in this gap. They added a *module loader* on top of the language — runtime-managed dependency graphs, sometimes async (AMD), sometimes sync (CJS). They patched the load-order problem at the cost of a non-standard runtime convention. ES modules later baked this into the language itself, but with a key change: the dependency graph is **static** (knowable before any code runs), not built up dynamically by `require()` calls. That static guarantee is what unlocks tree-shaking and live bindings — covered in later chunks.
+
+
+
+## What a module system must provide
+
+Derive the requirements from the three pain points (`#1`, `#2`, `#3`) plus the IIFE patch's gap.
+
+### 1. Per-file scope
+
+Each file gets its own Environment Record. Top-level `let`, `const`, `function`, `class` bind there, not on the global. Fixes **#1** at the *language* level — no IIFE wrapping needed, and *no escape*: even if a module author wanted to leak globally, the language refuses to put top-level bindings on `window`.
+
+### 2. Explicit exports
+
+A file declares what it makes available. Anything not exported is private by default — privacy is the default, leakage requires opt-in. Fixes **#3** with stronger guarantees than IIFEs:
+
+- No wrapper to remember.
+- No risk of accidentally returning the wrong shape.
+- Static — the export list is part of the file's parseable structure.
+
+### 3. Explicit imports
+
+A file declares what it needs, by name and by source specifier. Combined with #1 and #2, the dependency graph is now **stated in the source**, not implied by HTML tag order. This is the structural fix to **#2** — the system can now answer "what does this file depend on?" by *reading*, not by *running*.
+
+### 4. A loader / linker
+
+Something has to read those import declarations, fetch the dependencies, and wire bindings together before any user code runs. Imports are useless if the system can't act on them. The module system replaces ad-hoc tag ordering with a real loader that resolves the dependency graph automatically.
+
+### 5. Single instantiation per module
+
+If `app.js` and `helpers.js` both import `./logger.js`, the loader must give them *the same* logger module — not run it twice. Otherwise shared state (counters, caches, configuration) fragments. Module-level state only works if every importer sees the same instance.
+
+ES modules guarantee this via the **module map** — one record per resolved URL. Cached at first import, reused thereafter.
+
+> **Aside —** the easy-to-miss requirement. Scope/exports/imports/loader is the obvious set; without single-instantiation the loader gives isolation but no shared identity. Module-level singletons (config object, connection pool, registered handlers) silently break when the same module is loaded twice.
+
+### Forward-looking
+
+Two refinements that matter for later chunks:
+
+- **"Static" imports — a stronger property than "declared in syntax."** ESM enforces that `import` / `export` are only legal at the top level of a module — not inside `if`, not inside functions. This makes the dependency graph parseable *before any code runs*. CommonJS's `require()` is a function call, so its dependencies emerge only at runtime. The static-vs-dynamic distinction is what unlocks tree-shaking and live bindings — see *Static linking & live bindings*.
+- **The loader is host-level.** The engine parses and links; the *host* (Node, browser) supplies the loader that resolves a specifier like `"./helpers.js"` or `"lodash"` to actual bytes. Engine-vs-runtime split — see *Module record lifecycle*.
 
