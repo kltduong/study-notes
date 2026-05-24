@@ -33,11 +33,7 @@ Order rationale: static first (whole graph known at parse), dynamic second (runt
 
 ## Progress
 
-- [x] **Why modules exist** — the pre-module problem (global namespace pollution, implicit load order, no encapsulation), IIFE workaround and its limits, what a module system needs to provide
-      📊 solid — three failure modes derived from a common root (one global ER); IIFE mechanism (closure-based privacy) and its #2 gap (host-level load order) reasoned cleanly; five-requirement synthesis hit four of five independently
-      🔧 Refinements:
-        - Missed *single instantiation per module* in the requirements derivation (caught easily once flagged) — module-level singletons depend on a shared module map, not just isolation
-        - Said `Widgets.pad(7)` would "raise" without specifying error type; precise answer is `TypeError`, not `ReferenceError` (property miss returns `undefined`, then call on `undefined` throws)
+- [] **Why modules exist** — the pre-module problem (global namespace pollution, implicit load order, no encapsulation), IIFE workaround and its limits, what a module system needs to provide
 - [ ] **ES module basics** — `export` / `import` syntax, named vs default exports, re-exports, `export * from`, the module scope (each file is its own Module ER)
 - [ ] **Static linking & live bindings** — how the engine resolves imports at parse time (not runtime), why bindings are live (not copied values), contrast with CommonJS `require` copy semantics
 - [ ] **Module record lifecycle** — Parse → Instantiate (link) → Evaluate, what happens at each phase, why top-level code runs exactly once, the module map / registry
