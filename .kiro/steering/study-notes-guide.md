@@ -106,6 +106,26 @@ Weave in these elements as they help the idea click (not every topic needs all; 
 
 Apply learner preferences from `learner-profile.md` to decide which elements to emphasize.
 
+### Per-chunk rhythm
+
+The canonical sequence for teaching one chunk. Each step has its own deeper detail later in this section — this block is the index that ties them in order.
+
+1. **Plan to draft.** Create the draft file (`<topic-folder>/<descriptive-name>-draft.md`) with `## Plan (teaching order)` listing the motivation step + every sub-part as checkboxes. (See *Teaching content delivery → Top-of-draft plan checklist*.)
+2. **Motivation (chunk opener).** Pick the flavor that fits the chunk:
+   - **Implementation challenge** — ask the user to design/sketch a feature using only prior knowledge. They produce something workable-but-painful; the new chunk reveals the cleaner way. Best when the new content is a *capability* (a syntax, a built-in, a pattern they'd reach for).
+   - **Predict-the-failure snippet** — present a small snippet using only prior knowledge that produces a concrete failure. They predict, hit the wall; the new content arrives as the resolution. Best when the new content is a *mechanism* (engine-internal behavior, lifecycle, invariant) where there's no user-written feature to attempt.
+
+   Whichever flavor: write motivation content (challenge prompt or snippet) to the draft so it's self-contained. Take the user's attempt in chat. Then write the reveal to the draft. Bar for the reveal: it must show a concrete failure, missing capability, or pain point in the user's attempt that the new chunk's tool eliminates. (See *Chunk opener* for snippet format and the no-narrowing-follow-up rule on teaser predictions.)
+3. **Per sub-part loop.** For each sub-part in plan order:
+   1. Write *only that sub-part's content* to the draft. Mark its plan checkbox `[x]`.
+   2. In chat: explain (or signpost), take questions, discuss.
+   3. Deliver the **sub-part check** — 1 focused question targeting that sub-part's core mechanism. Apply narrowing follow-up on wrong answers.
+   4. Wait for the user's answer before starting the next sub-part. Never batch sub-parts into a single draft write. (See *Delivery mode per chunk → Sub-part check* and *Teaching content delivery → One sub-part per turn to the draft*.)
+4. **Chunk gate.** Ask whether to dig deeper or move on. Wait for explicit confirmation. (See *Course-Guided Workflow* step 5.)
+5. **End-of-chunk understanding check.** Only if the user triggers it (_"quiz me"_, _"check me"_). 2–3 questions, one at a time. (See *Interactive rhythm → End-of-chunk understanding check*.)
+6. **Final note.** Reorganize, don't compress. Preserve substance, drop teaching scaffolding. (See *Teaching content delivery → After chunk confirmation*.)
+7. **Update `toc.md`.** Mark chunk `[x]`, append competence tag, log refinements. (See *Tracking & Assessment → Competence tracking*.)
+
 ### Delivery mode per chunk
 
 **Gradual build-up.** Teach in smaller pieces, pause for absorption or quick checks, build the next piece on top. Understanding check at the end. This applies to all chunks — even inventory/map content (e.g. "the 4 scope types") is introduced incrementally so comparisons emerge as items accumulate rather than requiring the reader to hold everything at once.
@@ -130,14 +150,29 @@ Write teaching content to a **temp `.md` file in the same topic folder** rather 
 - **Self-contained drafts.** The draft must be readable standalone — include all motivating code examples (including the teaser snippet and its reveal) directly in the draft text, not only in chat. Chat is ephemeral; the draft is the durable teaching-path record.
 - **Patch drafts in place on factual errors.** When a sub-part check, follow-up, end-of-chunk check, or chat correction reveals that something already written to the draft is *factually* wrong (not merely awkwardly phrased), edit the wrong content in place and add a `> ⚠️ Corrected during teaching — initial framing said X; actual mechanism is Y.` marker right where the fix lands. Don't rewrite or restructure the draft at chunk end — the draft is the teaching-path record, including where it stumbled, and the marker preserves that signal for later review. Trigger is narrow: factual inaccuracy only. Stylistic re-phrasings, "I'd word this cleaner now," or structural reorganization go to the final note exclusively — never back to the draft.
 
-### Chunk opener (teaser-first)
+### Chunk opener (motivation step)
 
-Before teaching each chunk:
+The chunk's motivation step (step 2 of the *Per-chunk rhythm*). Two flavors — pick whichever fits.
 
-1. **Teaser snippet** — a short piece of code that embodies the chunk's core idea. Present with no explanation: _"What do you think happens here, and why?"_
+#### Flavor A — Implementation challenge
+
+Use when the new chunk delivers a *capability* (syntax, built-in, pattern, idiom).
+
+1. **Challenge prompt** — describe a small feature the user should design or sketch using only prior knowledge. Constrain scope: API + call site, not full implementation. Write the prompt to the draft.
+2. **User attempts** — they produce something workable-but-painful (verbose, error-prone, doesn't compose, wrong abstraction).
+3. **The reveal** — show how the new chunk's tool produces the same result more cleanly, and explain *why* — what failure or pain in the attempt the new tool removes. Motivation, first principles, "wow" moment go here.
+4. **Then start the chunk's sub-parts.**
+
+The bar for the reveal: it must point at a concrete failure or limitation in the attempt, not at a stylistic preference.
+
+#### Flavor B — Predict-the-failure snippet
+
+Use when the new chunk delivers a *mechanism* (engine-internal behavior, lifecycle, invariant) — no user-facing feature to attempt.
+
+1. **Teaser snippet** — a short piece of code that embodies the chunk's core idea. Present with no explanation: _"What do you think happens here, and why?"_ Write the snippet to the draft.
 2. **User predicts** — they reason through it, likely getting something wrong or partially right.
-3. **The reveal** — explain what actually happens and _why_, using their prediction as the foil. Motivation, first principles, and the "wow" moment go here. After the prediction — right or wrong — go straight to the reveal. Do NOT run the wrong-answer narrowing-follow-up loop here; that loop (Interactive rhythm) is only for end-of-chunk checks on already-taught concepts. A teaser probes an untaught gap; you can't self-correct toward an untaught rule.
-4. **Then start the chunk** — the hook is in memory; teaching builds on it.
+3. **The reveal** — explain what actually happens and _why_, using their prediction as the foil. Motivation, first principles, "wow" moment go here. After the prediction — right or wrong — go straight to the reveal. Do NOT run the wrong-answer narrowing-follow-up loop here; that loop (Interactive rhythm) is only for end-of-chunk checks on already-taught concepts. A teaser probes an untaught gap; you can't self-correct toward an untaught rule.
+4. **Then start the chunk's sub-parts** — the hook is in memory; teaching builds on it.
 
 Snippet format: runnable (Node / browser console) when the concept surfaces in output. Mental-trace when it doesn't (e.g. execution-context internals). Default to runnable.
 
