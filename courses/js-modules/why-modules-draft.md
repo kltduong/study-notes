@@ -7,7 +7,7 @@ Teaching draft for the chunk. Lives alongside chat; final note is reorganized af
 - [x] **Motivation** — implementation challenge: build a multi-file dashboard with no `import`/`export`, no bundler, just `<script>` tags. Feel the pain.
 - [x] **The pre-module landscape** — *folded into the motivation reveal:* the single-shared-global mechanism + four pain points (name collisions, implicit load order, no encapsulation, no explicit dependency declaration), with the table showing they're independent.
 - [x] **IIFE namespace pattern** — the pre-ES2015 workaround. What it fixes (encapsulation, single global per module). What it can't fix (still need `<script>` ordering, deps still implicit, still leaks one global per file).
-- [ ] **What a module system needs to provide** — the requirements list extracted from the pain points, framed as four things ES modules deliver on. Bridge to the next chunk (ES module syntax).
+- [x] **What a module system needs to provide** — the requirements list extracted from the pain points, framed as four things ES modules deliver on. Bridge to the next chunk (ES module syntax).
 
 ---
 
@@ -239,3 +239,123 @@ That's the bridge to the next sub-part: what a real module system needs to provi
 
 
 > ⚠️ Corrected during teaching — initial framing said the wall for problem 2 was "no fetching primitive in the language." That's only the wall for *language-only* solutions; the moment the host provides a fetch primitive (as Node does for `require()`), problem 2 *is* solvable via a runtime function call, and CommonJS actually shipped that solution in 2009. The deeper distinction ES modules introduce is **static** vs runtime resolution: `import` is syntax (parsed without running code), so the host knows the full dep graph before evaluation. That's what unlocks tree-shaking, browser-parallel-fetch, and parse-time error checking. So the *real* design axis isn't "fetch vs no-fetch" — it's "runtime resolution (`require()`-style) vs static resolution (`import`-style)," and ES modules pick the static side.
+
+
+---
+
+## What a module system needs to provide
+
+Pulling the requirements out of the pain points. Each problem implies a capability — and crucially, each capability has to live somewhere specific (engine, host, or syntax-as-contract between them).
+
+### The four requirements
+
+1. **Per-file scope.** Top-level declarations don't leak to the global object. Each file gets its own scope. *Lives in: language (engine).* Pure scoping rules — same machinery as functions, just lifted to file granularity.
+
+2. **Explicit public API.** A way to mark "this is what my file exposes to others"; everything else is private. *Lives in: language (engine), as syntax.* A keyword (`export`) tagging the bindings that escape.
+
+3. **Explicit imports.** A way to declare "I depend on these names from this file." *Lives in: language (engine), as syntax* — but the syntax is the contract that lets the host do its job.
+
+4. **A loader.** Something that fetches files, links them by name, and orders execution. *Lives in: host (browser, Node, bundler).* The language can't fetch on its own; the host has always owned that.
+
+The first three are **engine-side** — they're scoping rules and syntax. The fourth is **host-side** — fetching, resolving paths, deciding what runs when. The whole module system is a **partnership**: language ships syntax that *declares* the dep graph; host ships a loader that *acts* on it.
+
+> **Aside —** "the module system" colloquially means all four together. Spec-wise, the engine portion is in ECMAScript (parsing rules, module records, linking algorithm); the host portion is in HTML spec for browsers and in Node's docs for Node. Same JS, different hosts → different loaders.
+
+### The two-axis decision
+
+Given the four requirements, two design questions remain:
+
+**Axis 1 — Where does fetching come from?** It has to come from the host (functions can't fetch in pure JS). Both CommonJS and ES modules accept this. No real choice here; it's a constraint.
+
+**Axis 2 — When is the dep graph determined: at runtime or at parse time?**
+
+This is the actual fork in the road, and where CommonJS and ES modules diverge.
+
+| Question                                        | CommonJS (`require`)                | ES modules (`import`)                  |
+| ----------------------------------------------- | ----------------------------------- | -------------------------------------- |
+| Imports look like...                            | function calls                      | dedicated syntax                       |
+| ...so they execute when?                        | when the line runs                  | never "execute" — parsed, not called   |
+| Can the dep be computed at runtime?             | yes (`require(getName())`)          | no (must be a literal string at top)   |
+| Can imports sit inside `if` / functions?        | yes                                 | no (top-level only)                    |
+| When does the host learn the full dep graph?    | only by running every file          | by *parsing* the entry, no execution   |
+| Fetch strategy                                  | sequential (run → discover → fetch) | parallel (parse all, fetch graph)      |
+| Tree-shaking possible?                          | no — can't tell what's used         | yes — graph is fully known statically  |
+| Misspelled import fails when?                   | at runtime, when the line runs      | at parse/link time, before any code runs |
+
+The static side has stricter rules (top-level only, literal strings only) — and gets a stronger guarantee in return: **the dep graph is knowable before any code runs.** That's what enables every downstream win — parallel fetching, tree-shaking, parse-time error catching, IDE features.
+
+The runtime side is more flexible — you can `require` based on a runtime condition or a computed name — and pays for that flexibility with the loss of static analyzability.
+
+> **Aside —** this is a recurring tradeoff in language design: declarative-and-restricted vs imperative-and-flexible. Declarative wins when tooling needs to reason about the program without running it. Same shape as types vs. duck-typing, prepared statements vs. string-concat SQL, schema vs. schemaless data — restrict the form, gain analyzability.
+
+### Mapping back to the problems
+
+With the static-resolution axis settled, here's how the four pain points get retired:
+
+```mermaid
+flowchart TD
+  P1["P1: Name collisions"] --> R1["Per-file scope (engine)"]
+  P3["P3: No encapsulation"] --> R1
+  P3 --> R2["export syntax (engine)"]
+  P4["P4: No explicit deps"] --> R3["import syntax (engine)"]
+  P2["P2: Implicit load order"] --> R4["Loader (host)"]
+  R3 --> R4
+  classDef prob fill:#a44,stroke:#fff,color:#fff
+  classDef req  fill:#46c,stroke:#fff,color:#fff
+  class P1,P2,P3,P4 prob
+  class R1,R2,R3,R4 req
+```
+
+`import` syntax does double duty — it's the user-facing way to declare a dependency (problem 4), and it's the structured input the host loader needs to know what to fetch and in what order (problem 2). One piece of syntax, two problems retired, *because* it's static.
+
+### Bridge to the next chunk
+
+The next chunk drops into the actual ES module syntax — `import`, `export`, named vs default, re-exports. With this design framing in mind, the syntax should feel inevitable: every restriction (top-level only, literal strings, statically-known names) traces back to "the host has to know the dep graph before any code runs." Nothing is arbitrary.
+
+
+---
+
+## What a module system needs to provide
+
+Pulling the requirements list out of everything we've seen. Each requirement maps directly to one of the four pain points — not by accident; they're the inverse.
+
+### The four requirements
+
+1. **Per-file scope.** Each file gets its own scope; top-level declarations don't leak to a shared global. This is what closes problem 1 (collisions) and problem 3 (encapsulation). IIFE achieves this with closures; ESM bakes it into the language by making every module file its own scope automatically — no wrapping required.
+2. **A way to declare dependencies.** A file says "I need `Formatter`" *and names where it comes from* (the path, or some specifier the host can resolve). Closes problem 4. CJS does this with `require("./formatter.js")`; ESM does it with `import { formatCurrency } from "./formatter.js"`.
+3. **A way to declare exports.** A file says "this is my public API; everything else stays private." Closes the second half of problem 3 (intentional API boundary, not just "what didn't leak"). CJS uses `module.exports = {...}`; ESM uses `export` statements.
+4. **A loader that orders execution by dependency.** Something fetches files, links them by name, and runs them in dependency order — so when `chart.js` runs, `Formatter` is guaranteed to exist. Closes problem 2. The loader lives in the host (browser, Node, bundler), not the engine.
+
+### The two design axes
+
+The four requirements above are *what* a module system must deliver. The interesting design choices are *how* — and they cluster on two independent axes:
+
+**Axis 1 — Where does fetching live?** Always in the host. JavaScript the language has never had a fetch primitive and never will (would tie the language to a specific I/O model — filesystems vs network vs whatever else). Both CJS and ESM agree on this; the host provides fetching, the language calls into it. Not really a choice; just where the seam sits.
+
+**Axis 2 — When is the dep graph known?** This is the actual fork.
+
+- **Runtime resolution** (CJS, AMD's `require`). Dependencies are discovered by *running the code* — `require()` is a function call. Simple to implement; works fine when files are local and execution is single-threaded server startup.
+- **Static resolution** (ESM). Dependencies are discovered by *parsing the syntax* — `import` is a top-of-file declaration with literal string paths. The host can scan files without executing them, build the full graph, fetch in parallel, link, then evaluate. This is the unlock for tree-shaking, browser-friendly parallel loading, IDE intelligence, and parse-time error catching.
+
+### What ES modules deliver
+
+Mapping the four requirements onto ESM's actual machinery — preview only; each gets a dedicated chunk later in the course.
+
+| Requirement                       | ESM mechanism                                                  | Where it's covered later                |
+| --------------------------------- | -------------------------------------------------------------- | --------------------------------------- |
+| 1. Per-file scope                 | Every module file is its own scope by language rule            | *ES module basics*                      |
+| 2. Declare dependencies           | `import` syntax (static), `import()` expression (dynamic)      | *ES module basics*, *Dynamic `import()`* |
+| 3. Declare exports                | `export` syntax (named, default, re-exports)                   | *ES module basics*                      |
+| 4. Loader orders execution        | Module Record lifecycle: Parse → Instantiate → Evaluate        | *Static linking & live bindings*, *Module record lifecycle* |
+
+ESM also adds capabilities that pure-runtime systems can't provide, all flowing from the static-resolution choice on axis 2:
+
+- **Live bindings** (vs CJS's value copies) — the import is a *reference* to the exporter's binding, not a snapshot. Re-export and circular-dep semantics fall out of this. Covered in *Static linking & live bindings*.
+- **Top-level `await`** — possible because the loader knows the full graph and can suspend a module's evaluation step without losing track of dependents. Covered in *Top-level `await`*.
+- **Tree-shaking** — bundlers can statically determine which exports are unused. Covered in *Bundlers & the module graph*.
+
+### The bridge
+
+Now we have the *requirements* and the *axis choices*. The next chunk shows the **syntax** ESM uses to deliver on them — `export`, `import`, named vs default, re-exports, and what "every file is its own scope" actually changes about how code is written.
+
+The mental hook to carry forward: when you write `import { formatCurrency } from "./formatter.js"`, you're not calling a function. You're handing the host a parseable declaration. The host fetches, the engine parses and links, and only *then* does any of your code run. That ordering — parse-and-link before any evaluation — is the whole game.
