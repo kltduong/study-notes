@@ -33,7 +33,13 @@ Order rationale: static first (whole graph known at parse), dynamic second (runt
 
 ## Progress
 
-- [] **Why modules exist** — the pre-module problem (global namespace pollution, implicit load order, no encapsulation), IIFE workaround and its limits, what a module system needs to provide
+- [x] **Why modules exist** — the pre-module problem (global namespace pollution, implicit load order, no encapsulation), IIFE workaround and its limits, what a module system needs to provide
+      📊 solid — landed mechanism + design axes; chunk gate confirmed.
+      🔧 Refinements:
+        - Said *"the language merge all the script and execute code from top-down"* — engine vs host conflation. The host (browser) fetches and orders scripts; the engine only executes what's handed to it. Same engine-vs-runtime pattern flagged in the profile.
+        - Sub-part check on load-order vs traceability — answered problem 4 (knowing where things come from) when the question targeted problem 2 (making things available in time). They're adjacent but independent.
+        - *"`needs` can check the existence of formatter.js (download it successfully)"* — assumed pure JS has fetching capability. The language has *no* fetching primitive; every fetch-shaped function (`fetch`, `require`, `setTimeout`) is the host's tentacle into JS. Wall for problem 2 in pure JS is "no fetching primitive," not "no traceability."
+        - Tree-shaking / static-resolution justification — *"tree-shaking happens before any code runs, it's the only valid design"*. Right axis, but the *why* is **decidability**, not timing. Static dep graphs make export-usage a tractable static-analysis problem; runtime dep discovery turns it into general code-simulation (halting-problem class). "Right conclusion, wrong mechanism" pattern.
 - [ ] **ES module basics** — `export` / `import` syntax, named vs default exports, re-exports, `export * from`, the module scope (each file is its own Module ER)
 - [ ] **Static linking & live bindings** — how the engine resolves imports at parse time (not runtime), why bindings are live (not copied values), contrast with CommonJS `require` copy semantics
 - [ ] **Module record lifecycle** — Parse → Instantiate (link) → Evaluate, what happens at each phase, why top-level code runs exactly once, the module map / registry
