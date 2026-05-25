@@ -121,7 +121,7 @@ The canonical sequence for teaching one chunk. Each step has its own deeper deta
    2. In chat: explain (or signpost), take questions, discuss.
    3. Deliver the **sub-part check** — 1 focused question targeting that sub-part's core mechanism. Apply narrowing follow-up on wrong answers.
    4. Wait for the user's answer before starting the next sub-part. Never batch sub-parts into a single draft write. (See *Delivery mode per chunk → Sub-part check* and *Teaching content delivery → One sub-part per turn to the draft*.)
-4. **Chunk gate.** Ask whether to dig deeper or move on. Wait for explicit confirmation. (See *Course-Guided Workflow* step 5.)
+4. **Chunk gate.** Ask whether to dig deeper or end the chunk. Wait for explicit confirmation. The next chunk starts in a new session — never continue past the gate in the same session. (See *Course-Guided Workflow* step 5.)
 5. **End-of-chunk understanding check.** Only if the user triggers it (_"quiz me"_, _"check me"_). 2–3 questions, one at a time. (See *Interactive rhythm → End-of-chunk understanding check*.)
 6. **Final note.** Reorganize, don't compress. Preserve substance, drop teaching scaffolding. (See *Teaching content delivery → After chunk confirmation*.)
 7. **Update `toc.md`.** Mark chunk `[x]`, append competence tag, log refinements. (See *Tracking & Assessment → Competence tracking*.)
@@ -262,11 +262,11 @@ If a `courses/<topic>/` exists on the same subject, the discussion is extending 
 3. **Calibrate** and persist to `toc.md → ## Calibration`.
 4. **Teach chunk by chunk in course order**, but teach freely — restructure, reorder within a chunk, add missing context. Don't narrate slides.
 5. **Chunk gate.** After teaching is complete (and after the understanding check if the user triggered one):
-   - Ask: _"Anything you want to dig deeper into on this chunk — follow-ups, edge cases, deeper dives? Or ready to move on?"_
+   - Ask: _"Anything you want to dig deeper into on this chunk — follow-ups, edge cases, deeper dives? Or ready to end the chunk?"_
    - Wait for explicit confirmation.
-   - Only then: save the note automatically (don't ask whether to save), update the `toc.md` checkbox, proceed to the next chunk.
+   - Only then: save the note automatically (don't ask whether to save), update the `toc.md` checkbox, and **stop the session here**. The next chunk starts in a new session — do not begin it, preview it, or offer to proceed.
 
-   Never save a note, mention the next chunk, or offer to proceed before the user confirms.
+   Never save a note, mention the next chunk, or offer to proceed before the user confirms. Never start the next chunk in the same session, even on confirmation.
 
 6. **One note per chunk.** Captures the mental model — not a transcript. Organized by understanding, not course order. Never start the next chunk without saving the current one.
 7. **Track progress.** Answer _"where are we?" / "what's next?"_ clearly from `toc.md`.
@@ -278,7 +278,7 @@ If a `courses/<topic>/` exists on the same subject, the discussion is extending 
     - **Refinement patterns.** Scan all `🔧 Refinements`. Group recurring themes. Present a summary and suggest targeted improvements. Informational — no re-testing unless requested.
     - **Update `learner-profile.md`.** Refresh the topic's competence row with the current absolute level. Fold recurring refinement themes into cross-cutting weaknesses. Upgrade relevant `🟡 inferred` items to `✅ confirmed`. See the profile's `Maintenance` section.
     - Course is complete when all tags are `solid` (or the user opts out), refinement patterns have been reviewed, and the profile is updated.
-12. **Session management.** Prefer short sessions — one chunk (or a few small related chunks) per session. After saving a chunk's note and updating `toc.md`, that's a natural stopping point.
+12. **Session management.** One chunk per session — hard rule. After saving the chunk's note and updating `toc.md`, the session ends. The next chunk starts in a new session.
 
 ## Content-to-Note Workflow
 
