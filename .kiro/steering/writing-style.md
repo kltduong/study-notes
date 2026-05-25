@@ -72,6 +72,21 @@ Tangential content that's useful but sits outside the main derivation — termin
 
 Concise — notes are for future-self, not strangers. No filler. Match existing note style in the folder.
 
+### Sentence-level clarity
+
+The reader is a non-native English speaker reading at speed. Optimize each sentence for first-pass parse — every sentence that needs to be re-read is a tax.
+
+- **Subject-verb-object plain order.** *"That analysis gives us exactly two operations."* not *"Two operations, only two, drop out of that."* Front-load the subject; let the verb do the work.
+- **Avoid English idioms when a literal phrasing exists.** Replace *drop out of*, *fall out as*, *come down to*, *boils down to*, *cuts both ways*, *across the board*, *under the hood* (when not literally about an engine), *the upshot is*, *long story short*, *at the end of the day*, *by and large*, etc. with their plain equivalents (*follow from*, *amount to*, *applies everywhere*, *internally*, *the result is*, *briefly*, *ultimately*, *generally*). Idioms cost a non-native reader a lookup; the literal phrasing is free.
+- **No comma-aside emphasis tricks.** *"Two operations, only two, drop out…"* / *"This pattern, surprisingly, holds for…"* / *"The result, of course, is…"* — these add a parse stop where prose can be linear. Either drop the aside or turn it into a regular sentence.
+- **One clause per sentence when the technical content is dense.** Split on *and*, *but*, *which*, *because* if the sentence already carries a non-trivial mechanism. Two short sentences read faster than one accurate-but-stuffed one.
+- **Concrete subjects.** *"This causes…"* / *"That gives us…"* are weak when *this* / *that* point at a paragraph instead of a noun. Name the noun: *"This factoring gives us…"*, *"This decoupling causes…"*. Reader doesn't have to scroll up to resolve the pronoun.
+- **Hedge sparingly.** *"It might be worth noting that perhaps in some cases X often tends to…"* — every hedge is a syllable the reader has to discount. State the claim, then qualify in the next sentence if needed: *"X holds. Exception: Y."*
+- **Active voice for the actor.** *"The engine resolves the binding"* not *"The binding is resolved"* — when there is an actor, name them. Passive is fine when the actor is genuinely irrelevant or unknown.
+- **Technical idioms are exempt.** Established jargon (*hoisting*, *lexical scope*, *late binding*, *short-circuit*, *fall-through*) stays — it's not idiomatic English, it's vocabulary. The rule targets *general-English* idioms layered on top of technical writing.
+
+The bar: a non-native reader skimming the note understands each sentence on first pass without re-parsing. If you catch yourself wanting a comma to mark "wait, here's the trick" — that's the signal to rewrite the sentence linearly.
+
 ## Formatting
 
 Markdown with headings, fenced code blocks (with language tags), tables, and mermaid diagrams.
