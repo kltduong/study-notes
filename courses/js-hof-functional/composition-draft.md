@@ -101,7 +101,13 @@ The cost is one definition of `compose` (or import it from `lodash/fp`, `ramda`,
 
 Function composition has a name in math: the `∘` operator. For two functions `f` and `g`, the composition `f ∘ g` is the function that takes `x` and returns `f(g(x))`. Read right-to-left: apply `g` first, then `f`.
 
-**The mental model:** composition glues unary functions end-to-end — the output of one becomes the input of the next. `f: A → B`, `g: B → C` ⇒ `g ∘ f: A → C`. The types have to line up at the seams.
+**The mental model:** composition glues unary functions end-to-end — the output of one becomes the input of the next. The types have to line up at the seams:
+
+```haskell
+(.) :: (b -> c) -> (a -> b) -> (a -> c)
+```
+
+Read: give me an `f :: b -> c` and a `g :: a -> b`, I hand back a function `a -> c`. The shared `b` is the seam — `g`'s output type must equal `f`'s input type. The intermediate `b` disappears from the composed signature.
 
 ```mermaid
 graph LR
@@ -151,6 +157,13 @@ const compose = (...fns) => (x) => fns.reduceRight((acc, f) => f(acc), x);
 ```
 
 Same five tokens, one differs: `reduce` vs `reduceRight`.
+
+```haskell
+pipe    :: [a -> a] -> (a -> a)   -- simplified: homogeneous list
+compose :: [a -> a] -> (a -> a)   -- same type, opposite iteration order
+```
+
+The simplified signature above assumes all functions share the same type (`a -> a`). In practice JS pipelines thread through different types at each seam (`String -> String[]`, `String[] -> Number`, etc.) — the real signature is a heterogeneous chain where each step's output matches the next step's input. Haskell can't express that in a simple list type (it needs type-level lists or indexed types), but the `[a -> a]` form captures the common case and the essential shape: a list of functions folded into one.
 
 ### Tracing it through reduce
 
@@ -209,6 +222,15 @@ Modern JS code (lodash/fp's `pipe`, Ramda's `pipe`, RxJS `pipe`) defaults to **`
 What does `pipe()` (with zero functions) do? It returns `(x) => x` — the **identity function**. Same for `compose()`.
 
 This isn't a special case patched in. It falls out of the reduce: `[].reduce((acc, f) => f(acc), x)` returns `x` because there are no callbacks to apply — the seed flows through unchanged. The empty fold returns the identity.
+
+```haskell
+id :: a -> a
+id x = x
+
+-- Laws:
+-- f . id  ≡  f        (right identity)
+-- id . f  ≡  f        (left identity)
+```
 
 > **Aside — formal layer.** Functions with composition form a **monoid** under composition:
 >
@@ -292,6 +314,11 @@ Both are equivalent. The right-hand side of the second `slugify` *is* a function
 ### The eta-reduction insight
 
 `(s) => f(s)` ≡ `f`. Wrapping a function in an arrow that just forwards its argument is **always** redundant. This is a special case of η-reduction (eta-reduction) from lambda calculus.
+
+```haskell
+-- η-reduction:  \x -> f x  ≡  f
+-- Provided f is a function (not a partially-applied expression with side effects on evaluation).
+```
 
 ```js
 // All three are the same function (modulo identity)
@@ -628,22 +655,34 @@ If `map` and `filter` take `next` as a parameter instead of hard-coding the next
 
 A **transducer** is a function that takes one reducer and returns a transformed reducer. Type:
 
+```haskell
+type Reducer acc a = acc -> a -> acc    -- accumulator, element → new accumulator
+
+type Transducer a b = forall acc. Reducer acc b -> Reducer acc a
+--                    ^^^^^^^^^^
+--                    "for any accumulator type acc" — the transducer doesn't
+--                    know or care what shape is being built.
 ```
-Reducer<Acc, X> = (acc: Acc, x: X) => Acc
 
-transducer(f: A → B) : Reducer<Acc, B>  →  Reducer<Acc, A>
+Read `Transducer a b`: "give me a reducer that consumes `b`s, I'll hand back a reducer that consumes `a`s (by transforming each `a` into a `b` before forwarding)." The `forall acc` is the key — it guarantees the transducer is shape-agnostic. It can't inspect or construct `acc`; it can only thread it through.
+
+`acc`, `a`, `b` are all **type parameters** (generic placeholders). `acc` is the accumulator type — whatever the reducer is building (array, sum, object, observable). `a` and `b` are element types at different stages of the pipeline.
+
+Read the transducer signature with concrete types in mind. Suppose the downstream reducer consumes `b`s and builds an `acc` (an array of `b`s, a sum, an object). A `mapT(f :: a -> b)` transducer wraps it and hands back a reducer with these properties:
+
+- **Input type changes** — the new reducer consumes `a`s, not `b`s. Each incoming `a` is passed through `f` to become a `b` before reaching the wrapped reducer.
+- **`acc` is preserved** — the new reducer still builds the same `acc` as the wrapped one. The `forall acc` in the signature guarantees this — the transducer is parametric in `acc`, so it can't change the accumulator's shape.
+
+`filterT(p :: a -> Bool)` is the same shape with input and output element types both `a` — the predicate does not transform elements, only decides which ones reach the inner reducer. `acc` is preserved here too.
+
+This `acc`-preservation property is what makes a chain of transducers end-to-end coherent. Plug in `pushReducer` (which fixes `acc = [b]`) at the bottom; every transducer above it produces a reducer that still builds a `[b]`, even though each layer may be reading a different element type. The final reducer at the top consumes the original input type and builds the array decided at the bottom — one consistent `acc` threading through every wrapping layer.
+
+```haskell
+mapT    :: (a -> b) -> Transducer a b    -- element type changes: a → b
+filterT :: (a -> Bool) -> Transducer a a -- element type preserved: a → a
 ```
 
-`Acc`, `X`, `A`, `B` are all **type parameters** (generic placeholders). `Acc` is the accumulator type — whatever the reducer is building (array, sum, object, observable). `A` and `B` are element types. `X` is the generic element-type slot in the `Reducer` definition; it gets instantiated to `A` or `B` depending on which reducer in the chain we're talking about.
-
-Read the transducer signature left-to-right with concrete types in mind. Suppose the downstream reducer consumes `B`s and builds an `Acc` (an array of `B`s, a sum, an object). A `map(f: A → B)` transducer wraps it and hands back a reducer with these properties:
-
-- **Input type changes** — the new reducer consumes `A`s, not `B`s. Each incoming `A` is passed through `f` to become a `B` before reaching the wrapped reducer.
-- **`Acc` is preserved** — the new reducer still builds the same `Acc` as the wrapped one. Notice the *same* `Acc` symbol appears on both sides of the `→` in the transducer signature; only the element type changes (`B → A`).
-
-`filter(p: A → boolean)` is the same shape with input and output element types both equal to `A` — the predicate does not transform elements, only decides which ones reach the inner reducer. `Acc` is preserved here too.
-
-This `Acc`-preservation property is what makes a chain of transducers end-to-end coherent. Plug in `pushReducer` (which fixes `Acc = B[]`) at the bottom; every transducer above it produces a reducer that still builds a `B[]`, even though each layer may be reading a different element type. The final reducer at the top consumes the original input type and builds the array decided at the bottom — one consistent `Acc` threading through every wrapping layer.
+`mapT` changes the element type (`a → b`); `filterT` keeps it the same (`a → a`) — the predicate decides *which* elements pass, not *what* they become.
 
 ```js
 // A reducer for building an array — the canonical one
@@ -665,7 +704,18 @@ Neither one mentions arrays. Both compose by **wrapping the next reducer**.
 
 ### Composing transducers — use `compose`, not `pipe`
 
-Because each transducer is `Reducer → Reducer`, they compose under regular function composition. **Important:** transducers are the rare case in JS-land where you reach for `compose`, not `pipe`. The canonical form:
+Because each transducer is `Reducer acc b -> Reducer acc a`, they compose under regular function composition. Composing two transducers:
+
+```haskell
+-- Given:
+t1 :: Transducer a b    -- i.e.  forall acc. Reducer acc b -> Reducer acc a
+t2 :: Transducer b c    -- i.e.  forall acc. Reducer acc c -> Reducer acc b
+
+-- Composed:
+t1 . t2 :: Transducer a c  -- i.e.  forall acc. Reducer acc c -> Reducer acc a
+```
+
+The intermediate type `b` disappears — same seam-matching as plain function composition. **Important:** transducers are the rare case in JS-land where you reach for `compose`, not `pipe`. The canonical form:
 
 ```js
 const xform = compose(                              // L1 — listed in data-flow order
