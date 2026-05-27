@@ -110,6 +110,23 @@ Subgraph titles and edge labels clip when they exceed the rendered box width —
 
 Principle: the diagram handles spatial relationships and compact labels; the prose handles explanation. The `†` bridges the two.
 
+### Type signatures in Haskell notation
+
+When a function, combinator, or operation has a shape worth communicating (input types, output type, how pieces compose), express it as a Haskell-style type signature in a fenced `haskell` code block. The signature is a compact, language-neutral statement of the function's contract — what goes in, what comes out, and where the seams are.
+
+```haskell
+-- Example
+pipe    :: [a -> a] -> (a -> a)
+compose :: (b -> c) -> (a -> b) -> (a -> c)
+```
+
+Guidelines:
+
+- Use when the type relationship is the insight (e.g. showing that an intermediate type disappears after composition, or that a combinator takes a list of functions and returns one function).
+- Keep signatures short. If the real type is complex (heterogeneous pipelines, overloads), write the simplified/homogeneous version and note the simplification in prose.
+- Not every function needs one. Reserve for combinators, higher-order functions, and operations where the shape isn't obvious from the JS alone.
+- Place immediately after or alongside the JS implementation it describes — the two form a pair (JS = how it runs, Haskell sig = what shape it has).
+
 ## Surgical edits
 
 - Touch only what changed. Don't reformat adjacent sections.
