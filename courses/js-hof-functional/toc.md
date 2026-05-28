@@ -48,8 +48,9 @@ Progress tracker for the course. Chunks grouped by theme.
       📊 fns-as-values: solid · iter-abstractions: solid · reduce: solid → shaky (protocol & sloppy-mode mechanics)
 - [x] **Composition & pipelines** — function composition (`f(g(x))`), pipe/compose utilities (built on `reduceRight` / `reduce` respectively), point-free style, when pipelines clarify vs obscure, transducers-lite (compose map/filter without intermediate arrays)
       📊 solid
-- [ ] **Currying & partial application** — currying vs partial application (distinct concepts), manual currying, `bind` as partial application, use cases (config factories, event handlers), arity and variadic functions
+- [x] **Currying & partial application** — currying vs partial application (distinct concepts), manual currying, `bind` as partial application, use cases (config factories, event handlers), arity and variadic functions
 - [ ] **Quiz 2** (covering *Composition & pipelines*, *Currying & partial application*): composition, currying, partial application
+      ⏭️ bypassed at learner request
 - [ ] **Immutability patterns** — pure functions, avoiding side effects, shallow copy idioms (spread, `Object.assign`), structural sharing concept, when immutability helps (predictability, debugging) vs when it hurts (performance, ergonomics)
 - [ ] **Algebraic structure** — monoid pattern (identity + associative binary op), recognizing monoids in JS (string concat, array concat, `&&`, `||`, `+`), why `reduce` needs an initial value (identity element), functor-lite (mappable containers)
 - [ ] **Quiz 3** (covering *Immutability patterns*, *Algebraic structure*): immutability, algebraic patterns

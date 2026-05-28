@@ -5,9 +5,9 @@
 - [x] 1. Teaser — motivation snippet (the arity wall from composition)
 - [x] 2. Partial application — fixing arguments, `bind` as the built-in mechanism, manual wrappers
 - [x] 3. Currying — unary chain, manual currying, auto-curry utilities
-- [ ] 4. Currying vs partial application — the distinction made precise
-- [ ] 5. Arity, variadic functions, and the limits of currying
-- [ ] 6. Use cases and decision framework — config factories, event handlers, composition pipelines, when each tool wins
+- [x] 4. Currying vs partial application — the distinction made precise
+- [x] 5. Arity, variadic functions, and the limits of currying
+- [x] 6. Use cases and decision framework — config factories, event handlers, composition pipelines, when each tool wins
 
 ---
 
@@ -422,13 +422,13 @@ People say "just curry it" when they mean "partially apply it." The distinction 
 
 ```mermaid
 graph TD
-  subgraph PARTIAL["Partial application — fix k args, get (N−k)-arg fn"]
-    F["(a, b, c, d) => result"] -->|"fix a"| FA["(b, c, d) => result"]
-    F -->|"fix a, b"| FAB["(c, d) => result"]
-    F -->|"fix a, b, c"| FABC["(d) => result"]
+  subgraph PARTIAL["Partial application"]
+    F["f(a,b,c,d)"] -->|"fix a"| FA["f†(b,c,d)"]
+    F -->|"fix a,b"| FAB["f†(c,d)"]
+    F -->|"fix a,b,c"| FABC["f†(d)"]
   end
-  subgraph CURRY["Currying — restructure into unary chain"]
-    FC["(a, b, c, d) => result"] -->|"curry"| FC1["a => (b => (c => (d => result)))"]
+  subgraph CURRY["Currying"]
+    FC["f(a,b,c,d)"] -->|"curry"| FC1["f†(a)(b)(c)(d)"]
   end
 
   style F fill:#46c,stroke:#fff,color:#fff
@@ -439,9 +439,285 @@ graph TD
   style FC1 fill:#363,stroke:#fff,color:#fff
 ```
 
+**† Legend:**
+- `f(a,b,c,d)` — original function: `(a, b, c, d) => result`
+- `f†(b,c,d)` — residual after fixing `a`: `(b, c, d) => result` (closure captures `a`)
+- `f†(c,d)` — residual after fixing `a, b`: `(c, d) => result`
+- `f†(d)` — residual after fixing `a, b, c`: `(d) => result`
+- `f†(a)(b)(c)(d)` — curried form: `a => (b => (c => (d => result)))`
+
 **Two-line axiom:**
 
 - `f(a, b, c, d)` → partial with `a` → `fa(b, c, d)` — fix some, get the rest.
 - `f(a, b, c, d)` → curry → `f(a)(b)(c)(d)` — restructure into unary chain. Each call is an implicit partial application.
 
 Partial application is the umbrella. Currying is one specific structure that makes partial application frictionless at every prefix. `bind`, manual wrappers, and `partial()` are other ways to achieve partial application without currying.
+
+
+---
+
+## Arity, variadic functions, and the limits of currying
+
+### `fn.length` — how JS reports arity
+
+Every function has a `.length` property — the number of **declared parameters** (excluding rest params and those after a default):
+
+```js
+const f1 = (a, b, c) => {};          console.log(f1.length);  // L1 → 3
+const f2 = (a, b, ...rest) => {};    console.log(f2.length);  // L2 → 2 (rest excluded)
+const f3 = (a, b = 10, c) => {};     console.log(f3.length);  // L3 → 1 (stops at first default)
+const f4 = (...args) => {};           console.log(f4.length);  // L4 → 0
+```
+
+`fn.length` is what the `curry` utility uses to decide "have I collected enough arguments?" This works perfectly for fixed-arity functions. It breaks for variadic ones.
+
+### The variadic problem
+
+```js
+const curry = (fn) => {
+  const arity = fn.length;
+  const curried = (...args) =>
+    args.length >= arity ? fn(...args) : (...more) => curried(...args, ...more);
+  return curried;
+};
+
+const sum = (...nums) => nums.reduce((a, b) => a + b, 0);   // L1 — variadic
+console.log(sum.length);                                      // L2 → 0
+
+const sumC = curry(sum);                                      // L3
+sumC(1, 2, 3);    // L4 → 0 (not 6!)
+sumC(1)(2)(3);    // L5 → ??? 
+```
+
+What happens at L4: `args.length (3) >= arity (0)` → true immediately → calls `sum(1, 2, 3)` → `6`. Wait — that actually works?
+
+What happens at L5: `sumC(1)` → `args.length (1) >= 0` → true → calls `sum(1)` → `1`. It never waits for more arguments. The chain `sumC(1)(2)(3)` tries to call `1(2)` — TypeError.
+
+The fundamental issue: **currying requires a known, fixed arity.** A variadic function has no natural "I'm done collecting" signal. The `curry` utility can't distinguish "I have all the args" from "more are coming" when `fn.length === 0`.
+
+### Three cases where `fn.length` lies
+
+| Case | `fn.length` | Actual expected args | Problem for curry |
+|---|---|---|---|
+| Rest parameter `(...args)` | `0` | Any number | Fires immediately on first call |
+| Default parameters `(a, b = 5)` | `1` | 1 or 2 | Fires after 1 arg; caller can't pass `b` through the curried interface |
+| `arguments`-based functions | `0` | Unknown | Same as rest — fires immediately |
+
+### Workarounds
+
+**1. Explicit arity override:**
+
+```js
+const curryN = (arity, fn) => {                             // L1 — caller specifies arity
+  const curried = (...args) =>
+    args.length >= arity ? fn(...args) : (...more) => curried(...args, ...more);
+  return curried;
+};
+
+const sum3 = curryN(3, (...nums) => nums.reduce((a, b) => a + b, 0));  // L2
+sum3(1)(2)(3);    // L3 → 6
+sum3(1, 2)(3);    // L4 → 6
+```
+
+Works, but the caller must know and declare the arity — the function itself doesn't carry it.
+
+**2. Sentinel / terminator pattern:**
+
+```js
+const sum = (...args) => {
+  const inner = (...more) =>
+    more.length === 0 ? args.reduce((a, b) => a + b, 0) : sum(...args, ...more);
+  return inner;
+};
+
+sum(1, 2, 3)();    // → 6 — empty call signals "done"
+sum(1)(2)(3)();    // → 6
+```
+
+Unusual in JS — you see this in interview puzzles, rarely in production. The empty `()` is the "I'm done" signal that replaces the arity check.
+
+**3. Don't curry variadic functions — use partial application instead:**
+
+```js
+const sum = (...nums) => nums.reduce((a, b) => a + b, 0);
+
+// Partial application works fine — no arity detection needed
+const sum1and2 = (...rest) => sum(1, 2, ...rest);
+sum1and2(3, 4);   // → 10
+```
+
+This is the pragmatic answer for most JS code. Currying is for fixed-arity functions; variadic functions use `partial` or manual wrappers.
+
+### The decision: when currying works and when it doesn't
+
+| Function shape | Curry-friendly? | Alternative |
+|---|---|---|
+| Fixed arity, no defaults: `(a, b, c) => ...` | ✅ yes | — |
+| Fixed arity with defaults: `(a, b = 5) => ...` | ⚠️ partial — curry sees arity as 1 | `curryN` with explicit arity, or manual wrapper |
+| Variadic: `(...args) => ...` | ❌ no | `partial`, manual wrapper, or `curryN` |
+| Methods relying on `this` | ⚠️ fragile — curry doesn't preserve `this` | `bind` for `this` + partial, or avoid currying methods |
+
+### `fn.length` after `bind` and `curry`
+
+One more gotcha — `bind` and most `curry` utilities produce functions whose `.length` reflects the *residual* arity:
+
+```js
+const add = (a, b) => a + b;
+const add10 = add.bind(null, 10);
+console.log(add10.length);             // → 1 (original 2 minus 1 fixed)
+
+const addC = curry(add);
+const add10c = addC(10);
+console.log(add10c.length);            // → 0 (curry returns an arrow with ...args — rest param)
+```
+
+`bind` preserves residual `.length`. Most `curry` implementations don't (they use `...args` internally). This matters if downstream code inspects `.length` — e.g., another `curry` wrapping the result, or a framework that dispatches based on arity.
+
+### Summary
+
+Currying's precondition: **the function must have a fixed, known arity declared via named parameters.** When that holds, `curry` works perfectly and gives you incremental partial application for free. When it doesn't hold (variadic, defaults, `arguments`), fall back to `partial`, `bind`, manual wrappers, or `curryN` with an explicit arity.
+
+
+---
+
+## Use cases and decision framework
+
+### Pattern 1 — Config factories
+
+Fix the stable configuration once, get a specialized function that only needs the varying part:
+
+```js
+const createLogger = curry((level, prefix, msg) =>
+  console.log(`[${level}] ${prefix}: ${msg}`)
+);
+
+const infoLog  = createLogger("INFO");           // L1 — fix level
+const authInfo = createLogger("INFO", "AUTH");   // L2 — fix level + prefix
+
+authInfo("User logged in");                       // L3 → [INFO] AUTH: User logged in
+authInfo("Session expired");                      // L4 → [INFO] AUTH: Session expired
+```
+
+The pattern: **stable config → left parameters, varying data → right parameters.** Each partial application produces a more specialized function. The factory doesn't allocate objects or classes — just closures.
+
+Compare to the OOP equivalent:
+
+```js
+class Logger {
+  constructor(level, prefix) { this.level = level; this.prefix = prefix; }
+  log(msg) { console.log(`[${this.level}] ${this.prefix}: ${msg}`); }
+}
+const authInfo = new Logger("INFO", "AUTH");
+authInfo.log("User logged in");
+```
+
+Same result. The curried version is lighter (no class, no `this`, no `new`) but less discoverable (no autocomplete on methods). Trade-off depends on team conventions and how many "methods" the configured thing needs.
+
+### Pattern 2 — Event handlers with context
+
+DOM event handlers receive one argument (the event). Any extra context must be baked in:
+
+```js
+// Without currying — arrow closure at the call site
+button.addEventListener("click", (e) => handleClick(userId, section, e));
+
+// With currying — named, reusable, removable
+const handleClick = curry((userId, section, e) => {
+  // ... use userId, section, e
+});
+
+const onClick = handleClick(currentUserId, "header");   // unary: (e) => ...
+button.addEventListener("click", onClick);
+
+// Later — removable because onClick is a stable reference
+button.removeEventListener("click", onClick);
+```
+
+The curried version produces a stable function reference — critical for `removeEventListener` (which needs the same reference that was added). The inline arrow creates a new function each time, making removal impossible without storing it separately.
+
+### Pattern 3 — Composition pipelines (the canonical use)
+
+The payoff from the composition chunk — currying is what makes multi-arg functions composable:
+
+```js
+const map    = curry((fn, arr) => arr.map(fn));
+const filter = curry((pred, arr) => arr.filter(pred));
+const prop   = curry((key, obj) => obj[key]);
+const gt     = curry((threshold, x) => x > threshold);
+
+const getExpensiveItems = pipe(
+  filter(pipe(prop("price"), gt(100))),   // keep items where price > 100
+  map(prop("name")),                       // extract names
+);
+
+getExpensiveItems([
+  { name: "A", price: 50 },
+  { name: "B", price: 150 },
+  { name: "C", price: 200 },
+]);
+// → ["B", "C"]
+```
+
+Every step in the pipeline is a partially-applied curried function — unary, ready for `pipe`. Without currying, each step would need an inline arrow: `(arr) => arr.filter((x) => x.price > 100)`. Currying eliminates the plumbing.
+
+### Pattern 4 — Predicate builders
+
+Build reusable predicates by fixing the comparison value:
+
+```js
+const eq      = curry((a, b) => a === b);
+const includes = curry((item, arr) => arr.includes(item));
+
+const isAdmin    = eq("admin");                    // (role) => role === "admin"
+const hasFeature = includes("dark-mode");          // (features) => features.includes("dark-mode")
+
+users.filter(pipe(prop("role"), isAdmin));
+users.filter(pipe(prop("features"), hasFeature));
+```
+
+Each predicate is a named, testable, composable unit. No anonymous arrows scattered across the codebase.
+
+### Decision framework — when to reach for what
+
+| Situation | Reach for | Why |
+|---|---|---|
+| Multi-arg function used in `pipe`/`compose` | **Curry** | Produces unary steps at each prefix |
+| Fix 1–2 args of a function you don't control (library, builtin) | **`bind`** or **manual arrow** | Can't restructure someone else's function |
+| Fix args from a non-left position | **Manual arrow** | `bind` and curry only fix from the left |
+| Variadic function needs some args fixed | **`partial`** or **manual arrow** | Curry can't detect arity |
+| Config factory (stable config → specialized fn) | **Curry** (if you own the function) or **manual closure** | Natural left-to-right: config first, data last |
+| One-off, inline, 2-arg function | **Nothing** — just call it | Currying adds ceremony for no reuse payoff |
+
+### The smell test
+
+Currying and partial application are **capabilities with a smell radius** (same framing as point-free from the composition chunk):
+
+| Capability | Smell vs OK in |
+|---|---|
+| Curried utility functions in a shared library (`map`, `filter`, `prop`, `eq`) | ✅ canonical — the whole team benefits from composability |
+| Currying a function used exactly once | ❌ ceremony for no payoff — just call it with all args |
+| Deeply nested partial applications (`f(a)(b)(c)(d)(e)`) | ⚠️ hard to read; consider whether the function has too many params |
+| Currying methods that rely on `this` | ❌ fragile — `this` binding doesn't survive curry; use `bind` |
+| `partial` to fix one arg of a well-known builtin (`parseInt`, `setTimeout`) | ✅ clear intent, avoids the arity trap |
+| Currying everything "because FP" | ❌ aesthetic, not communication — curry what composes, leave the rest alone |
+
+### The Ramda / lodash-fp convention
+
+Libraries that embrace currying follow two conventions:
+
+1. **Data-last parameter order.** The "thing being operated on" is always the final argument. This makes partial application produce a function that *waits for the data* — exactly what `pipe` needs.
+
+2. **All exported functions are auto-curried.** `R.map(fn)` returns a function waiting for the array. `R.filter(pred)` returns a function waiting for the collection. No explicit `curry()` call needed at the use site.
+
+```js
+// Ramda style — data-last, auto-curried
+const R = require("ramda");
+
+const getActiveEmails = R.pipe(
+  R.filter(R.prop("active")),
+  R.map(R.prop("email")),
+  R.map(R.toLower),
+);
+```
+
+If your codebase uses Ramda or lodash/fp, you inherit this convention. If not, apply it selectively to your own utility functions that will be composed — don't retrofit it onto every function in the project.
