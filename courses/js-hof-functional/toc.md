@@ -46,7 +46,8 @@ Progress tracker for the course. Chunks grouped by theme.
         - **Q5 — sloppy-mode chain**: predicted "sloppy: no error, returns `"a"`". Sloppy mode silently swallows iter 1's write-to-primitive, then iter 2 throws on `undefined["a"]` because forgot-return left `acc = undefined`. Both modes throw — they differ on *which iteration* and *which underlying bug surfaces*.
 - [x] **Quiz 1** (covering *Functions as values*, *Core iteration abstractions*, *Reduce deep dive*): first-class functions, iteration abstractions, reduce mechanics
       📊 fns-as-values: solid · iter-abstractions: solid · reduce: solid → shaky (protocol & sloppy-mode mechanics)
-- [ ] **Composition & pipelines** — function composition (`f(g(x))`), pipe/compose utilities (built on `reduceRight` / `reduce` respectively), point-free style, when pipelines clarify vs obscure, transducers-lite (compose map/filter without intermediate arrays)
+- [x] **Composition & pipelines** — function composition (`f(g(x))`), pipe/compose utilities (built on `reduceRight` / `reduce` respectively), point-free style, when pipelines clarify vs obscure, transducers-lite (compose map/filter without intermediate arrays)
+      📊 solid
 - [ ] **Currying & partial application** — currying vs partial application (distinct concepts), manual currying, `bind` as partial application, use cases (config factories, event handlers), arity and variadic functions
 - [ ] **Quiz 2** (covering *Composition & pipelines*, *Currying & partial application*): composition, currying, partial application
 - [ ] **Immutability patterns** — pure functions, avoiding side effects, shallow copy idioms (spread, `Object.assign`), structural sharing concept, when immutability helps (predictability, debugging) vs when it hurts (performance, ergonomics)
