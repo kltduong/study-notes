@@ -7,7 +7,7 @@ Last updated: 2026-05-28.
 ## Active
 
 - **Frontend Fundamentals** → `js-hof-functional` (27%)
-- **Dataflows & Reactive** → not started (blocked: needs `js-hof-functional` + `js-iterators-generators`)
+- **Data Engineering & Processing** → not started (blocked: needs `js-hof-functional` + `js-iterators-generators`)
 - **Systems & Infrastructure** → not started
 
 ---
@@ -34,20 +34,22 @@ Goal: whole-system UI literacy for a backend-strong dev. Reviewing and architect
 
 ---
 
-## Dataflows & Reactive Systems
+## Data Engineering & Processing
 
-Goal: build the mental model that iteration, streaming, reactivity, and distributed processing are the same structural pattern at increasing scale.
+Goal: understand how data moves, transforms, and persists across systems — from in-process algebra to distributed architectures. Formal structure surfaced at every level.
 
 Prerequisites: `js-hof-functional` + `js-iterators-generators` (from Frontend path) before course 1.
 
 | #   | Course                    | Status | Progress | Scope                                                                                                                     |
 | --- | ------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `dataflow-foundations`    | new    | 0%       | Transducers, reducer algebra, push vs pull, iterator combinators. JS + Python + Haskell notation (~6–8 chunks)            |
-| 2   | `async-streams`           | new    | 0%       | Async iterators, backpressure, observable pattern (RxJS), hot vs cold, cancellation (~6–8 chunks)                         |
-| 3   | `reactive-systems`        | new    | 0%       | Signals, fine-grained dependency tracking, glitch-free propagation, SolidJS/Vue internals (~5–6 chunks)                   |
-| 4   | `distributed-streams`     | new    | 0%       | Event logs (Kafka), partitioning, windowing, exactly-once, stateful processing (Flink/Beam), replay (~6–8 chunks)         |
-| 5   | `workflow-orchestration`  | new    | 0%       | DAGs, durable execution (Temporal), saga patterns, Step Functions, idempotency (~5–6 chunks)                              |
-| 6   | `dataflow-theory`         | new    | 0%       | Capstone — monoids/folds/functors as unifying algebra, incremental computation, stream algebra (~4–5 chunks)              |
+| 1   | `transformation-algebra`  | new    | 0%       | Reducer composition, transducers, push vs pull, functors/monoids. JS + Python + Haskell notation (~6–8 chunks)            |
+| 2   | `async-streams`           | new    | 0%       | Async iterators, backpressure, observable pattern, hot vs cold, cancellation (~6–8 chunks)                                |
+| 3   | `reactive-systems`        | new    | 0%       | Signals, dependency graphs, glitch-free propagation, incremental computation. SolidJS/Vue as case studies (~5–6 chunks)   |
+| 4   | `batch-processing`        | new    | 0%       | Dataframe model, declarative transforms, lazy evaluation, schema validation (~5–6 chunks)                                 |
+| 5   | `distributed-streams`     | new    | 0%       | Event logs (Kafka), partitioning, windowing, exactly-once, stateful processing (Flink/Beam), replay (~6–8 chunks)         |
+| 6   | `orchestration-pipelines` | new    | 0%       | DAGs, durable execution (Temporal), saga patterns, idempotency, failure semantics (~5–6 chunks)                           |
+| 7   | `data-quality`            | new    | 0%       | Data contracts, lineage, testing, monitoring, schema registries (~4–5 chunks)                                             |
+| 8   | `dataflow-theory`         | new    | 0%       | Capstone — formal unification: monoids/folds/functors across all prior courses, stream algebra, fixpoints (~4–5 chunks)   |
 
 ---
 
