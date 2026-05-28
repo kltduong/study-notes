@@ -66,7 +66,7 @@ If ambiguous, ask to clarify before proceeding. Courses go in `courses/`, everyt
 
 On every new session:
 
-1. Read `learner-profile.md` and the repo-root `roadmap.md` for background, preferences, global competence, cross-cutting weaknesses, and what's in progress / what's next.
+1. Read `learner-profile.md` and the repo-root `roadmap.md` for background, preferences, global competence, cross-cutting weaknesses, active tracks, and current course.
 2. If a `courses/<topic>/toc.md` exists for the current topic, read it to recover calibration, progress, and competence tags.
 3. Skim existing notes in the active folder if resuming work there.
 
@@ -394,7 +394,7 @@ See `writing-style.md` for content rules, style rules, formatting, and mermaid c
 
 ## Roadmap
 
-The cross-course study roadmap lives at the repo root. It tracks course sequencing, status, and order rationale — read alongside `learner-profile.md` per the *Session start* checklist.
+The study roadmap lives at the repo root. It contains all three tracks (Frontend, Data Engineering, Systems) with active status and course tables. Always loaded below via file reference — read alongside `learner-profile.md` per the *Session start* checklist.
 
 #[[file:../../roadmap.md]]
 
