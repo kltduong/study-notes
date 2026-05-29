@@ -292,3 +292,30 @@ user.address.city;   // → "Paris" (fully independent)
 
 The common case in FP-style JS is shallow spread — one level, targeting the property you're changing. Deep structures that change frequently are where structural sharing (next sub-part) becomes worth the complexity.
 
+### 1.4.7. Encapsulated mutation — purity without the copy cost
+
+The copy idioms above have a cost: every spread allocates a new object. For hot paths building up a result incrementally (e.g., constructing a large object inside `reduce`), copying at every step is O(n²). The escape hatch: **mutate locally-created data, return the result, never touch the input.**
+
+```js
+// Externally pure, internally mutable
+const buildIndex = (items) => {
+  const index = {};                         // locally created — no one else has a reference
+  for (const item of items) {
+    index[item.id] = item;                  // mutation — but only of `index`
+  }
+  return index;                             // caller gets a fresh object; `items` untouched
+};
+```
+
+The contract from the caller's perspective: same input → same output, no side effects. The function is pure. Internally it mutates — but the mutated data was created inside the function and never existed outside it until the return.
+
+**The three conditions** (all must hold):
+
+1. The mutated data is **created inside the function** — not received as an argument.
+2. No reference to the mutated data **escapes before the return** (no stashing it in a closure, global, or callback).
+3. The function's **inputs are untouched**.
+
+If any condition breaks, the mutation leaks and the function is impure.
+
+This is the same principle from the reduce chunk (mutating the accumulator for O(n) instead of spreading for O(n²)) — generalized. It's not a loophole in purity; it's the recognition that purity is defined by *observable behavior*, not by the absence of assignment statements.
+
